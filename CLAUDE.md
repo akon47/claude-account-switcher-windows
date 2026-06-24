@@ -124,3 +124,8 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **다국어 추가는 JSON만**: `Localization/xx-XX.json`에 `_culture`/`_name` 포함해 추가하면 끝.
   매니저에 손대지 말 것(런타임 스캔). JSON은 UTF-8, 문자열 안 따옴표는 이스케이프하거나 전각 “ ” 사용.
 - 탐색기 우클릭 메뉴 아이콘은 exe 아이콘(`"<exe>",0`)을 가리킴 → 아이콘 바꿔도 옛것 보이면 **윈도우 아이콘 캐시**.
+- **코드 스타일**: `.editorconfig`(C#/네이밍/분석기 심각도) + `Settings.XamlStyler`(XAML 포맷) + `stylecop.json`.
+  StyleCop/Roslynator 빌드 강제는 `Directory.Build.props`에서 **옵트인**(현재 간결한 한 줄 스타일이라 켜면 ~300 포맷 경고).
+- **MVVM 노코드비하인드 지향**(사용자 선호): 뷰 상호작용은 커맨드(`[RelayCommand]`)+ `Behaviors/<타입>/` 첨부 동작으로,
+  `*.xaml.cs` 이벤트 핸들러 지양. 단축키는 네이티브 `InputBindings`. 자세한 규약은 `CONTRIBUTING.md`.
+  (기존 코드비하인드: MainWindow 드래그/더블클릭, ProgressDialog, EditableTextBlock → 추후 비헤이비어로 이관 후보.)
