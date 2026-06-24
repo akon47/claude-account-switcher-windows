@@ -96,6 +96,20 @@ public partial class MainViewModel : ObservableObject
         if (gen == _usageGen) UsageUpdated?.Invoke();
     }
 
+    /// <summary>드래그로 행 순서를 바꾼다. dragged 를 target 위치로 옮긴다(target 이 null 이면 맨 뒤로).</summary>
+    public void MoveProfile(ProfileItemViewModel? dragged, ProfileItemViewModel? target)
+    {
+        if (dragged is null) return;
+        int from = Profiles.IndexOf(dragged);
+        if (from < 0) return;
+        int to = target is null ? Profiles.Count - 1 : Profiles.IndexOf(target);
+        if (to < 0 || from == to) return;
+
+        Profiles.Move(from, to);
+        _store.Reorder(Profiles.Select(p => p.Profile.Id)); // 저장 순서도 표시 순서에 맞춰 영속
+        Changed?.Invoke();                                   // 트레이/탐색기 메뉴 순서도 갱신
+    }
+
     private Profile? Selected => SelectedProfile?.Profile;
 
     [RelayCommand]

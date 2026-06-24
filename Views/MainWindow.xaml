@@ -86,6 +86,11 @@
                 ItemsSource="{Binding Profiles}"
                 SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
                 MouseDoubleClick="ProfileList_DoubleClick"
+                AllowDrop="True"
+                PreviewMouseLeftButtonDown="ProfileList_PreviewMouseLeftButtonDown"
+                PreviewMouseMove="ProfileList_PreviewMouseMove"
+                DragOver="ProfileList_DragOver"
+                Drop="ProfileList_Drop"
                 >
                 <ListView.View>
                     <GridView>

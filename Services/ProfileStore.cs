@@ -153,6 +153,18 @@ public class ProfileStore
         Save();
     }
 
+    /// <summary>표시 순서(프로필 Id 순서)에 맞춰 저장된 프로필 목록을 재정렬하고 저장한다.</summary>
+    public void Reorder(IEnumerable<string> idOrder)
+    {
+        var order = idOrder.ToList();
+        var ordered = Data.Profiles
+            .OrderBy(p => { int i = order.IndexOf(p.Id); return i < 0 ? int.MaxValue : i; })
+            .ToList();
+        Data.Profiles.Clear();
+        Data.Profiles.AddRange(ordered);
+        Save();
+    }
+
     public void Delete(Profile p)
     {
         try
