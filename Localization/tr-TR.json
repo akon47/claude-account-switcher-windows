@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "Güncellemeleri denetle…",
   "UpdTitle": "Güncelleme",
   "UpdNone": "En son sürümü kullanıyorsunuz.",
-  "UpdAvailable": "Yeni bir sürüm {0} mevcut. Şimdi güncellensin mi?"
+  "UpdAvailable": "Yeni bir sürüm {0} mevcut. Şimdi güncellensin mi?",
+  "UpdDownloading": "{0} güncellemesi indiriliyor…"
 }

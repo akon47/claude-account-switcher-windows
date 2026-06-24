@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "Periksa pembaruan…",
   "UpdTitle": "Pembaruan",
   "UpdNone": "Anda menggunakan versi terbaru.",
-  "UpdAvailable": "Versi baru {0} tersedia. Perbarui sekarang?"
+  "UpdAvailable": "Versi baru {0} tersedia. Perbarui sekarang?",
+  "UpdDownloading": "Mengunduh pembaruan {0}…"
 }

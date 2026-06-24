@@ -31,18 +31,28 @@ SetCompressor /SOLID lzma
 !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
 !define MUI_UNWELCOMEFINISHPAGE_BITMAP "welcome.bmp"
 
-!define MUI_WELCOMEPAGE_TITLE "Claude Account Switcher 설치"
-!define MUI_WELCOMEPAGE_TEXT "여러 Claude Code 계정을 전환·실행하는 트레이 앱입니다.$\r$\n$\r$\n계속하려면 '다음'을 누르세요."
+!define MUI_WELCOMEPAGE_TITLE "$(WelcomeTitle)"
+!define MUI_WELCOMEPAGE_TEXT "$(WelcomeText)"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
-!define MUI_FINISHPAGE_RUN_TEXT "Claude Account Switcher 실행"
+!define MUI_FINISHPAGE_RUN_TEXT "$(RunAppText)"
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 
+; 언어: 영어를 먼저 넣어 기본(폴백)으로 두고, 한국어를 추가한다.
+; NSIS 가 시스템 UI 언어를 자동 감지 → 한국어 윈도우에서만 한국어, 그 외엔 영어로 표시.
+!insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "Korean"
+
+LangString WelcomeTitle ${LANG_ENGLISH} "Claude Account Switcher Setup"
+LangString WelcomeTitle ${LANG_KOREAN}  "Claude Account Switcher 설치"
+LangString WelcomeText  ${LANG_ENGLISH} "A system-tray app to switch and run multiple Claude Code accounts.$\r$\n$\r$\nClick Next to continue."
+LangString WelcomeText  ${LANG_KOREAN}  "여러 Claude Code 계정을 전환·실행하는 시스템 트레이 앱입니다.$\r$\n$\r$\n계속하려면 '다음'을 누르세요."
+LangString RunAppText   ${LANG_ENGLISH} "Run Claude Account Switcher"
+LangString RunAppText   ${LANG_KOREAN}  "Claude Account Switcher 실행"
 
 Name "${PRODUCT_NAME}"
 !ifdef OUT_DIR

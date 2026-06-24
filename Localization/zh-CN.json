@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "检查更新…",
   "UpdTitle": "更新",
   "UpdNone": "已是最新版本。",
-  "UpdAvailable": "有新版本 {0}。现在更新吗？"
+  "UpdAvailable": "有新版本 {0}。现在更新吗？",
+  "UpdDownloading": "正在下载更新 {0}…"
 }

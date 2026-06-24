@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "Verificar atualizações…",
   "UpdTitle": "Atualização",
   "UpdNone": "Você está na versão mais recente.",
-  "UpdAvailable": "Uma nova versão {0} está disponível. Atualizar agora?"
+  "UpdAvailable": "Uma nova versão {0} está disponível. Atualizar agora?",
+  "UpdDownloading": "Baixando a atualização {0}…"
 }

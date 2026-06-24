@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "Kiểm tra cập nhật…",
   "UpdTitle": "Cập nhật",
   "UpdNone": "Bạn đang dùng phiên bản mới nhất.",
-  "UpdAvailable": "Đã có phiên bản mới {0}. Cập nhật ngay?"
+  "UpdAvailable": "Đã có phiên bản mới {0}. Cập nhật ngay?",
+  "UpdDownloading": "Đang tải xuống bản cập nhật {0}…"
 }

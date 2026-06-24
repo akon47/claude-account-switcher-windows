@@ -95,5 +95,6 @@
   "TrayCheckUpdate": "업데이트 확인…",
   "UpdTitle": "업데이트",
   "UpdNone": "최신 버전입니다.",
-  "UpdAvailable": "새 버전 {0} 이(가) 있습니다. 지금 업데이트할까요?"
+  "UpdAvailable": "새 버전 {0} 이(가) 있습니다. 지금 업데이트할까요?",
+  "UpdDownloading": "업데이트 {0} 다운로드 중…"
 }

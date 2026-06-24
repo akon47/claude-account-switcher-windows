@@ -72,14 +72,27 @@ public static class UpdateService
         return null;
     }
 
-    /// <summary>설치 파일을 임시 폴더로 내려받아 경로를 반환한다.</summary>
-    public static async Task<string> DownloadAsync(UpdateInfo info, CancellationToken ct = default)
+    /// <summary>설치 파일을 임시 폴더로 내려받아 경로를 반환한다. progress 로 0~100 진행률을 보고한다.</summary>
+    public static async Task<string> DownloadAsync(UpdateInfo info, IProgress<double>? progress = null, CancellationToken ct = default)
     {
         var path = Path.Combine(Path.GetTempPath(), $"Claude-Account-Switcher-Setup-{info.Tag}.exe");
         using var resp = await Http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
-        await using (var fs = File.Create(path))
-            await resp.Content.CopyToAsync(fs, ct);
+
+        long? total = resp.Content.Headers.ContentLength;
+        await using var src = await resp.Content.ReadAsStreamAsync(ct);
+        await using var dst = File.Create(path);
+
+        var buffer = new byte[81920];
+        long read = 0;
+        int n;
+        while ((n = await src.ReadAsync(buffer, ct)) > 0)
+        {
+            await dst.WriteAsync(buffer.AsMemory(0, n), ct);
+            read += n;
+            if (total is > 0) progress?.Report(read * 100.0 / total.Value);
+        }
+        progress?.Report(100);
         return path;
     }
 

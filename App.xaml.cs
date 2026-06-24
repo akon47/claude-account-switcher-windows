@@ -215,12 +215,37 @@ public partial class App : Application
                 return;
             }
 
-            if (!dialogs.Confirm(L["UpdTitle"], L.Tr("UpdAvailable", info.Tag.TrimStart('v', 'V'))))
+            string ver = info.Tag.TrimStart('v', 'V');
+            if (!dialogs.Confirm(L["UpdTitle"], L.Tr("UpdAvailable", ver)))
                 return;
 
-            var path = await UpdateService.DownloadAsync(info);
-            UpdateService.RunInstaller(path);
-            Shutdown(); // 인스톨러가 교체할 수 있도록 종료
+            // 다운로드 진행률 다이얼로그
+            using var cts = new CancellationTokenSource();
+            var pvm = new ProgressDialogViewModel { Status = L.Tr("UpdDownloading", ver) };
+            var dlg = new ProgressDialog { DataContext = pvm };
+            var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive && w.IsVisible);
+            if (owner is not null) dlg.Owner = owner;
+            else dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            dlg.CancelRequested += cts.Cancel;
+            dlg.Show();
+
+            try
+            {
+                var progress = new Progress<double>(p => pvm.Progress = p);
+                var path = await UpdateService.DownloadAsync(info, progress, cts.Token);
+                dlg.ForceClose();
+                UpdateService.RunInstaller(path);
+                Shutdown(); // 인스톨러가 교체할 수 있도록 종료
+            }
+            catch (OperationCanceledException)
+            {
+                dlg.ForceClose(); // 사용자가 취소
+            }
+            catch (Exception ex)
+            {
+                dlg.ForceClose();
+                if (manual) dialogs.ShowError(ex.Message);
+            }
         }
         catch (Exception ex)
         {

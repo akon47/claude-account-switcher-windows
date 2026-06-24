@@ -95,5 +95,6 @@
   "TrayCheckUpdate": "Check for updates…",
   "UpdTitle": "Update",
   "UpdNone": "You're on the latest version.",
-  "UpdAvailable": "A new version {0} is available. Update now?"
+  "UpdAvailable": "A new version {0} is available. Update now?",
+  "UpdDownloading": "Downloading update {0}…"
 }

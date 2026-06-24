@@ -80,5 +80,6 @@
   "TrayCheckUpdate": "更新を確認…",
   "UpdTitle": "更新",
   "UpdNone": "最新バージョンです。",
-  "UpdAvailable": "新しいバージョン {0} があります。今すぐ更新しますか？"
+  "UpdAvailable": "新しいバージョン {0} があります。今すぐ更新しますか？",
+  "UpdDownloading": "アップデート {0} をダウンロード中…"
 }
