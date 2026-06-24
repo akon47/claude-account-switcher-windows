@@ -28,20 +28,31 @@
             Grid.Row="0"
             Margin="0 0 0 12"
             >
-            <StackPanel HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel
+                Grid.Column="0"
+                HorizontalAlignment="Left"
+                Margin="0 0 12 0"
+                >
                 <TextBlock
                     Text="{loc:Loc MainTitle}"
                     FontSize="18"
                     FontWeight="SemiBold"
+                    TextWrapping="Wrap"
                     Foreground="{DynamicResource WhiteBrush}"
                     />
                 <TextBlock
                     Text="{loc:Loc MainSubtitle}"
                     Foreground="{DynamicResource SageMistBrush}"
+                    TextWrapping="Wrap"
                     Margin="0 4 0 0"
                     />
             </StackPanel>
             <StackPanel
+                Grid.Column="1"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Orientation="Horizontal"
