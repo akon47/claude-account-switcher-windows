@@ -42,6 +42,7 @@
   "SetSkipReset": "Demander à chaque exécution",
   "SetLangHeader": "Langue",
   "SetLangDesc": "Choisissez la langue d'affichage.",
+  "SetGeneralHeader": "Général",
   "SetClose": "Fermer",
   "SetVersion": "Version",
   "SkipStateAsk": "Demander à chaque fois",

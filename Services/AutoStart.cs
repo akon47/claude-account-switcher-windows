@@ -5,6 +5,8 @@ namespace ClaudeAccountSwitcher.Services;
 /// <summary>Windows 로그인 시 자동 실행 (HKCU ...\Run 레지스트리).</summary>
 public static class AutoStart
 {
+    // 주의: 아래 RunKey/ValueName 은 Installer\Setup.nsi 의 Section Uninstall(DeleteRegValue, line 130)에도
+    //       문자열로 복제돼 있다. 이름을 바꾸면 제거 시 레지스트리가 정리되지 않으니 NSI 와 함께 수정할 것.
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Claude-Account-Switcher";
 

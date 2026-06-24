@@ -34,6 +34,29 @@ public partial class SettingsViewModel : ObservableObject
         _selectedLanguage = Languages.FirstOrDefault(l => l.Culture == L.Culture) ?? Languages[0];
     }
 
+    /// <summary>Windows 로그인 시 자동 실행(HKCU Run). 트레이 메뉴 토글과 같은 레지스트리를 가리킨다.</summary>
+    public bool RunAtStartup
+    {
+        get => AutoStart.IsEnabled();
+        set
+        {
+            AutoStart.Set(value);
+            OnPropertyChanged(); // 실패 시 실제 상태로 되돌아가도록 다시 읽게 한다
+        }
+    }
+
+    /// <summary>탐색기 폴더 우클릭 "Claude로 실행" 메뉴 등록 여부. 트레이 메뉴 토글과 동일.</summary>
+    public bool ExplorerMenuEnabled
+    {
+        get => ExplorerMenu.IsInstalled();
+        set
+        {
+            if (value) ExplorerMenu.Install(_store.Data.Profiles);
+            else ExplorerMenu.Uninstall();
+            OnPropertyChanged();
+        }
+    }
+
     partial void OnSelectedShellChanged(ShellKind value)
     {
         _store.Data.Shell = value;

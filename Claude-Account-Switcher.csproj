@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.2.3</Version>
+    <Version>0.3.0</Version>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -20,7 +20,17 @@
 
   <ItemGroup>
     <Resource Include="Resources\app.ico" />
-    <Resource Include="Localization\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 언어 JSON은 exe에 임베드하지 않고 설치 폴더의 locale\ 에 '느슨한 파일'로 둔다.
+         런타임에 AppContext.BaseDirectory\locale\*.json 를 스캔하므로, locale\ 에 JSON을 하나
+         떨궈 넣으면 재컴파일 없이 언어가 추가된다. (단일 파일 publish 에도 임베드되지 않도록 ExcludeFromSingleFile) -->
+    <Content Include="Localization\*.json">
+      <TargetPath>locale\%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
   </ItemGroup>
 
 </Project>

@@ -42,6 +42,7 @@
   "SetSkipReset": "Спрашивать при каждом запуске",
   "SetLangHeader": "Язык",
   "SetLangDesc": "Выберите язык интерфейса.",
+  "SetGeneralHeader": "Общие",
   "SetClose": "Закрыть",
   "SetVersion": "Версия",
   "SkipStateAsk": "Спрашивать каждый раз",

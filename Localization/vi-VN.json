@@ -42,6 +42,7 @@
   "SetSkipReset": "Hỏi mỗi lần chạy",
   "SetLangHeader": "Ngôn ngữ",
   "SetLangDesc": "Chọn ngôn ngữ hiển thị.",
+  "SetGeneralHeader": "Chung",
   "SetClose": "Đóng",
   "SetVersion": "Phiên bản",
   "SkipStateAsk": "Hỏi mỗi lần",

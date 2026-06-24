@@ -1,17 +1,15 @@
-using System.Collections;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
-using System.Resources;
 using System.Text.Json;
 
 namespace ClaudeAccountSwitcher.Localization;
 
 /// <summary>
-/// 언어별 JSON(Localization/&lt;culture&gt;.json)에서 문자열을 읽어 제공한다.
-/// 지원 언어 목록은 하드코딩하지 않고, exe 에 임베드된 Localization/*.json 들을 런타임에 스캔해 구성한다.
-/// 각 json 은 자신의 메타데이터("_culture", "_name")를 담는다. 새 언어 = json 파일 추가만 하면 끝.
+/// 언어별 JSON(설치 폴더의 locale/&lt;culture&gt;.json)에서 문자열을 읽어 제공한다.
+/// 지원 언어 목록은 하드코딩하지 않고, exe 옆 locale\ 폴더의 *.json 들을 런타임에 스캔해 구성한다.
+/// (exe 에 임베드하지 않는다 — locale\ 에 JSON 을 떨궈 넣으면 재컴파일 없이 언어가 추가된다.)
+/// 각 json 은 자신의 메타데이터("_culture", "_name")를 담는다.
 /// 인덱서(this[key])에 OneWay 바인딩하면(LocExtension) 언어 변경 시 실시간으로 갱신된다.
 /// </summary>
 public sealed class LocalizationManager : INotifyPropertyChanged
@@ -19,6 +17,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     private const string Fallback = "en-US";
     private const string MetaCulture = "_culture";
     private const string MetaName = "_name";
+    private const string LocaleFolder = "locale";
 
     public static LocalizationManager Instance { get; } = new();
 
@@ -42,7 +41,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         {
             string culture = dict.TryGetValue(MetaCulture, out var c) && !string.IsNullOrWhiteSpace(c)
                 ? c.Trim()
-                : CultureFromResourceKey(key);
+                : CultureFromFileName(key);
             if (string.IsNullOrEmpty(culture)) continue;
 
             string display = dict.TryGetValue(MetaName, out var n) && !string.IsNullOrWhiteSpace(n)
@@ -103,56 +102,38 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         return args.Length == 0 ? s : string.Format(s, args);
     }
 
-    /// <summary>exe 에 임베드된 Localization/*.json 들을 (리소스 키, 파싱된 사전)으로 열거한다.</summary>
+    /// <summary>exe 옆 locale\ 폴더의 *.json 들을 (파일 경로, 파싱된 사전)으로 열거한다.</summary>
     private static IEnumerable<(string Key, Dictionary<string, string> Dict)> DiscoverLocales()
     {
-        var asm = Assembly.GetExecutingAssembly();
-        // WPF 'Resource' 빌드 항목들은 <AssemblyName>.g.resources 안에 들어간다.
-        var resName = asm.GetName().Name + ".g.resources";
-        Stream? stream = null;
-        ResourceReader? reader = null;
-        try
-        {
-            stream = asm.GetManifestResourceStream(resName);
-            if (stream is null) yield break;
-            reader = new ResourceReader(stream);
-        }
-        catch
-        {
-            stream?.Dispose();
-            yield break;
-        }
+        // 단일 파일 publish 에서도 AppContext.BaseDirectory 는 exe 가 있는 폴더를 가리킨다.
+        string dir = Path.Combine(AppContext.BaseDirectory, LocaleFolder);
+        if (!Directory.Exists(dir)) yield break;
 
-        using (reader)
-        using (stream)
+        string[] files;
+        try { files = Directory.GetFiles(dir, "*.json"); }
+        catch { yield break; }
+
+        foreach (var file in files)
         {
-            foreach (DictionaryEntry entry in reader)
+            Dictionary<string, string>? dict = null;
+            try
             {
-                if (entry.Key is not string key) continue;
-                if (!key.StartsWith("localization/", StringComparison.OrdinalIgnoreCase)) continue;
-                if (!key.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
-
-                Dictionary<string, string>? dict = null;
-                try
-                {
-                    if (entry.Value is Stream s)
-                    {
-                        using var ms = new MemoryStream();
-                        s.CopyTo(ms);
-                        dict = JsonSerializer.Deserialize<Dictionary<string, string>>(ms.ToArray());
-                    }
-                }
-                catch { dict = null; }
-
-                if (dict is not null) yield return (key, dict);
+                // 누군가 편집 중이어도 읽도록 공유 모드로 연다. 역직렬화는 UTF-8 BOM 을 알아서 건너뛴다.
+                using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var ms = new MemoryStream();
+                fs.CopyTo(ms);
+                dict = JsonSerializer.Deserialize<Dictionary<string, string>>(ms.ToArray());
             }
+            catch { dict = null; }
+
+            if (dict is not null) yield return (file, dict);
         }
     }
 
-    /// <summary>리소스 키(예: "localization/en-us.json")에서 컬처 코드를 복원한다.</summary>
-    private static string CultureFromResourceKey(string key)
+    /// <summary>파일 경로(예: "...\locale\en-US.json")에서 컬처 코드를 복원한다.</summary>
+    private static string CultureFromFileName(string path)
     {
-        var file = Path.GetFileNameWithoutExtension(key);
+        var file = Path.GetFileNameWithoutExtension(path);
         try { return CultureInfo.GetCultureInfo(file).Name; }
         catch { return file; }
     }
@@ -166,8 +147,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
             // 1) 정확히 일치하는 컬처(예: ja-JP)
             foreach (var (culture, _) in Available)
-                if (culture.Equals(ci.Name, StringComparison.OrdinalIgnoreCase))
-                    return culture;
+            {
+                if (culture.Equals(ci.Name, StringComparison.OrdinalIgnoreCase)) return culture;
+            }
 
             // 2) 중국어는 간체/번체 구분
             if (ci.TwoLetterISOLanguageName.Equals("zh", StringComparison.OrdinalIgnoreCase))
@@ -183,8 +165,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
             // 3) 두 글자 언어 코드로 매칭(예: fr-CA → fr-FR)
             foreach (var (culture, _) in Available)
-                if (culture.StartsWith(ci.TwoLetterISOLanguageName + "-", StringComparison.OrdinalIgnoreCase))
-                    return culture;
+            {
+                if (culture.StartsWith(ci.TwoLetterISOLanguageName + "-", StringComparison.OrdinalIgnoreCase)) return culture;
+            }
         }
         catch { /* 아래 폴백 */ }
         return Fallback;

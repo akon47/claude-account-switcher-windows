@@ -133,7 +133,9 @@ public sealed class UsageService
             DateTimeOffset? reset = null;
             if (fh.TryGetProperty("resets_at", out var r) && r.ValueKind == JsonValueKind.String
                 && DateTimeOffset.TryParse(r.GetString(), out var dt))
+            {
                 reset = dt;
+            }
 
             double remaining = Math.Clamp(100 - util, 0, 100);
             return new SessionUsage(remaining, reset);

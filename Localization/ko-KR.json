@@ -49,6 +49,7 @@
   "SetSkipReset": "실행할 때마다 다시 묻기",
   "SetLangHeader": "언어",
   "SetLangDesc": "표시 언어를 선택합니다.",
+  "SetGeneralHeader": "일반",
   "SetClose": "닫기",
   "SetVersion": "버전",
 

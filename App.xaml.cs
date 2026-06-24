@@ -185,7 +185,9 @@ public partial class App : Application
         var dialogs = _services.GetRequiredService<IDialogService>();
         if (MainViewModel.IsClaudeRunning() &&
             !dialogs.Confirm(L["WarnTitle"], L["RunningSwitchWarn"]))
+        {
             return;
+        }
 
         try
         {
@@ -226,24 +228,32 @@ public partial class App : Application
             var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive && w.IsVisible);
             if (owner is not null) dlg.Owner = owner;
             else dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            dlg.CancelRequested += cts.Cancel;
+            // 취소(버튼·Esc·창 닫기 X)는 VM 의 CancelRequested 로 흘러와 다운로드 토큰을 취소한다.
+            pvm.CancelRequested += cts.Cancel;
             dlg.Show();
+
+            void CloseDialog()
+            {
+                if (dlg.IsVisible) dlg.Close(); // 사용자가 X로 이미 닫았으면 중복 닫기 방지
+            }
 
             try
             {
                 var progress = new Progress<double>(p => pvm.Progress = p);
                 var path = await UpdateService.DownloadAsync(info, progress, cts.Token);
-                dlg.ForceClose();
+                // 성공: 창을 닫으면 WindowClosingCommandBehavior 가 CancelCommand 를 한 번 더 호출하지만
+                // 다운로드는 이미 끝났으므로 토큰 취소는 무해하다(이후 작업 추가 시 이 점에 유의).
+                CloseDialog();
                 UpdateService.RunInstaller(path);
                 Shutdown(); // 인스톨러가 교체할 수 있도록 종료
             }
             catch (OperationCanceledException)
             {
-                dlg.ForceClose(); // 사용자가 취소
+                CloseDialog(); // 사용자가 취소
             }
             catch (Exception ex)
             {
-                dlg.ForceClose();
+                CloseDialog();
                 if (manual) dialogs.ShowError(ex.Message);
             }
         }

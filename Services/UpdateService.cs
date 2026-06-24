@@ -65,7 +65,10 @@ public static class UpdateService
             var name = a.TryGetProperty("name", out var n) ? n.GetString() : null;
             if (name is null
                 || !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                || name.IndexOf("Setup", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                || name.IndexOf("Setup", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                continue;
+            }
             var dl = a.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
             if (!string.IsNullOrEmpty(dl)) return new UpdateInfo(ver, tag!, dl!);
         }

@@ -42,6 +42,7 @@
   "SetSkipReset": "Tanya setiap kali dijalankan",
   "SetLangHeader": "Bahasa",
   "SetLangDesc": "Pilih bahasa tampilan.",
+  "SetGeneralHeader": "Umum",
   "SetClose": "Tutup",
   "SetVersion": "Versi",
   "SkipStateAsk": "Tanya setiap kali",

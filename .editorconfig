@@ -169,7 +169,8 @@ csharp_style_prefer_readonly_struct = true:warning
 csharp_style_prefer_readonly_struct_member = true:warning
 
 # Code-block preferences
-csharp_prefer_braces = true:warning
+# 간결한 한 줄 스타일(`if (x) return;`)은 허용하고, 여러 줄로 나뉜 본문에만 중괄호를 강제한다.
+csharp_prefer_braces = when_multiline:warning
 csharp_prefer_simple_using_statement = true:warning
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_prefer_method_group_conversion = true:suggestion

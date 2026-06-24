@@ -3,12 +3,14 @@
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                    xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
                    xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+                   xmlns:b="clr-namespace:ClaudeAccountSwitcher.Behaviors"
                    Title="{loc:Loc SkipDlgTitle}"
                    Width="480" SizeToContent="Height"
                    ResizeMode="NoResize"
                    ShowInTaskbar="False"
                    WindowStartupLocation="CenterOwner"
-                   Style="{DynamicResource ThemedWindowStyle}">
+                   Style="{DynamicResource ThemedWindowStyle}"
+                   b:DialogResultBehavior.Result="{Binding DialogResult}">
     <StackPanel Margin="22,20">
         <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
                    Foreground="{DynamicResource WhiteBrush}" LineHeight="20" />
@@ -17,8 +19,8 @@
                   Foreground="{DynamicResource SageMistBrush}" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="{loc:Loc SkipDlgSkip}" MinWidth="130" Height="30" IsDefault="True"
-                    Click="Skip_Click" Margin="0,0,8,0" Style="{DynamicResource AccentButtonStyle}" />
-            <Button Content="{loc:Loc SkipDlgRun}" MinWidth="84" Height="30" Click="NoSkip_Click" Margin="0,0,8,0" />
+                    Command="{Binding ChooseSkipCommand}" Margin="0,0,8,0" Style="{DynamicResource AccentButtonStyle}" />
+            <Button Content="{loc:Loc SkipDlgRun}" MinWidth="84" Height="30" Command="{Binding ChooseNoSkipCommand}" Margin="0,0,8,0" />
             <Button Content="{loc:Loc DlgCancel}" MinWidth="72" Height="30" IsCancel="True" />
         </StackPanel>
     </StackPanel>

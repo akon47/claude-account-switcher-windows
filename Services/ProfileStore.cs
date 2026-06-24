@@ -75,8 +75,10 @@ public class ProfileStore
     public Profile CaptureCurrent(string name)
     {
         if (!File.Exists(AppPaths.ClaudeCredentials))
+        {
             throw new InvalidOperationException(
                 "현재 로그인된 Claude 계정이 없습니다. 먼저 터미널에서 'claude'로 로그인하세요.");
+        }
 
         var p = new Profile { Name = name };
         Directory.CreateDirectory(p.ConfigDir);
@@ -120,8 +122,10 @@ public class ProfileStore
         }
 
         if (!File.Exists(target.CredentialsPath))
+        {
             throw new InvalidOperationException(
                 $"'{target.Name}' 프로필에 저장된 로그인 정보가 없습니다. 먼저 이 프로필로 로그인하세요.");
+        }
 
         // 2) 현재 ~/.claude 자격증명 백업
         Directory.CreateDirectory(AppPaths.ClaudeHome);

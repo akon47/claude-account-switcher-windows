@@ -30,12 +30,14 @@
 - **전환은 두 파일을 모두 손댄다**: `.credentials.json` 교체 + `~/.claude.json`의 `oauthAccount`도
   대상 계정 것으로 패치(백업 후). 안 그러면 Claude `/status` 표시가 어긋남.
 - **다국어(14개)**: `Localization/<culture>.json`. 하드코딩 목록 없음 — `LocalizationManager`가 런타임에
-  `<asm>.g.resources`(WPF Resource)에서 `localization/*.json`을 스캔. 각 JSON이 `_culture`/`_name` 메타를
-  품는다. **언어 추가 = JSON 파일 1개만 추가**(csproj `Localization\*.json` 글롭으로 자동 임베드). 첫 실행 시
-  윈도우 UI 언어로 자동 선택.
+  **exe 옆 `locale\` 폴더**의 `*.json`을 스캔(`AppContext.BaseDirectory\locale`). exe에 임베드하지 않는다 —
+  csproj가 `Localization\*.json`을 `Content`(TargetPath=`locale\…`, `ExcludeFromSingleFile`)로 출력 폴더에
+  복사하고, 인스톨러 `File /r`가 설치 폴더로 옮긴다. 각 JSON이 `_culture`/`_name` 메타를 품는다.
+  **언어 추가 = 설치 폴더 `locale\`에 JSON 1개 떨궈 넣기(재컴파일 불필요)** 또는 `Localization\`에 추가 후 빌드.
+  첫 실행 시 윈도우 UI 언어로 자동 선택.
 - **자동 업데이트**: `Services/UpdateService.cs` 가 GitHub `releases/latest` 태그를 현재 어셈블리 버전과
   비교 → 새 버전이면 `*Setup.exe` 자산을 받아 인스톨러 실행(시작 시 1회 + 트레이 "업데이트 확인" 메뉴).
-- **버전**: csproj `<Version>`(현재 0.2.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
+- **버전**: csproj `<Version>`(현재 0.3.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
 
 ## 아키텍처 (파일 맵)
 
@@ -118,11 +120,13 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - 커밋 작성자는 이 repo 한정 `Kim, Hwan <akon47@naver.com>` (로컬 git config).
 - 외부 프로젝트명/브랜드는 코드·주석·식별자·경로 어디에도 넣지 말 것(사용자 요청).
 - 작업 방식: 모호하면 먼저 묻고, 큰 변경은 작은 마일스톤으로 나눠 진행(사용자 선호).
-- **릴리스 모델**: 리모트 `main`은 **커밋 1개**만 유지한다. 배포 가능 수준이면 전체를 `git commit --amend`
-  로 단일 커밋에 합쳐 `git push --force-with-lease`. 브랜치는 `main` 유지(master로 안 바꿈).
-  → 단일 커밋 푸시 직후엔 트리를 깨끗이 둘 것(추가 수정하면 또 amend+강제푸시 필요).
-- **다국어 추가는 JSON만**: `Localization/xx-XX.json`에 `_culture`/`_name` 포함해 추가하면 끝.
-  매니저에 손대지 말 것(런타임 스캔). JSON은 UTF-8, 문자열 안 따옴표는 이스케이프하거나 전각 “ ” 사용.
+- **릴리스 모델**: `main`에 **일반 커밋**을 선형으로 쌓는다(squash/force-push 안 함 — CONTRIBUTING.md 기준).
+  배포 시 `<Version>`을 올린 커밋을 푸시하고 `vX.Y.Z` 태그를 밀면 `release` 워크플로가 자기완결 인스톨러를
+  빌드해 GitHub Release로 올린다(공개되면 `winget` 워크플로가 PR 생성). 브랜치는 `main` 유지(master로 안 바꿈).
+- **다국어 추가는 JSON만**: 빌드에 포함하려면 `Localization/xx-XX.json`에 `_culture`/`_name` 포함해 추가
+  (csproj `Content` 글롭이 출력 `locale\`로 복사). 재컴파일 없이 늘리려면 **설치 폴더 `locale\`에 JSON을
+  직접 떨궈** 넣으면 된다(런타임에 그 폴더를 스캔). 매니저엔 손대지 말 것. JSON은 UTF-8(BOM 무관),
+  문자열 안 따옴표는 이스케이프하거나 전각 “ ” 사용.
 - 탐색기 우클릭 메뉴 아이콘은 exe 아이콘(`"<exe>",0`)을 가리킴 → 아이콘 바꿔도 옛것 보이면 **윈도우 아이콘 캐시**.
 - **코드 스타일**: `.editorconfig`(C#/네이밍/분석기 심각도) + `Settings.XamlStyler`(XAML 포맷) + `stylecop.json`.
   StyleCop/Roslynator 빌드 강제는 `Directory.Build.props`에서 **옵트인**(현재 간결한 한 줄 스타일이라 켜면 ~300 포맷 경고).

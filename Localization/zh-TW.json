@@ -42,6 +42,7 @@
   "SetSkipReset": "每次執行時詢問",
   "SetLangHeader": "語言",
   "SetLangDesc": "選擇顯示語言。",
+  "SetGeneralHeader": "一般",
   "SetClose": "關閉",
   "SetVersion": "版本",
   "SkipStateAsk": "每次詢問",

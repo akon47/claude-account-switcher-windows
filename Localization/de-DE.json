@@ -42,6 +42,7 @@
   "SetSkipReset": "Jedes Mal fragen",
   "SetLangHeader": "Sprache",
   "SetLangDesc": "Anzeigesprache auswählen.",
+  "SetGeneralHeader": "Allgemein",
   "SetClose": "Schließen",
   "SetVersion": "Version",
   "SkipStateAsk": "Jedes Mal fragen",

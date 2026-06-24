@@ -127,6 +127,8 @@ FunctionEnd
 
 Section Uninstall
   ; 앱이 등록한 HKCU 항목 정리 (자동 실행 / 탐색기 우클릭 메뉴)
+  ; 주의: 아래 키/값 문자열은 Services\AutoStart.cs(RunKey/ValueName)와 Services\ExplorerMenu.cs
+  ;       (Verb/SubKeyName)에 정의된 것과 동일해야 한다. 코드에서 이름을 바꾸면 여기도 함께 고칠 것.
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Claude-Account-Switcher"
   DeleteRegKey HKCU "Software\Classes\Directory\shell\ClaudeAccountSwitcher"
   DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\ClaudeAccountSwitcher"

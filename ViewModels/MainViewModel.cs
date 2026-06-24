@@ -96,14 +96,19 @@ public partial class MainViewModel : ObservableObject
         if (gen == _usageGen) UsageUpdated?.Invoke();
     }
 
-    /// <summary>드래그로 행 순서를 바꾼다. dragged 를 insertIndex(삽입선 위치, 0~Count) 앞에 끼워 넣는다.</summary>
-    public void MoveProfile(ProfileItemViewModel? dragged, int insertIndex)
+    /// <summary>창이 활성화될 때(앞으로 올 때) 목록을 다시 그린다. WindowActivated 동작에서 호출.</summary>
+    [RelayCommand]
+    private void Reload() => ReloadFromStore();
+
+    /// <summary>드래그로 행 순서를 바꾼다(삽입선 위치 기준). ListView 드래그 동작에서 호출.</summary>
+    [RelayCommand]
+    private void Reorder(ReorderRequest? request)
     {
-        if (dragged is null) return;
+        if (request?.Item is not ProfileItemViewModel dragged) return;
         int from = Profiles.IndexOf(dragged);
         if (from < 0) return;
 
-        insertIndex = Math.Clamp(insertIndex, 0, Profiles.Count);
+        int insertIndex = Math.Clamp(request.InsertIndex, 0, Profiles.Count);
         // dragged 를 먼저 빼면 그 뒤 항목들이 한 칸 당겨지므로 목적 인덱스를 보정한다.
         int to = from < insertIndex ? insertIndex - 1 : insertIndex;
         if (to == from || to < 0 || to >= Profiles.Count) return;
@@ -180,7 +185,9 @@ public partial class MainViewModel : ObservableObject
 
         if (IsClaudeRunning() &&
             !_dialogs.Confirm(L["WarnTitle"], L["RunningSwitchWarn"]))
+        {
             return;
+        }
 
         try { _store.SwitchTo(p); ReloadFromStore(); Changed?.Invoke(); }
         catch (Exception ex) { _dialogs.ShowError(ex.Message); }

@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+    xmlns:b="clr-namespace:ClaudeAccountSwitcher.Behaviors"
     Title="{loc:Loc UpdTitle}"
     Width="400"
     SizeToContent="Height"
@@ -11,7 +12,11 @@
     ShowInTaskbar="False"
     WindowStartupLocation="CenterOwner"
     Style="{DynamicResource ThemedWindowStyle}"
+    b:WindowClosingCommandBehavior.Command="{Binding CancelCommand}"
     >
+    <ctrl:ThemedWindow.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </ctrl:ThemedWindow.InputBindings>
     <StackPanel Margin="22 20">
         <TextBlock
             Text="{Binding Status}"
@@ -53,8 +58,7 @@
                 HorizontalAlignment="Right"
                 MinWidth="84"
                 Height="30"
-                IsCancel="True"
-                Click="Cancel_Click"
+                Command="{Binding CancelCommand}"
                 />
         </Grid>
     </StackPanel>

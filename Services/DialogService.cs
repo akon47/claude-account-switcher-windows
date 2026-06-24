@@ -32,7 +32,7 @@ public sealed class DialogService : IDialogService
         var dlg = new SkipPermissionsDialog { DataContext = vm };
         SetOwner(dlg);
         return dlg.ShowDialog() == true
-            ? new SkipPermissionsResult(dlg.SkipChosen, vm.DontAskAgain)
+            ? new SkipPermissionsResult(vm.SkipChosen, vm.DontAskAgain)
             : null;
     }
 

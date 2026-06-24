@@ -11,6 +11,9 @@ namespace ClaudeAccountSwitcher.Services;
 /// </summary>
 public static class ExplorerMenu
 {
+    // 주의: 아래 Verb/SubKeyName 으로 만드는 레지스트리 경로는 Installer\Setup.nsi 의 Section Uninstall
+    //       (DeleteRegKey, line 131-133)에도 문자열로 복제돼 있다. 키 이름을 바꾸면 제거 시 정리가 깨지니
+    //       NSI 와 함께 수정할 것.
     private const string Verb = "ClaudeAccountSwitcher";
     private const string DisplayName = "Claude로 실행";
     private const string SubKeyName = "ClaudeAccountSwitcher.Sub"; // ExtendedSubCommandsKey (Software\Classes 기준)
@@ -36,16 +39,20 @@ public static class ExplorerMenu
 
     public static void Install(IEnumerable<Profile> profiles)
     {
-        string icon = $"\"{ExePath}\",0";
-        foreach (var top in TopKeys)
+        try
         {
-            using var k = Registry.CurrentUser.CreateSubKey(Classes(top));
-            if (k is null) continue;
-            k.SetValue("MUIVerb", DisplayName);
-            k.SetValue("Icon", icon);
-            k.SetValue("ExtendedSubCommandsKey", SubKeyName);
+            string icon = $"\"{ExePath}\",0";
+            foreach (var top in TopKeys)
+            {
+                using var k = Registry.CurrentUser.CreateSubKey(Classes(top));
+                if (k is null) continue;
+                k.SetValue("MUIVerb", DisplayName);
+                k.SetValue("Icon", icon);
+                k.SetValue("ExtendedSubCommandsKey", SubKeyName);
+            }
+            Sync(profiles);
         }
-        Sync(profiles);
+        catch { /* best effort — 레지스트리 쓰기 실패해도(설정 토글 setter 포함) 앱은 계속 동작 */ }
     }
 
     /// <summary>서브메뉴(계정 목록)를 현재 프로필에 맞춰 다시 구성. 로그인된 계정만.</summary>

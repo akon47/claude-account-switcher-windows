@@ -3,19 +3,22 @@
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                    xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
                    xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+                   xmlns:b="clr-namespace:ClaudeAccountSwitcher.Behaviors"
                    Title="{Binding Title}"
                    Width="430" SizeToContent="Height"
                    ResizeMode="NoResize"
                    ShowInTaskbar="False"
                    WindowStartupLocation="CenterOwner"
-                   Style="{DynamicResource ThemedWindowStyle}">
+                   Style="{DynamicResource ThemedWindowStyle}"
+                   b:DialogResultBehavior.Result="{Binding DialogResult}">
     <StackPanel Margin="20">
         <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,10"
                    Foreground="{DynamicResource WhiteBrush}" />
-        <TextBox x:Name="InputBox" FontSize="14"
+        <TextBox FontSize="14"
+                 b:FocusOnLoadBehavior.IsEnabled="True"
                  Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
-            <Button Content="{loc:Loc DlgOk}" Width="84" Height="30" IsDefault="True" Click="Ok_Click"
+            <Button Content="{loc:Loc DlgOk}" Width="84" Height="30" IsDefault="True" Command="{Binding AcceptCommand}"
                     Margin="0,0,8,0" Style="{DynamicResource AccentButtonStyle}" />
             <Button Content="{loc:Loc DlgCancel}" Width="84" Height="30" IsCancel="True" />
         </StackPanel>

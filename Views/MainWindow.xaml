@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:b="clr-namespace:ClaudeAccountSwitcher.Behaviors"
     xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     mc:Ignorable="d"
@@ -15,6 +16,7 @@
     ResizeMode="CanResize"
     WindowStartupLocation="CenterScreen"
     Style="{DynamicResource ThemedWindowStyle}"
+    b:WindowActivatedCommandBehavior.Command="{Binding ReloadCommand}"
     >
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -80,19 +82,19 @@
             BorderThickness="1"
             >
             <ListView
-                x:Name="ProfileList"
                 BorderThickness="0"
                 Background="Transparent"
                 ItemsSource="{Binding Profiles}"
                 SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                MouseDoubleClick="ProfileList_DoubleClick"
-                AllowDrop="True"
-                PreviewMouseLeftButtonDown="ProfileList_PreviewMouseLeftButtonDown"
-                PreviewMouseMove="ProfileList_PreviewMouseMove"
-                DragOver="ProfileList_DragOver"
-                DragLeave="ProfileList_DragLeave"
-                Drop="ProfileList_Drop"
+                b:ListViewDragReorderBehavior.Command="{Binding ReorderCommand}"
                 >
+                <!-- 행 더블클릭 = 전환(이름 칸은 EditableTextBlock 이 더블클릭을 가로채 편집). -->
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                        <Setter Property="b:DoubleClickCommandBehavior.Command"
+                                Value="{Binding DataContext.SwitchCommand, RelativeSource={RelativeSource AncestorType=ListView}}" />
+                    </Style>
+                </ListView.ItemContainerStyle>
                 <ListView.View>
                     <GridView>
                         <GridViewColumn

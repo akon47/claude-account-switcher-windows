@@ -42,6 +42,7 @@
   "SetSkipReset": "毎回確認する",
   "SetLangHeader": "言語",
   "SetLangDesc": "表示言語を選択してください。",
+  "SetGeneralHeader": "全般",
   "SetClose": "閉じる",
   "SetVersion": "バージョン",
   "SkipStateAsk": "毎回確認する",

@@ -49,6 +49,7 @@
   "SetSkipReset": "Ask every time it runs",
   "SetLangHeader": "Language",
   "SetLangDesc": "Choose the display language.",
+  "SetGeneralHeader": "General",
   "SetClose": "Close",
   "SetVersion": "Version",
 
