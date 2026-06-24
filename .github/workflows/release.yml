@@ -43,6 +43,8 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     if: ${{ vars.PUBLISH_WINGET == 'true' }}
+    # 최초 1회 winget-pkgs 등록 전에는 실패하는 게 정상이므로 릴리스 런을 빨갛게 만들지 않는다.
+    continue-on-error: true
     steps:
       - uses: vedantmgoyal9/winget-releaser@v2
         with:
