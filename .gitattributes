@@ -1,0 +1,15 @@
+# 텍스트 파일 줄바꿈 정규화 (저장은 LF, 체크아웃은 OS 기본)
+* text=auto
+
+*.cs    text
+*.xaml  text
+*.csproj text
+*.json  text
+*.md    text
+
+# 바이너리
+*.ico   binary
+*.bmp   binary
+
+# NSIS 스크립트 (UTF-8 BOM 포함, 한글)
+*.nsi   text

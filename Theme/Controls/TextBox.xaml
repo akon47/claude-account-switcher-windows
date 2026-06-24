@@ -1,0 +1,122 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+<!-- ============================================================
+     IMPLICIT input styles (stock WPF TextBox / PasswordBox)
+     Self-contained: stock Border + stock ScrollViewer (PART_ContentHost).
+     Helper resources prefixed with Tb_.
+     ============================================================ -->
+
+<!-- Shared selection brush (Azure @ 30% opacity) -->
+<SolidColorBrush x:Key="Tb_SelectionBrush" Color="#0078D4" Opacity="0.3" />
+
+<!-- ===================== TextBox (implicit) ===================== -->
+<Style TargetType="{x:Type TextBox}">
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="AllowDrop" Value="True" />
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CaretBrush" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="SelectionBrush" Value="{StaticResource Tb_SelectionBrush}" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type TextBox}">
+                <Border x:Name="Tb_Border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        SnapsToDevicePixels="True">
+                    <ScrollViewer x:Name="PART_ContentHost"
+                                  Margin="{TemplateBinding Padding}"
+                                  Padding="0"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Focusable="False"
+                                  BorderThickness="0"
+                                  Background="Transparent" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <!-- MouseOver: lighter (Azure mist) border -->
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Tb_Border" Property="BorderBrush" Value="{StaticResource AzureMistBrush}" />
+                    </Trigger>
+                    <!-- Keyboard focus: accent border, 1.5px (wins over hover via ordering) -->
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter TargetName="Tb_Border" Property="BorderBrush" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Tb_Border" Property="BorderThickness" Value="1.5" />
+                    </Trigger>
+                    <!-- Disabled: dim entire control -->
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Tb_Border" Property="Opacity" Value="0.4" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== PasswordBox (implicit) ===================== -->
+<Style TargetType="{x:Type PasswordBox}">
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="AllowDrop" Value="True" />
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CaretBrush" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="SelectionBrush" Value="{StaticResource Tb_SelectionBrush}" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type PasswordBox}">
+                <Border x:Name="Tb_PwdBorder"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        SnapsToDevicePixels="True">
+                    <ScrollViewer x:Name="PART_ContentHost"
+                                  Margin="{TemplateBinding Padding}"
+                                  Padding="0"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                  Focusable="False"
+                                  BorderThickness="0"
+                                  Background="Transparent" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Tb_PwdBorder" Property="BorderBrush" Value="{StaticResource AzureMistBrush}" />
+                    </Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                        <Setter TargetName="Tb_PwdBorder" Property="BorderBrush" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Tb_PwdBorder" Property="BorderThickness" Value="1.5" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Tb_PwdBorder" Property="Opacity" Value="0.4" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+</ResourceDictionary>

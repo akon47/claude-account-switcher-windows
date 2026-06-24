@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Dark control styles (decoupled, stock WPF targets) for the dark theme. -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/ScrollBar.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/Button.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/TextBox.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/CheckRadio.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/ComboBox.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/List.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/EditableTextBlock.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/MenuToolTip.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/Window.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

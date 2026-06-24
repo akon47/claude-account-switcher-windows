@@ -1,0 +1,39 @@
+name: bump-version
+
+# 수동 실행: 버전을 올려 csproj 에 반영하고 커밋 + vX.Y.Z 태그를 만든다.
+# 태그가 푸시되면 release.yml 이 이어서 빌드·릴리스한다.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version, e.g. 0.3.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update csproj <Version> and tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${{ github.event.inputs.version }}"
+          v="${v#v}"
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: $v (expected X.Y.Z)"; exit 1
+          fi
+          if git rev-parse "v$v" >/dev/null 2>&1; then
+            echo "Tag v$v already exists"; exit 1
+          fi
+          sed -i -E "s|<Version>[^<]*</Version>|<Version>${v}</Version>|" Claude-Account-Switcher.csproj
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Claude-Account-Switcher.csproj
+          git commit -m "chore: release v${v}"
+          git tag "v${v}"
+          git push origin HEAD --tags

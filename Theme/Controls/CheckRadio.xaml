@@ -1,0 +1,180 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+<!-- ===================== CheckBox (helper key prefix: Chk_) ===================== -->
+<Style TargetType="{x:Type CheckBox}">
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type CheckBox}">
+                <Border x:Name="Chk_LayoutRoot"
+                        Background="Transparent"
+                        Padding="{TemplateBinding Padding}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border x:Name="Chk_Box"
+                                Grid.Column="0"
+                                Width="16"
+                                Height="16"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <Grid>
+                                <!-- Check glyph (checked) -->
+                                <Path x:Name="Chk_CheckMark"
+                                      Margin="3"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Data="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"
+                                      Fill="{StaticResource WhiteBrush}"
+                                      Opacity="0"
+                                      Stretch="Uniform" />
+                                <!-- Dash glyph (indeterminate) -->
+                                <Rectangle x:Name="Chk_Dash"
+                                           Width="8"
+                                           Height="2"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Fill="{StaticResource WhiteBrush}"
+                                           Opacity="0"
+                                           RadiusX="1"
+                                           RadiusY="1" />
+                            </Grid>
+                        </Border>
+
+                        <ContentPresenter x:Name="Chk_Content"
+                                          Grid.Column="1"
+                                          Margin="6,0,0,0"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Grid>
+                </Border>
+
+                <ControlTemplate.Triggers>
+                    <!-- Checked -->
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter TargetName="Chk_Box" Property="Background" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Chk_Box" Property="BorderBrush" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Chk_CheckMark" Property="Opacity" Value="1" />
+                    </Trigger>
+
+                    <!-- Indeterminate = filled dash -->
+                    <Trigger Property="IsChecked" Value="{x:Null}">
+                        <Setter TargetName="Chk_Box" Property="Background" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Chk_Box" Property="BorderBrush" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Chk_Dash" Property="Opacity" Value="1" />
+                    </Trigger>
+
+                    <!-- Hover -->
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Chk_Box" Property="BorderBrush" Value="{StaticResource AzureMistBrush}" />
+                    </Trigger>
+
+                    <!-- Disabled -->
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Chk_LayoutRoot" Property="Opacity" Value="0.4" />
+                        <Setter Property="Cursor" Value="Arrow" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== RadioButton (helper key prefix: Rdo_) ===================== -->
+<Style TargetType="{x:Type RadioButton}">
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type RadioButton}">
+                <Border x:Name="Rdo_LayoutRoot"
+                        Background="Transparent"
+                        Padding="{TemplateBinding Padding}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0"
+                              Width="16"
+                              Height="16"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center">
+                            <Ellipse x:Name="Rdo_Ring"
+                                     Fill="{TemplateBinding Background}"
+                                     Stroke="{TemplateBinding BorderBrush}"
+                                     StrokeThickness="{TemplateBinding BorderThickness}" />
+                            <Ellipse x:Name="Rdo_Dot"
+                                     Width="6"
+                                     Height="6"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Fill="{StaticResource WhiteBrush}"
+                                     Opacity="0" />
+                        </Grid>
+
+                        <ContentPresenter x:Name="Rdo_Content"
+                                          Grid.Column="1"
+                                          Margin="6,0,0,0"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Grid>
+                </Border>
+
+                <ControlTemplate.Triggers>
+                    <!-- Checked = AzureBrush ring + inner white dot -->
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter TargetName="Rdo_Ring" Property="Stroke" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Rdo_Ring" Property="Fill" Value="{StaticResource AzureBrush}" />
+                        <Setter TargetName="Rdo_Dot" Property="Opacity" Value="1" />
+                    </Trigger>
+
+                    <!-- Hover -->
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Rdo_Ring" Property="Stroke" Value="{StaticResource AzureMistBrush}" />
+                    </Trigger>
+
+                    <!-- Disabled -->
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Rdo_LayoutRoot" Property="Opacity" Value="0.4" />
+                        <Setter Property="Cursor" Value="Arrow" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+</ResourceDictionary>

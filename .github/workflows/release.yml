@@ -1,0 +1,52 @@
+name: release
+
+# vX.Y.Z 태그를 푸시하면 자기완결 설치 파일을 빌드해 GitHub Release 로 올린다.
+# 버전은 태그에서 결정된다(build-installer.ps1 -Version).
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write   # 릴리스 생성 + 자산 업로드
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Build self-contained installer
+        shell: pwsh
+        run: ./Installer/build-installer.ps1 -Version "${{ github.ref_name }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/Claude-Account-Switcher-Setup_v*.exe
+
+  # winget-pkgs 로 매니페스트 갱신 PR 자동 생성.
+  # 같은 워크플로 실행 안에서 돌려야 한다(GITHUB_TOKEN 으로 만든 릴리스는 release 이벤트를
+  # 트리거하지 못하므로 별도 워크플로로는 자동 실행되지 않는다).
+  # 사전 준비(1회): 저장소 변수 PUBLISH_WINGET=true + 시크릿 WINGET_TOKEN(winget-pkgs fork 가능한 PAT).
+  # (secrets 는 job if 에서 못 쓰므로 vars 로 게이트한다.)
+  winget:
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ vars.PUBLISH_WINGET == 'true' }}
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: akon47.ClaudeAccountSwitcher
+          release-tag: ${{ github.ref_name }}
+          installers-regex: 'Setup_v[\d.]+\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}

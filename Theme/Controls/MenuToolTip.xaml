@@ -1,0 +1,343 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+<!-- ============================ Helper geometries ============================ -->
+<Geometry x:Key="Mnu_CheckGlyphGeometry">M0,4.5 L1.5,3 L4,5.5 L8.5,1 L10,2.5 L4,8.5 Z</Geometry>
+<Geometry x:Key="Mnu_ChevronRightGeometry">M0,0 L4,4 L0,8 Z</Geometry>
+<Geometry x:Key="Mnu_BulletGeometry">M3,0 A3,3 0 1 1 2.999,0 Z</Geometry>
+
+<!-- ============================ Shared Popup style ============================ -->
+<Style x:Key="Mnu_PopupStyle" TargetType="{x:Type Popup}">
+    <Setter Property="AllowsTransparency" Value="True" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="PopupAnimation" Value="Fade" />
+    <Setter Property="UseLayoutRounding" Value="True" />
+</Style>
+
+<!-- Reusable submenu popup chrome: CharcoalGray bg, DimGray 1px border, rounded 4, drop shadow.
+     Margin leaves room for the shadow so it isn't clipped by the popup window. -->
+<Style x:Key="Mnu_SubmenuBorderStyle" TargetType="{x:Type Border}">
+    <Setter Property="Background" Value="{StaticResource CharcoalGrayBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="Margin" Value="5" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Effect" Value="{StaticResource DefaultDropShadowEffect}" />
+</Style>
+
+<!-- ============================ ToolTip ============================ -->
+<Style TargetType="{x:Type ToolTip}">
+    <Setter Property="OverridesDefaultStyle" Value="True" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="Background" Value="{StaticResource CharcoalGrayBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="FontFamily" Value="Segoe UI" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="RenderOptions.ClearTypeHint" Value="Enabled" />
+    <Setter Property="HasDropShadow" Value="False" />
+    <Setter Property="ToolTipService.ShowDuration" Value="60000" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ToolTip}">
+                <Border Name="Border"
+                        Margin="5"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        Effect="{StaticResource DefaultDropShadowEffect}"
+                        SnapsToDevicePixels="True">
+                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </Border>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ============================ ContextMenu ============================ -->
+<Style TargetType="{x:Type ContextMenu}">
+    <Setter Property="OverridesDefaultStyle" Value="True" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="UseLayoutRounding" Value="True" />
+    <Setter Property="HasDropShadow" Value="False" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Grid.IsSharedSizeScope" Value="True" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ContextMenu}">
+                <Border Margin="5"
+                        Padding="2"
+                        Background="{StaticResource CharcoalGrayBrush}"
+                        BorderBrush="{StaticResource DimGrayBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        ClipToBounds="True"
+                        SnapsToDevicePixels="True"
+                        Effect="{StaticResource DefaultDropShadowEffect}">
+                    <ScrollViewer CanContentScroll="True"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  FocusVisualStyle="{x:Null}">
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                        SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </ScrollViewer>
+                </Border>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ============================ MenuItem templates ============================ -->
+
+<!-- TopLevelItem: a bare clickable item (used when MenuItem hosted directly, no submenu). -->
+<ControlTemplate x:Key="Mnu_TopLevelItemTemplate" TargetType="{x:Type MenuItem}">
+    <Border x:Name="Border"
+            Padding="{TemplateBinding Padding}"
+            Background="Transparent"
+            CornerRadius="3"
+            SnapsToDevicePixels="True">
+        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+    </Border>
+    <ControlTemplate.Triggers>
+        <Trigger Property="IsHighlighted" Value="True">
+            <Setter TargetName="Border" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+            <Setter Property="Foreground" Value="{StaticResource SageMistBrush}" />
+        </Trigger>
+    </ControlTemplate.Triggers>
+</ControlTemplate>
+
+<!-- SubmenuItem: leaf item inside a popup. Columns: check/glyph | icon | header | gesture | chevron-gap. -->
+<ControlTemplate x:Key="Mnu_SubmenuItemTemplate" TargetType="{x:Type MenuItem}">
+    <Border x:Name="Border"
+            Padding="{TemplateBinding Padding}"
+            Background="Transparent"
+            CornerRadius="3"
+            SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Mnu_CheckColumn" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Mnu_IconColumn" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Check / bullet column -->
+            <Grid Grid.Column="0"
+                  Width="16"
+                  Margin="0,0,4,0"
+                  VerticalAlignment="Center">
+                <Path x:Name="CheckGlyph"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Data="{StaticResource Mnu_CheckGlyphGeometry}"
+                      Fill="{StaticResource AzureMistBrush}"
+                      Visibility="Collapsed" />
+                <Path x:Name="BulletGlyph"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Data="{StaticResource Mnu_BulletGeometry}"
+                      Fill="{StaticResource AzureMistBrush}"
+                      Visibility="Collapsed" />
+            </Grid>
+
+            <!-- Icon column -->
+            <ContentPresenter x:Name="Icon"
+                              Grid.Column="1"
+                              Width="16"
+                              Height="16"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              ContentSource="Icon"
+                              SnapsToDevicePixels="True" />
+
+            <!-- Header -->
+            <ContentPresenter Grid.Column="2"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Center"
+                              ContentSource="Header"
+                              RecognizesAccessKey="True" />
+
+            <!-- Input gesture text -->
+            <TextBlock Grid.Column="3"
+                       Margin="20,0,0,0"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource SageMistBrush}"
+                       Text="{TemplateBinding InputGestureText}" />
+        </Grid>
+    </Border>
+    <ControlTemplate.Triggers>
+        <Trigger Property="Icon" Value="{x:Null}">
+            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+        </Trigger>
+        <Trigger Property="IsChecked" Value="True">
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" />
+            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+        </Trigger>
+        <Trigger Property="IsHighlighted" Value="True">
+            <Setter TargetName="Border" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+            <Setter Property="Foreground" Value="{StaticResource SageMistBrush}" />
+            <Setter TargetName="CheckGlyph" Property="Fill" Value="{StaticResource SageMistBrush}" />
+            <Setter TargetName="BulletGlyph" Property="Fill" Value="{StaticResource SageMistBrush}" />
+        </Trigger>
+    </ControlTemplate.Triggers>
+</ControlTemplate>
+
+<!-- SubmenuHeader: item with a child submenu popup. -->
+<ControlTemplate x:Key="Mnu_SubmenuHeaderTemplate" TargetType="{x:Type MenuItem}">
+    <Border x:Name="Border"
+            Padding="{TemplateBinding Padding}"
+            Background="Transparent"
+            CornerRadius="3"
+            SnapsToDevicePixels="True">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Mnu_CheckColumn" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Mnu_IconColumn" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Check / bullet column -->
+            <Grid Grid.Column="0"
+                  Width="16"
+                  Margin="0,0,4,0"
+                  VerticalAlignment="Center">
+                <Path x:Name="CheckGlyph"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Data="{StaticResource Mnu_CheckGlyphGeometry}"
+                      Fill="{StaticResource AzureMistBrush}"
+                      Visibility="Collapsed" />
+            </Grid>
+
+            <ContentPresenter x:Name="Icon"
+                              Grid.Column="1"
+                              Width="16"
+                              Height="16"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              ContentSource="Icon"
+                              SnapsToDevicePixels="True" />
+
+            <ContentPresenter Grid.Column="2"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Center"
+                              ContentSource="Header"
+                              RecognizesAccessKey="True" />
+
+            <TextBlock Grid.Column="3"
+                       Margin="20,0,0,0"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource SageMistBrush}"
+                       Text="{TemplateBinding InputGestureText}" />
+
+            <Path Grid.Column="4"
+                  Margin="12,0,0,0"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center"
+                  Data="{StaticResource Mnu_ChevronRightGeometry}"
+                  Fill="{StaticResource SageMistBrush}" />
+
+            <!-- Submenu popup -->
+            <Popup x:Name="Popup"
+                   HorizontalOffset="-3"
+                   VerticalOffset="-6"
+                   IsOpen="{TemplateBinding IsSubmenuOpen}"
+                   Placement="Right"
+                   PlacementTarget="{Binding ElementName=Border}"
+                   Style="{StaticResource Mnu_PopupStyle}">
+                <Border Style="{StaticResource Mnu_SubmenuBorderStyle}" ClipToBounds="True">
+                    <ScrollViewer CanContentScroll="True"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto"
+                                  FocusVisualStyle="{x:Null}">
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                        SnapsToDevicePixels="True"
+                                        Grid.IsSharedSizeScope="True" />
+                    </ScrollViewer>
+                </Border>
+            </Popup>
+        </Grid>
+    </Border>
+    <ControlTemplate.Triggers>
+        <Trigger Property="Icon" Value="{x:Null}">
+            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+        </Trigger>
+        <Trigger Property="IsChecked" Value="True">
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible" />
+            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+        </Trigger>
+        <Trigger Property="IsHighlighted" Value="True">
+            <Setter TargetName="Border" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+        </Trigger>
+        <Trigger Property="IsSubmenuOpen" Value="True">
+            <Setter TargetName="Border" Property="Background" Value="{StaticResource DeepAzureBrushOpacity50}" />
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+            <Setter Property="Foreground" Value="{StaticResource SageMistBrush}" />
+            <Setter TargetName="CheckGlyph" Property="Fill" Value="{StaticResource SageMistBrush}" />
+        </Trigger>
+    </ControlTemplate.Triggers>
+</ControlTemplate>
+
+<!-- ============================ MenuItem (implicit) ============================ -->
+<Style TargetType="{x:Type MenuItem}">
+    <Setter Property="OverridesDefaultStyle" Value="True" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="Padding" Value="10,6" />
+    <Style.Triggers>
+        <Trigger Property="Role" Value="TopLevelItem">
+            <Setter Property="Template" Value="{StaticResource Mnu_TopLevelItemTemplate}" />
+        </Trigger>
+        <Trigger Property="Role" Value="TopLevelHeader">
+            <Setter Property="Template" Value="{StaticResource Mnu_SubmenuHeaderTemplate}" />
+        </Trigger>
+        <Trigger Property="Role" Value="SubmenuItem">
+            <Setter Property="Template" Value="{StaticResource Mnu_SubmenuItemTemplate}" />
+        </Trigger>
+        <Trigger Property="Role" Value="SubmenuHeader">
+            <Setter Property="Template" Value="{StaticResource Mnu_SubmenuHeaderTemplate}" />
+        </Trigger>
+    </Style.Triggers>
+</Style>
+
+<!-- ============================ Separator (implicit) ============================ -->
+<Style TargetType="{x:Type Separator}">
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Margin" Value="8,4" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type Separator}">
+                <Border Height="1"
+                        Background="{StaticResource DimGrayBrushOpacity50}"
+                        SnapsToDevicePixels="True" />
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+</ResourceDictionary>

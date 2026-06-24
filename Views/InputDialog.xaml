@@ -1,0 +1,23 @@
+<ctrl:ThemedWindow x:Class="ClaudeAccountSwitcher.Views.InputDialog"
+                   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                   xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
+                   xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+                   Title="{Binding Title}"
+                   Width="430" SizeToContent="Height"
+                   ResizeMode="NoResize"
+                   ShowInTaskbar="False"
+                   WindowStartupLocation="CenterOwner"
+                   Style="{DynamicResource ThemedWindowStyle}">
+    <StackPanel Margin="20">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,10"
+                   Foreground="{DynamicResource WhiteBrush}" />
+        <TextBox x:Name="InputBox" FontSize="14"
+                 Text="{Binding Input, UpdateSourceTrigger=PropertyChanged}" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="{loc:Loc DlgOk}" Width="84" Height="30" IsDefault="True" Click="Ok_Click"
+                    Margin="0,0,8,0" Style="{DynamicResource AccentButtonStyle}" />
+            <Button Content="{loc:Loc DlgCancel}" Width="84" Height="30" IsCancel="True" />
+        </StackPanel>
+    </StackPanel>
+</ctrl:ThemedWindow>

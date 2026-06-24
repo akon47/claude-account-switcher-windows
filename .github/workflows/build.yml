@@ -1,0 +1,21 @@
+name: build
+
+# main 푸시 / PR 마다 컴파일 검증.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build (Release)
+        run: dotnet build Claude-Account-Switcher.csproj -c Release --nologo

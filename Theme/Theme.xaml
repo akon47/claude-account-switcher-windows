@@ -1,0 +1,12 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Dark theme entry point. Merge this single dictionary at App level.
+        Order matters: Colors -> Brushes (via Brushes' own merge) -> Effects -> control styles.
+    -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

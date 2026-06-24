@@ -1,0 +1,296 @@
+<ctrl:ThemedWindow
+    x:Class="ClaudeAccountSwitcher.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
+    xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+    mc:Ignorable="d"
+    Title="{loc:Loc WinMainTitle}"
+    Width="760"
+    Height="500"
+    MinWidth="600"
+    MinHeight="380"
+    ResizeMode="CanResize"
+    WindowStartupLocation="CenterScreen"
+    Style="{DynamicResource ThemedWindowStyle}"
+    >
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: title (left) + utility icon toolbar (right) -->
+        <Grid
+            Grid.Row="0"
+            Margin="0 0 0 12"
+            >
+            <StackPanel HorizontalAlignment="Left">
+                <TextBlock
+                    Text="{loc:Loc MainTitle}"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="{DynamicResource WhiteBrush}"
+                    />
+                <TextBlock
+                    Text="{loc:Loc MainSubtitle}"
+                    Foreground="{DynamicResource SageMistBrush}"
+                    Margin="0 4 0 0"
+                    />
+            </StackPanel>
+            <StackPanel
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Orientation="Horizontal"
+                >
+                <Button
+                    Style="{DynamicResource IconButtonStyle}"
+                    Content="&#xE72C;"
+                    ToolTip="{loc:Loc TipRefresh}"
+                    Command="{Binding RefreshCommand}"
+                    />
+                <Button
+                    Style="{DynamicResource IconButtonStyle}"
+                    Content="&#xE713;"
+                    ToolTip="{loc:Loc TipSettings}"
+                    Margin="4 0 0 0"
+                    Command="{Binding SettingsCommand}"
+                    />
+            </StackPanel>
+        </Grid>
+
+        <Border
+            Grid.Row="1"
+            Background="{DynamicResource ControlBackgroundBrush}"
+            BorderBrush="{DynamicResource CharcoalAshBrush}"
+            BorderThickness="1"
+            >
+            <ListView
+                x:Name="ProfileList"
+                BorderThickness="0"
+                Background="Transparent"
+                ItemsSource="{Binding Profiles}"
+                SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                MouseDoubleClick="ProfileList_DoubleClick"
+                >
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn
+                            Header="{loc:Loc ColName}"
+                            Width="150"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ctrl:EditableTextBlock
+                                        Text="{Binding EditName, Mode=TwoWay}"
+                                        AcceptCommand="{Binding DataContext.RenameProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                        AcceptCommandParameter="{Binding}"
+                                        />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn
+                            Header="{loc:Loc ColAccount}"
+                            Width="200"
+                            DisplayMemberBinding="{Binding Email}"
+                            />
+                        <!-- Plan: 구독 종류별 색 뱃지 -->
+                        <GridViewColumn
+                            Header="{loc:Loc ColPlan}"
+                            Width="104"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border
+                                        CornerRadius="9"
+                                        Padding="9 2"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        SnapsToDevicePixels="True"
+                                        >
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="Transparent" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Pro">
+                                                        <Setter Property="Background" Value="{DynamicResource AzureBrushOpacity20}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Max">
+                                                        <Setter Property="Background" Value="{DynamicResource VioletBrushOpacity20}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Team">
+                                                        <Setter Property="Background" Value="{DynamicResource EmeraldBrushOpacity20}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Enterprise">
+                                                        <Setter Property="Background" Value="{DynamicResource AmberBrushOpacity20}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Free">
+                                                        <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Other">
+                                                        <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock
+                                            Text="{Binding PlanLabel}"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            >
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Pro">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AzureMistBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Max">
+                                                            <Setter Property="Foreground" Value="{DynamicResource VioletBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Team">
+                                                            <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Enterprise">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <!-- Session: 남은 한도에 따라 녹색→주황→버밀리온 -->
+                        <GridViewColumn
+                            Header="{loc:Loc ColSession}"
+                            Width="104"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock
+                                        Text="{Binding SessionRemaining}"
+                                        FontWeight="SemiBold"
+                                        VerticalAlignment="Center"
+                                        >
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="High">
+                                                        <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="Medium">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="Low">
+                                                        <Setter Property="Foreground" Value="{DynamicResource VermilionBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <!-- Status: 상태 표시등(활성=녹색 원) + 텍스트 -->
+                        <GridViewColumn
+                            Header="{loc:Loc ColStatus}"
+                            Width="110"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Ellipse
+                                            Width="9"
+                                            Height="9"
+                                            VerticalAlignment="Center"
+                                            Margin="0 0 7 0"
+                                            >
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="{DynamicResource SageMistBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding StatusKind}" Value="Active">
+                                                            <Setter Property="Fill" Value="{DynamicResource EmeraldBrush}" />
+                                                            <Setter Property="Effect">
+                                                                <Setter.Value>
+                                                                    <DropShadowEffect Color="#4CAF50" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StatusKind}" Value="SignedIn">
+                                                            <Setter Property="Fill" Value="{DynamicResource AzureMistBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StatusKind}" Value="NeedLogin">
+                                                            <Setter Property="Fill" Value="{DynamicResource VermilionBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn
+                            Header=""
+                            Width="44"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button
+                                        Style="{DynamicResource DeleteRowButtonStyle}"
+                                        Content="&#xE711;"
+                                        ToolTip="{loc:Loc TipDelete}"
+                                        HorizontalAlignment="Center"
+                                        Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                        CommandParameter="{Binding}"
+                                        />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Border>
+
+        <!-- Primary actions (right-aligned; wraps cleanly with no overlapping left button) -->
+        <WrapPanel
+            Grid.Row="2"
+            Margin="0 12 0 0"
+            HorizontalAlignment="Right"
+            >
+            <Button
+                Content="{loc:Loc BtnCapture}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding CaptureCommand}"
+                />
+            <Button
+                Content="{loc:Loc BtnAdd}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding AddNewCommand}"
+                />
+            <Button
+                Content="{loc:Loc BtnSwitch}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding SwitchCommand}"
+                Style="{DynamicResource AccentButtonStyle}"
+                />
+            <Button
+                Content="{loc:Loc BtnLaunch}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding LaunchCommand}"
+                />
+        </WrapPanel>
+    </Grid>
+</ctrl:ThemedWindow>

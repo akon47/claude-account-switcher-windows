@@ -1,0 +1,121 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:popt="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Colors.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <SolidColorBrush x:Key="WindowForegroundBrush" popt:Freeze="True" Color="{StaticResource WindowForegroundColor}" />
+    <SolidColorBrush x:Key="WindowBackgroundBrush" popt:Freeze="True" Color="{StaticResource WindowBackgroundColor}" />
+    <SolidColorBrush x:Key="ControlBackgroundBrush" popt:Freeze="True" Color="{StaticResource ControlBackgroundColor}" />
+    <SolidColorBrush x:Key="ButtonMouseOverBorderBackgroundBrush" popt:Freeze="True" Opacity="0" Color="{StaticResource ButtonMouseOverBorderBackgroundColor}" />
+
+    <SolidColorBrush x:Key="CharcoalGrayBrush" popt:Freeze="True" Color="{StaticResource CharcoalGrayColor}" />
+    <SolidColorBrush x:Key="CharcoalGrayBrushOpacity10" popt:Freeze="True" Color="{StaticResource CharcoalGrayColorOpacity10}" />
+    <SolidColorBrush x:Key="CharcoalGrayBrushOpacity20" popt:Freeze="True" Color="{StaticResource CharcoalGrayColorOpacity20}" />
+    <SolidColorBrush x:Key="CharcoalGrayBrushOpacity30" popt:Freeze="True" Color="{StaticResource CharcoalGrayColorOpacity30}" />
+    <SolidColorBrush x:Key="CharcoalGrayBrushOpacity40" popt:Freeze="True" Color="{StaticResource CharcoalGrayColorOpacity40}" />
+    <SolidColorBrush x:Key="CharcoalGrayBrushOpacity50" popt:Freeze="True" Color="{StaticResource CharcoalGrayColorOpacity50}" />
+
+    <SolidColorBrush x:Key="CharcoalAshBrush" popt:Freeze="True" Color="{StaticResource CharcoalAshColor}" />
+    <SolidColorBrush x:Key="CharcoalAshBrushOpacity10" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity10}" />
+    <SolidColorBrush x:Key="CharcoalAshBrushOpacity20" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity20}" />
+    <SolidColorBrush x:Key="CharcoalAshBrushOpacity30" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity30}" />
+    <SolidColorBrush x:Key="CharcoalAshBrushOpacity40" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity40}" />
+    <SolidColorBrush x:Key="CharcoalAshBrushOpacity50" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity50}" />
+
+    <SolidColorBrush x:Key="DimGrayBrush" popt:Freeze="True" Color="{StaticResource DimGrayColor}" />
+    <SolidColorBrush x:Key="DimGrayBrushOpacity10" popt:Freeze="True" Color="{StaticResource DimGrayColorOpacity10}" />
+    <SolidColorBrush x:Key="DimGrayBrushOpacity20" popt:Freeze="True" Color="{StaticResource DimGrayColorOpacity20}" />
+    <SolidColorBrush x:Key="DimGrayBrushOpacity30" popt:Freeze="True" Color="{StaticResource DimGrayColorOpacity30}" />
+    <SolidColorBrush x:Key="DimGrayBrushOpacity40" popt:Freeze="True" Color="{StaticResource DimGrayColorOpacity40}" />
+    <SolidColorBrush x:Key="DimGrayBrushOpacity50" popt:Freeze="True" Color="{StaticResource DimGrayColorOpacity50}" />
+
+    <SolidColorBrush x:Key="AzureBrush" popt:Freeze="True" Color="{StaticResource AzureColor}" />
+    <SolidColorBrush x:Key="AzureBrushOpacity10" popt:Freeze="True" Color="{StaticResource AzureColorOpacity10}" />
+    <SolidColorBrush x:Key="AzureBrushOpacity20" popt:Freeze="True" Color="{StaticResource AzureColorOpacity20}" />
+    <SolidColorBrush x:Key="AzureBrushOpacity30" popt:Freeze="True" Color="{StaticResource AzureColorOpacity30}" />
+    <SolidColorBrush x:Key="AzureBrushOpacity40" popt:Freeze="True" Color="{StaticResource AzureColorOpacity40}" />
+    <SolidColorBrush x:Key="AzureBrushOpacity50" popt:Freeze="True" Color="{StaticResource AzureColorOpacity50}" />
+
+    <SolidColorBrush x:Key="DeepAzureBrush" popt:Freeze="True" Color="{StaticResource DeepAzureColor}" />
+    <SolidColorBrush x:Key="DeepAzureBrushOpacity10" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity10}" />
+    <SolidColorBrush x:Key="DeepAzureBrushOpacity20" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity20}" />
+    <SolidColorBrush x:Key="DeepAzureBrushOpacity30" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity30}" />
+    <SolidColorBrush x:Key="DeepAzureBrushOpacity40" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity40}" />
+    <SolidColorBrush x:Key="DeepAzureBrushOpacity50" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity50}" />
+
+    <SolidColorBrush x:Key="AzureMistBrush" popt:Freeze="True" Color="{StaticResource AzureMistColor}" />
+    <SolidColorBrush x:Key="AzureMistBrushOpacity10" popt:Freeze="True" Color="{StaticResource AzureMistColorOpacity10}" />
+    <SolidColorBrush x:Key="AzureMistBrushOpacity20" popt:Freeze="True" Color="{StaticResource AzureMistColorOpacity20}" />
+    <SolidColorBrush x:Key="AzureMistBrushOpacity30" popt:Freeze="True" Color="{StaticResource AzureMistColorOpacity30}" />
+    <SolidColorBrush x:Key="AzureMistBrushOpacity40" popt:Freeze="True" Color="{StaticResource AzureMistColorOpacity40}" />
+    <SolidColorBrush x:Key="AzureMistBrushOpacity50" popt:Freeze="True" Color="{StaticResource AzureMistColorOpacity50}" />
+
+    <SolidColorBrush x:Key="MistWhiteBrush" popt:Freeze="True" Color="{StaticResource MistWhiteColor}" />
+    <SolidColorBrush x:Key="MistWhiteBrushOpacity10" popt:Freeze="True" Color="{StaticResource MistWhiteColorOpacity10}" />
+    <SolidColorBrush x:Key="MistWhiteBrushOpacity20" popt:Freeze="True" Color="{StaticResource MistWhiteColorOpacity20}" />
+    <SolidColorBrush x:Key="MistWhiteBrushOpacity30" popt:Freeze="True" Color="{StaticResource MistWhiteColorOpacity30}" />
+    <SolidColorBrush x:Key="MistWhiteBrushOpacity40" popt:Freeze="True" Color="{StaticResource MistWhiteColorOpacity40}" />
+    <SolidColorBrush x:Key="MistWhiteBrushOpacity50" popt:Freeze="True" Color="{StaticResource MistWhiteColorOpacity50}" />
+
+    <SolidColorBrush x:Key="SageMistBrush" popt:Freeze="True" Color="{StaticResource SageMistColor}" />
+    <SolidColorBrush x:Key="SageMistBrushOpacity10" popt:Freeze="True" Color="{StaticResource SageMistColorOpacity10}" />
+    <SolidColorBrush x:Key="SageMistBrushOpacity20" popt:Freeze="True" Color="{StaticResource SageMistColorOpacity20}" />
+    <SolidColorBrush x:Key="SageMistBrushOpacity30" popt:Freeze="True" Color="{StaticResource SageMistColorOpacity30}" />
+    <SolidColorBrush x:Key="SageMistBrushOpacity40" popt:Freeze="True" Color="{StaticResource SageMistColorOpacity40}" />
+    <SolidColorBrush x:Key="SageMistBrushOpacity50" popt:Freeze="True" Color="{StaticResource SageMistColorOpacity50}" />
+
+    <SolidColorBrush x:Key="SoftAshBrush" popt:Freeze="True" Color="{StaticResource SoftAshColor}" />
+    <SolidColorBrush x:Key="WhiteBrush" popt:Freeze="True" Color="{StaticResource WhiteColor}" />
+
+    <SolidColorBrush x:Key="BlackBrush" popt:Freeze="True" Color="{StaticResource BlackColor}" />
+    <SolidColorBrush x:Key="BlackBrushOpacity10" popt:Freeze="True" Color="{StaticResource BlackColorOpacity10}" />
+    <SolidColorBrush x:Key="BlackBrushOpacity20" popt:Freeze="True" Color="{StaticResource BlackColorOpacity20}" />
+    <SolidColorBrush x:Key="BlackBrushOpacity30" popt:Freeze="True" Color="{StaticResource BlackColorOpacity30}" />
+    <SolidColorBrush x:Key="BlackBrushOpacity40" popt:Freeze="True" Color="{StaticResource BlackColorOpacity40}" />
+    <SolidColorBrush x:Key="BlackBrushOpacity50" popt:Freeze="True" Color="{StaticResource BlackColorOpacity50}" />
+
+    <SolidColorBrush x:Key="VermilionBrush" popt:Freeze="True" Color="{StaticResource VermilionColor}" />
+    <SolidColorBrush x:Key="VermilionBrushOpacity10" popt:Freeze="True" Color="{StaticResource VermilionColorOpacity10}" />
+    <SolidColorBrush x:Key="VermilionBrushOpacity20" popt:Freeze="True" Color="{StaticResource VermilionColorOpacity20}" />
+    <SolidColorBrush x:Key="VermilionBrushOpacity30" popt:Freeze="True" Color="{StaticResource VermilionColorOpacity30}" />
+    <SolidColorBrush x:Key="VermilionBrushOpacity40" popt:Freeze="True" Color="{StaticResource VermilionColorOpacity40}" />
+    <SolidColorBrush x:Key="VermilionBrushOpacity50" popt:Freeze="True" Color="{StaticResource VermilionColorOpacity50}" />
+
+    <SolidColorBrush x:Key="EmeraldBrush" popt:Freeze="True" Color="{StaticResource EmeraldColor}" />
+    <SolidColorBrush x:Key="EmeraldBrushOpacity10" popt:Freeze="True" Color="{StaticResource EmeraldColorOpacity10}" />
+    <SolidColorBrush x:Key="EmeraldBrushOpacity20" popt:Freeze="True" Color="{StaticResource EmeraldColorOpacity20}" />
+    <SolidColorBrush x:Key="EmeraldBrushOpacity30" popt:Freeze="True" Color="{StaticResource EmeraldColorOpacity30}" />
+    <SolidColorBrush x:Key="EmeraldBrushOpacity40" popt:Freeze="True" Color="{StaticResource EmeraldColorOpacity40}" />
+    <SolidColorBrush x:Key="EmeraldBrushOpacity50" popt:Freeze="True" Color="{StaticResource EmeraldColorOpacity50}" />
+
+    <SolidColorBrush x:Key="AmberBrush" popt:Freeze="True" Color="{StaticResource AmberColor}" />
+    <SolidColorBrush x:Key="AmberBrushOpacity10" popt:Freeze="True" Color="{StaticResource AmberColorOpacity10}" />
+    <SolidColorBrush x:Key="AmberBrushOpacity20" popt:Freeze="True" Color="{StaticResource AmberColorOpacity20}" />
+    <SolidColorBrush x:Key="AmberBrushOpacity30" popt:Freeze="True" Color="{StaticResource AmberColorOpacity30}" />
+    <SolidColorBrush x:Key="AmberBrushOpacity40" popt:Freeze="True" Color="{StaticResource AmberColorOpacity40}" />
+    <SolidColorBrush x:Key="AmberBrushOpacity50" popt:Freeze="True" Color="{StaticResource AmberColorOpacity50}" />
+
+    <SolidColorBrush x:Key="CrimsonBrush" popt:Freeze="True" Color="{StaticResource CrimsonColor}" />
+
+    <SolidColorBrush x:Key="VioletBrush" popt:Freeze="True" Color="{StaticResource VioletColor}" />
+    <SolidColorBrush x:Key="VioletBrushOpacity10" popt:Freeze="True" Color="{StaticResource VioletColorOpacity10}" />
+    <SolidColorBrush x:Key="VioletBrushOpacity20" popt:Freeze="True" Color="{StaticResource VioletColorOpacity20}" />
+    <SolidColorBrush x:Key="VioletBrushOpacity30" popt:Freeze="True" Color="{StaticResource VioletColorOpacity30}" />
+    <SolidColorBrush x:Key="VioletBrushOpacity40" popt:Freeze="True" Color="{StaticResource VioletColorOpacity40}" />
+    <SolidColorBrush x:Key="VioletBrushOpacity50" popt:Freeze="True" Color="{StaticResource VioletColorOpacity50}" />
+
+    <!-- DataGrid semantic brushes -->
+    <SolidColorBrush x:Key="DataGridBackgroundBrush" popt:Freeze="True" Color="{StaticResource ControlBackgroundColor}" />
+    <SolidColorBrush x:Key="DataGridForegroundBrush" popt:Freeze="True" Color="{StaticResource WhiteColor}" />
+    <SolidColorBrush x:Key="DataGridBorderBrush" popt:Freeze="True" Color="{StaticResource DimGrayColor}" />
+    <SolidColorBrush x:Key="DataGridHorizontalLineBrush" popt:Freeze="True" Color="{StaticResource CharcoalAshColor}" />
+    <SolidColorBrush x:Key="DataGridMergeLineBrush" popt:Freeze="True" Opacity=".5" Color="{StaticResource CharcoalAshColor}" />
+    <SolidColorBrush x:Key="DataGridHeaderBackgroundBrush" popt:Freeze="True" Color="{StaticResource CharcoalAshColorOpacity50}" />
+    <SolidColorBrush x:Key="DataGridHeaderForegroundBrush" popt:Freeze="True" Color="{StaticResource WhiteColor}" />
+    <SolidColorBrush x:Key="DataGridRowMouseOverBackgroundBrush" popt:Freeze="True" Color="{StaticResource DeepAzureColorOpacity50}" />
+
+    <SolidColorBrush x:Key="GridPatternLightBrush" popt:Freeze="True" Color="{StaticResource GridPatternLightColor}" />
+    <SolidColorBrush x:Key="GridPatternDarkBrush" popt:Freeze="True" Color="{StaticResource GridPatternDarkColor}" />
+</ResourceDictionary>

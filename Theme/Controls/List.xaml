@@ -1,0 +1,310 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+<!-- ============================================================
+     ListBox / ListView / ListBoxItem / ListViewItem / GridViewColumnHeader
+     Implicit (stock) styles matching the dark list + datagrid header look.
+     Helper key prefix: Lst_
+     ============================================================ -->
+
+<!-- Shared ScrollViewer template used by ListBox/ListView (stock ScrollViewer) -->
+<ControlTemplate x:Key="Lst_ScrollViewerTemplate" TargetType="{x:Type ScrollViewer}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                Grid.Row="0"
+                                Grid.Column="0"
+                                Margin="{TemplateBinding Padding}"
+                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+        <ScrollBar x:Name="PART_VerticalScrollBar"
+                   Grid.Row="0"
+                   Grid.Column="1"
+                   Maximum="{TemplateBinding ScrollableHeight}"
+                   Orientation="Vertical"
+                   ViewportSize="{TemplateBinding ViewportHeight}"
+                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" />
+
+        <ScrollBar x:Name="PART_HorizontalScrollBar"
+                   Grid.Row="1"
+                   Grid.Column="0"
+                   Maximum="{TemplateBinding ScrollableWidth}"
+                   Orientation="Horizontal"
+                   ViewportSize="{TemplateBinding ViewportWidth}"
+                   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"
+                   Value="{Binding HorizontalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}" />
+    </Grid>
+</ControlTemplate>
+
+<!-- ===================== ListBoxItem ===================== -->
+<Style TargetType="{x:Type ListBoxItem}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                <Border x:Name="Lst_Bd"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        SnapsToDevicePixels="True">
+                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource DeepAzureBrushOpacity50}" />
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource AzureBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+                    </Trigger>
+                    <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="IsSelected" Value="True" />
+                            <Condition Property="Selector.IsSelectionActive" Value="False" />
+                        </MultiTrigger.Conditions>
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+                    </MultiTrigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Lst_Bd" Property="Opacity" Value="0.45" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== ListViewItem ===================== -->
+<Style TargetType="{x:Type ListViewItem}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="Margin" Value="0,1" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListViewItem}">
+                <Border x:Name="Lst_Bd"
+                        Padding="{TemplateBinding Padding}"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="0"
+                        SnapsToDevicePixels="True">
+                    <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                          Columns="{TemplateBinding GridView.ColumnCollection}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource DeepAzureBrushOpacity50}" />
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource AzureBrush}" />
+                        <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+                    </Trigger>
+                    <MultiTrigger>
+                        <MultiTrigger.Conditions>
+                            <Condition Property="IsSelected" Value="True" />
+                            <Condition Property="Selector.IsSelectionActive" Value="False" />
+                        </MultiTrigger.Conditions>
+                        <Setter TargetName="Lst_Bd" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+                    </MultiTrigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Lst_Bd" Property="Opacity" Value="0.45" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== ListBox ===================== -->
+<Style TargetType="{x:Type ListBox}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+    <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+    <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListBox}">
+                <Border x:Name="Lst_Root"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        SnapsToDevicePixels="True">
+                    <ScrollViewer Padding="{TemplateBinding Padding}"
+                                  Focusable="False"
+                                  Template="{StaticResource Lst_ScrollViewerTemplate}">
+                        <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </ScrollViewer>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Lst_Root" Property="Opacity" Value="0.5" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== ListView ===================== -->
+<Style TargetType="{x:Type ListView}">
+    <Setter Property="Background" Value="{StaticResource ControlBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+    <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+    <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type ListView}">
+                <Border x:Name="Lst_Root"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4"
+                        SnapsToDevicePixels="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Pinned column header row (GridView). ColumnCollection is set on the
+                             item containers, not the ListView, so bind to View.Columns instead.
+                             Margin matches ListViewItem's horizontal Padding (8) so header columns
+                             line up with the data cells. -->
+                        <GridViewHeaderRowPresenter x:Name="Lst_HeaderRow"
+                                                    Grid.Row="0"
+                                                    Margin="8,0,8,0"
+                                                    Columns="{Binding View.Columns, RelativeSource={RelativeSource TemplatedParent}}"
+                                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+
+                        <ScrollViewer Grid.Row="1"
+                                      Padding="{TemplateBinding Padding}"
+                                      Focusable="False"
+                                      Template="{StaticResource Lst_ScrollViewerTemplate}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Lst_Root" Property="Opacity" Value="0.5" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+
+<!-- ===================== GridViewColumnHeader ===================== -->
+<!-- Dark VS-style header dark VS-style column header:
+     CharcoalAshBrushOpacity50 bg, WhiteBrush fg, ~8,6 padding, thin DimGray separators, no 3D chrome. -->
+<Style TargetType="{x:Type GridViewColumnHeader}">
+    <Setter Property="Background" Value="{StaticResource CharcoalAshBrushOpacity50}" />
+    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource DimGrayBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,1,1" />
+    <Setter Property="Padding" Value="8,6" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="Template">
+        <Setter.Value>
+            <ControlTemplate TargetType="{x:Type GridViewColumnHeader}">
+                <Grid SnapsToDevicePixels="True">
+                    <Border x:Name="Lst_HeaderBd"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="Lst_HeaderContent"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </Border>
+                    <Thumb x:Name="PART_HeaderGripper"
+                           HorizontalAlignment="Right"
+                           Margin="0,0,-4,0"
+                           Width="8"
+                           Background="Transparent"
+                           Cursor="SizeWE">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                <Border Background="{TemplateBinding Background}" />
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+                </Grid>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Lst_HeaderBd" Property="Background" Value="{StaticResource DeepAzureBrushOpacity50}" />
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter TargetName="Lst_HeaderBd" Property="Background" Value="{StaticResource AzureBrushOpacity30}" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                        <Setter TargetName="Lst_HeaderBd" Property="Opacity" Value="0.5" />
+                    </Trigger>
+                    <Trigger Property="Role" Value="Floating">
+                        <Setter Property="Opacity" Value="0.7" />
+                        <Setter TargetName="PART_HeaderGripper" Property="Visibility" Value="Collapsed" />
+                    </Trigger>
+                    <Trigger Property="Role" Value="Padding">
+                        <Setter TargetName="PART_HeaderGripper" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="Lst_HeaderBd" Property="BorderThickness" Value="0,0,0,1" />
+                    </Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value>
+    </Setter>
+</Style>
+</ResourceDictionary>
