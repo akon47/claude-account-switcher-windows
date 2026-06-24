@@ -8,7 +8,10 @@
 login accounts. Each account is kept as an isolated *profile*; switch the active account with one
 click, or run several accounts side by side in parallel.
 
-![status](https://img.shields.io/badge/status-WIP-orange) ![.NET](https://img.shields.io/badge/.NET%209-WPF-512BD4)
+[![Release](https://img.shields.io/github/v/release/akon47/claude-account-switcher-windows?logo=github)](https://github.com/akon47/claude-account-switcher-windows/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/akon47/claude-account-switcher-windows/total?color=brightgreen)](https://github.com/akon47/claude-account-switcher-windows/releases)
+![.NET](https://img.shields.io/badge/.NET%209-WPF-512BD4)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## What it does
 
@@ -49,11 +52,12 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
 
 ## Install
 
-### winget (once published)
+### winget
 
 ```powershell
 winget install akon47.ClaudeAccountSwitcher
 ```
+*A submission to [winget-pkgs](https://github.com/microsoft/winget-pkgs) is in review — this works once it's merged.*
 
 ### Installer
 
