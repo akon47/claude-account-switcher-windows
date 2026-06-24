@@ -15,7 +15,6 @@ ReleaseDate: 2026-06-24
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/akon47/claude-account-switcher-windows/releases/download/v0.2.0/Claude-Account-Switcher-Setup_v0.2.0.exe
-    # 릴리스 시 채울 것: (Get-FileHash Claude-Account-Switcher-Setup.exe -Algorithm SHA256).Hash
-    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+    InstallerSha256: 8D7FE662B85F6000A1CCDFCD2382AEEA916ED6D7903A9ADB43D4803DFC3BF359
 ManifestType: installer
 ManifestVersion: 1.6.0
