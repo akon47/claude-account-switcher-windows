@@ -96,14 +96,17 @@ public partial class MainViewModel : ObservableObject
         if (gen == _usageGen) UsageUpdated?.Invoke();
     }
 
-    /// <summary>드래그로 행 순서를 바꾼다. dragged 를 target 위치로 옮긴다(target 이 null 이면 맨 뒤로).</summary>
-    public void MoveProfile(ProfileItemViewModel? dragged, ProfileItemViewModel? target)
+    /// <summary>드래그로 행 순서를 바꾼다. dragged 를 insertIndex(삽입선 위치, 0~Count) 앞에 끼워 넣는다.</summary>
+    public void MoveProfile(ProfileItemViewModel? dragged, int insertIndex)
     {
         if (dragged is null) return;
         int from = Profiles.IndexOf(dragged);
         if (from < 0) return;
-        int to = target is null ? Profiles.Count - 1 : Profiles.IndexOf(target);
-        if (to < 0 || from == to) return;
+
+        insertIndex = Math.Clamp(insertIndex, 0, Profiles.Count);
+        // dragged 를 먼저 빼면 그 뒤 항목들이 한 칸 당겨지므로 목적 인덱스를 보정한다.
+        int to = from < insertIndex ? insertIndex - 1 : insertIndex;
+        if (to == from || to < 0 || to >= Profiles.Count) return;
 
         Profiles.Move(from, to);
         _store.Reorder(Profiles.Select(p => p.Profile.Id)); // 저장 순서도 표시 순서에 맞춰 영속

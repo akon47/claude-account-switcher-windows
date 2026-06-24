@@ -90,6 +90,7 @@
                 PreviewMouseLeftButtonDown="ProfileList_PreviewMouseLeftButtonDown"
                 PreviewMouseMove="ProfileList_PreviewMouseMove"
                 DragOver="ProfileList_DragOver"
+                DragLeave="ProfileList_DragLeave"
                 Drop="ProfileList_Drop"
                 >
                 <ListView.View>

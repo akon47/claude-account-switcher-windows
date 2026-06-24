@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using ClaudeAccountSwitcher.Controls;
@@ -13,6 +14,7 @@ public partial class MainWindow : ThemedWindow
     // 행 드래그로 순서 변경: 시작 지점과 드래그 중인 행을 기억해 둔다.
     private Point _dragStart;
     private ProfileItemViewModel? _dragItem;
+    private InsertionAdorner? _insertionAdorner; // 삽입 위치 표시선
 
     public MainWindow(MainViewModel vm)
     {
@@ -61,25 +63,79 @@ public partial class MainWindow : ThemedWindow
         var dragged = _dragItem;
         _dragItem = null; // DoDragDrop 은 드롭까지 블로킹되므로 먼저 비운다.
         DragDrop.DoDragDrop(ProfileList, dragged, DragDropEffects.Move);
+        RemoveAdorner(); // 드롭/취소 후 잔여 표시선 정리
     }
 
     private void ProfileList_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(typeof(ProfileItemViewModel))
-            ? DragDropEffects.Move : DragDropEffects.None;
+        if (!e.Data.GetDataPresent(typeof(ProfileItemViewModel)))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+        e.Effects = DragDropEffects.Move;
         e.Handled = true;
+
+        if (RowUnder(e.OriginalSource) is ListViewItem item)
+            ShowAdorner(item, above: e.GetPosition(item).Y < item.ActualHeight / 2);
+        else if (LastRow() is ListViewItem last)
+            ShowAdorner(last, above: false); // 빈 영역 위 → 마지막 행 아래
+        else
+            RemoveAdorner();
+    }
+
+    private void ProfileList_DragLeave(object sender, DragEventArgs e)
+    {
+        var p = e.GetPosition(ProfileList);
+        if (p.X < 0 || p.Y < 0 || p.X > ProfileList.ActualWidth || p.Y > ProfileList.ActualHeight)
+            RemoveAdorner();
     }
 
     private void ProfileList_Drop(object sender, DragEventArgs e)
     {
+        RemoveAdorner();
         if (e.Data.GetData(typeof(ProfileItemViewModel)) is not ProfileItemViewModel dragged) return;
 
-        ProfileItemViewModel? target = null;
-        if (ItemsControl.ContainerFromElement(ProfileList, e.OriginalSource as DependencyObject) is ListViewItem item)
-            target = ProfileList.ItemContainerGenerator.ItemFromContainer(item) as ProfileItemViewModel;
+        int insertIndex = ProfileList.Items.Count; // 기본: 맨 뒤
+        if (RowUnder(e.OriginalSource) is ListViewItem item)
+        {
+            int t = ProfileList.ItemContainerGenerator.IndexFromContainer(item);
+            bool below = e.GetPosition(item).Y >= item.ActualHeight / 2;
+            insertIndex = below ? t + 1 : t;
+        }
 
-        (DataContext as MainViewModel)?.MoveProfile(dragged, target);
+        (DataContext as MainViewModel)?.MoveProfile(dragged, insertIndex);
         e.Handled = true;
+    }
+
+    private ListViewItem? RowUnder(object? originalSource) =>
+        ItemsControl.ContainerFromElement(ProfileList, originalSource as DependencyObject) as ListViewItem;
+
+    private ListViewItem? LastRow() =>
+        ProfileList.Items.Count == 0
+            ? null
+            : ProfileList.ItemContainerGenerator.ContainerFromIndex(ProfileList.Items.Count - 1) as ListViewItem;
+
+    private void ShowAdorner(ListViewItem item, bool above)
+    {
+        if (_insertionAdorner is not null
+            && ReferenceEquals(_insertionAdorner.AdornedElement, item)
+            && _insertionAdorner.IsAbove == above)
+            return; // 이미 같은 위치면 그대로 둔다(깜빡임 방지)
+
+        RemoveAdorner();
+        var layer = AdornerLayer.GetAdornerLayer(item);
+        if (layer is null) return;
+        _insertionAdorner = new InsertionAdorner(item, above);
+        layer.Add(_insertionAdorner);
+    }
+
+    private void RemoveAdorner()
+    {
+        if (_insertionAdorner is null) return;
+        AdornerLayer.GetAdornerLayer(_insertionAdorner.AdornedElement)?.Remove(_insertionAdorner);
+        _insertionAdorner = null;
     }
 
     private static T? FindAncestor<T>(DependencyObject? from) where T : DependencyObject
