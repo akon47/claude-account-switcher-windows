@@ -32,6 +32,7 @@
   "TrayExit": "終了",
   "TraySwitchedTitle": "切り替え完了",
   "TraySwitchedBody": "'{0}' がアクティブなアカウントになりました。",
+  "TrayRunningBody": "システムトレイで実行中です。クリックすると管理画面が開きます。",
   "WarnTitle": "警告",
   "RunningSwitchWarn": "実行中の claude セッションが検出されました。切り替えるとそのセッションに影響する場合があります。\n続行しますか？",
   "SettingsTitle": "設定",

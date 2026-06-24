@@ -32,6 +32,7 @@
   "TrayExit": "結束",
   "TraySwitchedTitle": "已切換",
   "TraySwitchedBody": "「{0}」現在是使用中的帳號。",
+  "TrayRunningBody": "正在系統匣中執行。按一下即可開啟管理視窗。",
   "WarnTitle": "警告",
   "RunningSwitchWarn": "偵測到正在執行的 claude 工作階段。切換可能會影響該工作階段。\n是否繼續？",
   "SettingsTitle": "設定",

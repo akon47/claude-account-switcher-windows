@@ -32,6 +32,7 @@
   "TrayExit": "Quitter",
   "TraySwitchedTitle": "Compte changé",
   "TraySwitchedBody": "'{0}' est maintenant le compte actif.",
+  "TrayRunningBody": "En cours d'exécution dans la zone de notification. Cliquez pour ouvrir.",
   "WarnTitle": "Avertissement",
   "RunningSwitchWarn": "Une session claude en cours d'exécution a été détectée. Le changement peut affecter cette session.\nContinuer ?",
   "SettingsTitle": "Paramètres",

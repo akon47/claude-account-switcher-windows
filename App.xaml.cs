@@ -9,6 +9,7 @@ using ClaudeAccountSwitcher.Services;
 using ClaudeAccountSwitcher.ViewModels;
 using ClaudeAccountSwitcher.Views;
 using H.NotifyIcon;
+using H.NotifyIcon.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ClaudeAccountSwitcher;
@@ -38,6 +39,7 @@ public partial class App : Application
         if (TryHandleCliLaunch(e.Args)) { Shutdown(); return; }
 
         _store.Load();
+        ReconcileStartupSettings(); // 저장된 설정대로 자동실행/탐색기 레지스트리 복원(업데이트 후 초기화 방지)
         InitLanguage();
 
         _mainVm = _services.GetRequiredService<MainViewModel>();
@@ -65,12 +67,51 @@ public partial class App : Application
         _menu.Opened += (_, _) => RebuildMenu();
         _tray.ContextMenu = _menu;
         _tray.TrayLeftMouseUp += (_, _) => ShowWindow();
+        _tray.TrayBalloonTipClicked += (_, _) => ShowWindow(); // 토스트 클릭 → 관리 창 열기
 
         RebuildMenu();
         _tray.ForceCreate();
 
+        // 수동 실행(자동 실행 인자 없음)이면 트레이에 들어갔음을 토스트로 알린다(첫 사용자 "안 켜졌나?" 혼란 방지).
+        if (!e.Args.Contains("--autostart")) ShowRunningInTrayToast();
+
         // 시작 시 1회 백그라운드 업데이트 확인(조용히; 새 버전이 있을 때만 안내).
         _ = CheckForUpdatesAsync(manual: false);
+    }
+
+    /// <summary>
+    /// 저장된 사용자 설정(AppData)대로 자동실행/탐색기메뉴 레지스트리를 맞춘다.
+    /// 업데이트가 구버전 언인스톨러를 돌려 HKCU 설정을 지워도 이 메서드가 복원한다.
+    /// 미설정(null)이면 현재 레지스트리 상태로 시드한다(기존 사용자 설정 유지).
+    /// </summary>
+    private void ReconcileStartupSettings()
+    {
+        try
+        {
+            var data = _store.Data;
+
+            // 자동 실행: 미설정이면 현재 상태로 시드한 뒤, 저장값을 레지스트리에 강제(+ --autostart 정규화).
+            data.RunAtStartup ??= AutoStart.IsEnabled();
+            AutoStart.Set(data.RunAtStartup.Value);
+
+            // 탐색기 메뉴: 미설정이면 시드. ON인데 지워졌으면 복원, OFF인데 남아있으면 제거.
+            data.ExplorerMenu ??= ExplorerMenu.IsInstalled();
+            if (data.ExplorerMenu.Value && !ExplorerMenu.IsInstalled()) ExplorerMenu.Install(data.Profiles);
+            else if (!data.ExplorerMenu.Value && ExplorerMenu.IsInstalled()) ExplorerMenu.Uninstall();
+
+            _store.Save();
+        }
+        catch { /* best effort — 복원 실패해도 앱은 동작 */ }
+    }
+
+    /// <summary>트레이에서 실행 중임을 토스트로 알린다(클릭 시 관리 창 열기 — TrayBalloonTipClicked).</summary>
+    private void ShowRunningInTrayToast()
+    {
+        try
+        {
+            _tray?.ShowNotification("Claude Account Switcher", LocalizationManager.Instance["TrayRunningBody"], NotificationIcon.Info);
+        }
+        catch { /* 알림 실패는 무시 */ }
     }
 
     /// <summary>첫 실행이면 윈도우 언어로 기본값을 정하고, 저장된 언어를 적용한다.</summary>
@@ -146,21 +187,28 @@ public partial class App : Application
         {
             Header = L["TrayAutostart"],
             IsCheckable = true,
-            IsChecked = AutoStart.IsEnabled(),
+            IsChecked = _store.Data.RunAtStartup ?? AutoStart.IsEnabled(),
         };
-        autostart.Click += (_, _) => AutoStart.Set(autostart.IsChecked);
+        autostart.Click += (_, _) =>
+        {
+            _store.Data.RunAtStartup = autostart.IsChecked;
+            AutoStart.Set(autostart.IsChecked);
+            _store.Save();
+        };
         _menu.Items.Add(autostart);
 
         var explorer = new MenuItem
         {
             Header = L["TrayExplorer"],
             IsCheckable = true,
-            IsChecked = ExplorerMenu.IsInstalled(),
+            IsChecked = _store.Data.ExplorerMenu ?? ExplorerMenu.IsInstalled(),
         };
         explorer.Click += (_, _) =>
         {
+            _store.Data.ExplorerMenu = explorer.IsChecked;
             if (explorer.IsChecked) ExplorerMenu.Install(_store.Data.Profiles);
             else ExplorerMenu.Uninstall();
+            _store.Save();
         };
         _menu.Items.Add(explorer);
 

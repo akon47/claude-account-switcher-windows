@@ -32,6 +32,7 @@
   "TrayExit": "Çıkış",
   "TraySwitchedTitle": "Geçiş yapıldı",
   "TraySwitchedBody": "'{0}' artık etkin hesap.",
+  "TrayRunningBody": "Sistem tepsisinde çalışıyor. Açmak için tıklayın.",
   "WarnTitle": "Uyarı",
   "RunningSwitchWarn": "Çalışan bir claude oturumu algılandı. Geçiş yapmak bu oturumu etkileyebilir.\nDevam edilsin mi?",
   "SettingsTitle": "Ayarlar",

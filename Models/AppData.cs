@@ -24,4 +24,14 @@ public class AppData
 
     /// <summary>표시 언어 컬처(ko-KR/en-US). null 이면 첫 실행 시 윈도우 언어로 결정한다.</summary>
     public string? Language { get; set; }
+
+    /// <summary>
+    /// Windows 시작 시 자동 실행 사용자 설정(진짜 값). null = 아직 미초기화(시작 시 레지스트리 상태로 시드).
+    /// 레지스트리(HKCU Run)는 업데이트가 구버전 언인스톨러를 돌리면 지워지므로, 이 값을 원본으로 두고
+    /// 시작 시 레지스트리를 이 값에 맞춰 복원한다.
+    /// </summary>
+    public bool? RunAtStartup { get; set; }
+
+    /// <summary>탐색기 우클릭 메뉴 등록 사용자 설정(진짜 값). null = 아직 미초기화. (자동실행과 동일한 복원 로직)</summary>
+    public bool? ExplorerMenu { get; set; }
 }

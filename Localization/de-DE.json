@@ -32,6 +32,7 @@
   "TrayExit": "Beenden",
   "TraySwitchedTitle": "Gewechselt",
   "TraySwitchedBody": "'{0}' ist jetzt das aktive Konto.",
+  "TrayRunningBody": "Läuft im Infobereich. Zum Öffnen klicken.",
   "WarnTitle": "Warnung",
   "RunningSwitchWarn": "Eine laufende claude-Sitzung wurde erkannt. Der Wechsel kann diese Sitzung beeinflussen.\nFortfahren?",
   "SettingsTitle": "Einstellungen",

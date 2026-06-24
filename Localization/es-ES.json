@@ -32,6 +32,7 @@
   "TrayExit": "Salir",
   "TraySwitchedTitle": "Cambiado",
   "TraySwitchedBody": "'{0}' es ahora la cuenta activa.",
+  "TrayRunningBody": "Ejecutándose en la bandeja del sistema. Haz clic para abrir.",
   "WarnTitle": "Advertencia",
   "RunningSwitchWarn": "Se detectó una sesión de claude en ejecución. El cambio puede afectar esa sesión.\n¿Continuar?",
   "SettingsTitle": "Configuración",

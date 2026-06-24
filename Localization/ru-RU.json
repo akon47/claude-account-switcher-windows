@@ -32,6 +32,7 @@
   "TrayExit": "Выход",
   "TraySwitchedTitle": "Переключено",
   "TraySwitchedBody": "'{0}' теперь активный аккаунт.",
+  "TrayRunningBody": "Работает в системном трее. Нажмите, чтобы открыть.",
   "WarnTitle": "Предупреждение",
   "RunningSwitchWarn": "Обнаружена активная сессия claude. Переключение может повлиять на неё.\nПродолжить?",
   "SettingsTitle": "Настройки",

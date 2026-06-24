@@ -32,6 +32,7 @@
   "TrayExit": "Keluar",
   "TraySwitchedTitle": "Beralih",
   "TraySwitchedBody": "'{0}' sekarang menjadi akun aktif.",
+  "TrayRunningBody": "Berjalan di system tray. Klik untuk membuka.",
   "WarnTitle": "Peringatan",
   "RunningSwitchWarn": "Sesi claude yang sedang berjalan terdeteksi. Peralihan dapat memengaruhi sesi tersebut.\nLanjutkan?",
   "SettingsTitle": "Pengaturan",

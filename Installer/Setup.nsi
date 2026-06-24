@@ -94,6 +94,9 @@ FunctionEnd
 Section "Install"
   ; 기존 설치가 있으면 먼저 조용히 제거
   StrCmp $NeedUninstall "1" 0 skipUninst
+    ; 업데이트 중임을 표시 → 언인스톨러가 사용자 HKCU 설정(자동실행/탐색기메뉴)을 보존한다.
+    ; (이 마커 인식은 이 버전 이후의 언인스톨러부터 동작 — 이전 버전에서 올라올 땐 1회 초기화됨)
+    WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "Updating" "1"
     ExecWait '"$OldUninst" /S _?=$INSTDIR'
     Call CloseRunningApp
   skipUninst:
@@ -117,6 +120,10 @@ Section "Install"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
   WriteRegDWORD HKCU "${PRODUCT_UNINST_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${PRODUCT_UNINST_KEY}" "NoRepair" 1
+
+  ; 업데이트 표시 마커 정리(구버전 언인스톨러가 키째 지우지만, 중단 등 예외에 대비해 명시적으로 제거).
+  ; → 이후 '진짜 제거'가 마커를 잘못 보고 설정 정리를 건너뛰는 일이 없게 한다.
+  DeleteRegValue HKCU "${PRODUCT_UNINST_KEY}" "Updating"
 SectionEnd
 
 Function un.onInit
@@ -126,13 +133,18 @@ Function un.onInit
 FunctionEnd
 
 Section Uninstall
-  ; 앱이 등록한 HKCU 항목 정리 (자동 실행 / 탐색기 우클릭 메뉴)
-  ; 주의: 아래 키/값 문자열은 Services\AutoStart.cs(RunKey/ValueName)와 Services\ExplorerMenu.cs
-  ;       (Verb/SubKeyName)에 정의된 것과 동일해야 한다. 코드에서 이름을 바꾸면 여기도 함께 고칠 것.
-  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Claude-Account-Switcher"
-  DeleteRegKey HKCU "Software\Classes\Directory\shell\ClaudeAccountSwitcher"
-  DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\ClaudeAccountSwitcher"
-  DeleteRegKey HKCU "Software\Classes\ClaudeAccountSwitcher.Sub"
+  ; 업데이트로 인한 자동 언인스톨이면(설치 프로그램이 "Updating" 마커를 남김) 사용자 HKCU 설정을 보존한다.
+  ; 진짜 제거(마커 없음)일 때만 자동실행/탐색기메뉴 등록을 지운다.
+  ReadRegStr $0 HKCU "${PRODUCT_UNINST_KEY}" "Updating"
+  StrCmp $0 "1" skipUserSettings
+    ; 앱이 등록한 HKCU 항목 정리 (자동 실행 / 탐색기 우클릭 메뉴)
+    ; 주의: 아래 키/값 문자열은 Services\AutoStart.cs(RunKey/ValueName)와 Services\ExplorerMenu.cs
+    ;       (Verb/SubKeyName)에 정의된 것과 동일해야 한다. 코드에서 이름을 바꾸면 여기도 함께 고칠 것.
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Claude-Account-Switcher"
+    DeleteRegKey HKCU "Software\Classes\Directory\shell\ClaudeAccountSwitcher"
+    DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\ClaudeAccountSwitcher"
+    DeleteRegKey HKCU "Software\Classes\ClaudeAccountSwitcher.Sub"
+  skipUserSettings:
 
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"
   RMDir "$SMPROGRAMS\${PRODUCT_NAME}"

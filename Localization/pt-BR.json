@@ -32,6 +32,7 @@
   "TrayExit": "Sair",
   "TraySwitchedTitle": "Alternado",
   "TraySwitchedBody": "'{0}' agora é a conta ativa.",
+  "TrayRunningBody": "Em execução na bandeja do sistema. Clique para abrir.",
   "WarnTitle": "Aviso",
   "RunningSwitchWarn": "Uma sessão claude em execução foi detectada. Alternar pode afetar essa sessão.\nContinuar?",
   "SettingsTitle": "Configurações",

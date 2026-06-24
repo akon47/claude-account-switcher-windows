@@ -32,6 +32,7 @@
   "TrayExit": "退出",
   "TraySwitchedTitle": "已切换",
   "TraySwitchedBody": "“{0}”现在是活跃账户。",
+  "TrayRunningBody": "正在系统托盘中运行。点击以打开管理窗口。",
   "WarnTitle": "警告",
   "RunningSwitchWarn": "检测到正在运行的 claude 会话。切换可能影响该会话。\n是否继续？",
   "SettingsTitle": "设置",

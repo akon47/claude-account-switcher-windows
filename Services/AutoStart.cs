@@ -31,8 +31,9 @@ public static class AutoStart
             if (enabled)
             {
                 string exe = Environment.ProcessPath ?? "";
+                // --autostart 인자로 "Windows 로그인 시 자동 실행"임을 표시 → 앱이 수동 실행과 구분(토스트 억제).
                 if (!string.IsNullOrEmpty(exe))
-                    key.SetValue(ValueName, $"\"{exe}\"");
+                    key.SetValue(ValueName, $"\"{exe}\" --autostart");
             }
             else
             {

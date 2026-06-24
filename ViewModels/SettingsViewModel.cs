@@ -37,10 +37,12 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>Windows 로그인 시 자동 실행(HKCU Run). 트레이 메뉴 토글과 같은 레지스트리를 가리킨다.</summary>
     public bool RunAtStartup
     {
-        get => AutoStart.IsEnabled();
+        get => _store.Data.RunAtStartup ?? AutoStart.IsEnabled();
         set
         {
+            _store.Data.RunAtStartup = value; // AppData 가 진짜 값(업데이트로 레지스트리가 지워져도 복원됨)
             AutoStart.Set(value);
+            _store.Save();
             OnPropertyChanged(); // 실패 시 실제 상태로 되돌아가도록 다시 읽게 한다
         }
     }
@@ -48,11 +50,13 @@ public partial class SettingsViewModel : ObservableObject
     /// <summary>탐색기 폴더 우클릭 "Claude로 실행" 메뉴 등록 여부. 트레이 메뉴 토글과 동일.</summary>
     public bool ExplorerMenuEnabled
     {
-        get => ExplorerMenu.IsInstalled();
+        get => _store.Data.ExplorerMenu ?? ExplorerMenu.IsInstalled();
         set
         {
+            _store.Data.ExplorerMenu = value;
             if (value) ExplorerMenu.Install(_store.Data.Profiles);
             else ExplorerMenu.Uninstall();
+            _store.Save();
             OnPropertyChanged();
         }
     }

@@ -37,6 +37,7 @@
   "TrayExit": "종료",
   "TraySwitchedTitle": "전환 완료",
   "TraySwitchedBody": "이제 '{0}' 계정이 활성화되었습니다.",
+  "TrayRunningBody": "시스템 트레이에서 실행 중입니다. 클릭하면 관리 창이 열립니다.",
 
   "WarnTitle": "주의",
   "RunningSwitchWarn": "실행 중인 claude가 있습니다. 전환하면 해당 세션이 영향을 받을 수 있습니다.\n계속할까요?",

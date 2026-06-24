@@ -32,6 +32,7 @@
   "TrayExit": "Thoát",
   "TraySwitchedTitle": "Đã chuyển đổi",
   "TraySwitchedBody": "'{0}' hiện là tài khoản đang hoạt động.",
+  "TrayRunningBody": "Đang chạy trong khay hệ thống. Nhấp để mở.",
   "WarnTitle": "Cảnh báo",
   "RunningSwitchWarn": "Đã phát hiện phiên claude đang chạy. Việc chuyển đổi có thể ảnh hưởng đến phiên đó.\nTiếp tục?",
   "SettingsTitle": "Cài đặt",

@@ -37,6 +37,7 @@
   "TrayExit": "Exit",
   "TraySwitchedTitle": "Switched",
   "TraySwitchedBody": "'{0}' is now the active account.",
+  "TrayRunningBody": "Running in the system tray. Click to open.",
 
   "WarnTitle": "Warning",
   "RunningSwitchWarn": "A running claude session was detected. Switching may affect that session.\nContinue?",
