@@ -20,7 +20,27 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Install NSIS
-        run: choco install nsis -y --no-progress
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # choco community 피드가 간헐적으로 실패한다("Value cannot be null. Parameter name: packageStream").
+          # 3회 재시도 후에도 실패하면 SourceForge 에서 NSIS portable 을 직접 받아 PATH 에 추가한다.
+          $ok = $false
+          for ($i = 1; $i -le 3; $i++) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+            Write-Host "::warning::'choco install nsis' 시도 $i 실패. 15초 후 재시도..."
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ok) {
+            $ver = '3.10'
+            $zip = Join-Path $env:RUNNER_TEMP 'nsis.zip'
+            $dst = Join-Path $env:RUNNER_TEMP 'nsis'
+            Write-Host "choco 실패 → SourceForge 에서 NSIS $ver portable 직접 설치"
+            Invoke-WebRequest -UseBasicParsing -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/$ver/nsis-$ver.zip" -OutFile $zip
+            Expand-Archive -Path $zip -DestinationPath $dst -Force
+            "$dst\nsis-$ver" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          }
 
       - name: Build self-contained installer
         shell: pwsh
