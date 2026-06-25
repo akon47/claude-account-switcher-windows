@@ -21,6 +21,12 @@ public class Profile
     public string? DisplayName { get; set; }
     public string? OrganizationName { get; set; }
 
+    /// <summary>
+    /// 세션(5시간) 자동 유지. 켜면 백그라운드 감시자가 이 계정의 5시간 창이 리셋되는 즉시
+    /// claude 에 한마디(headless)를 보내 새 5시간 창을 곧바로 시작시킨다. profiles.json 에 영속.
+    /// </summary>
+    public bool KeepSessionAlive { get; set; }
+
     /// <summary>이 프로필 전용 격리 설정 폴더. 동시 실행 시 CLAUDE_CONFIG_DIR로 사용.</summary>
     [JsonIgnore]
     public string ConfigDir => Path.Combine(AppPaths.ProfilesDir, Id);

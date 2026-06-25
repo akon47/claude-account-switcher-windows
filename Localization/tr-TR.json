@@ -9,6 +9,8 @@
   "ColPlan": "Plan",
   "ColSession": "Kalan oturum",
   "ColStatus": "Durum",
+  "ColKeepAlive": "Sürdür",
+  "TipKeepAlive": "5 saatlik oturum sıfırlandığında, yeni bir oturum başlatmak için otomatik olarak kısa bir mesaj gönderir.",
   "BtnCapture": "Mevcut hesabı yakala",
   "BtnAdd": "Hesap ekle",
   "BtnSwitch": "Geçiş yap",

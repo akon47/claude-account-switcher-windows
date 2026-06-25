@@ -9,6 +9,8 @@
   "ColPlan": "Paket",
   "ColSession": "Sisa sesi",
   "ColStatus": "Status",
+  "ColKeepAlive": "Jaga sesi",
+  "TipKeepAlive": "Saat sesi 5 jam diatur ulang, otomatis mengirim pesan singkat untuk memulai sesi baru.",
   "BtnCapture": "Tangkap saat ini",
   "BtnAdd": "Tambah akun",
   "BtnSwitch": "Beralih",

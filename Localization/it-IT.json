@@ -9,6 +9,8 @@
   "ColPlan": "Piano",
   "ColSession": "Sessione rimanente",
   "ColStatus": "Stato",
+  "ColKeepAlive": "Mantieni",
+  "TipKeepAlive": "Quando la sessione di 5 ore si reimposta, invia automaticamente un breve messaggio per avviare una nuova sessione.",
   "BtnCapture": "Acquisisci attuale",
   "BtnAdd": "Aggiungi account",
   "BtnSwitch": "Cambia",

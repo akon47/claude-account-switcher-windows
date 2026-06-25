@@ -42,6 +42,33 @@ public static class Launcher
         Process.Start(psi);
     }
 
+    /// <summary>
+    /// 창 없이 claude 에 한마디(`claude -p "hi"`)를 보내 5시간 세션 창을 시작/갱신한다(세션 자동 유지).
+    /// 활성 프로필이면 ~/.claude(라이브 토큰)로, 그 외엔 CLAUDE_CONFIG_DIR=프로필폴더(격리 보관본)로 실행한다.
+    /// 보이는 창/콘솔 없이 조용히 돌리고(fire-and-forget), 실패해도 앱에는 영향 없다.
+    /// </summary>
+    public static void FireKeepAlive(Profile p, bool isActive)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                // claude 는 보통 npm 셸(.cmd) 이라 직접 실행이 안 되므로 cmd 로 감싼다.
+                FileName = "cmd.exe",
+                Arguments = "/c claude -p \"hi\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,            // 콘솔 창 안 뜸
+                WorkingDirectory = AppPaths.UserHome, // 신뢰된 폴더(폴더 신뢰 프롬프트 회피)
+            };
+
+            // 활성 계정은 ~/.claude 의 라이브 자격증명을 쓰도록 오버라이드하지 않는다.
+            if (!isActive) psi.EnvironmentVariables["CLAUDE_CONFIG_DIR"] = p.ConfigDir;
+
+            Process.Start(psi);
+        }
+        catch { /* best effort — claude 미설치/일시 오류여도 감시는 계속 */ }
+    }
+
     /// <summary>cmd 의 `title` 명령에 안전하게 넘기도록 메타문자를 캐럿 이스케이프한다.</summary>
     private static string EscapeCmdTitle(string s) =>
         s.Replace("^", "^^").Replace("&", "^&").Replace("<", "^<").Replace(">", "^>").Replace("|", "^|");

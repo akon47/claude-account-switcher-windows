@@ -9,6 +9,8 @@
   "ColPlan": "Gói",
   "ColSession": "Phiên còn lại",
   "ColStatus": "Trạng thái",
+  "ColKeepAlive": "Giữ phiên",
+  "TipKeepAlive": "Khi phiên 5 giờ đặt lại, tự động gửi một tin nhắn ngắn để bắt đầu phiên mới.",
   "BtnCapture": "Chụp hiện tại",
   "BtnAdd": "Thêm tài khoản",
   "BtnSwitch": "Chuyển đổi",

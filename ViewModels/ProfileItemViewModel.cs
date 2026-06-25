@@ -35,6 +35,14 @@ public sealed partial class ProfileItemViewModel : ObservableObject
     public AccountStatus StatusKind { get; init; }
     public string Status { get; init; } = "";
 
+    // ---------------- 세션 자동 유지 ----------------
+    /// <summary>세션 자동 유지 토글(체크박스). 변경 시 MainViewModel.ToggleKeepAlive 가 프로필에 반영·저장한다.</summary>
+    [ObservableProperty]
+    private bool _keepAlive;
+
+    /// <summary>로그인된 계정만 자동 유지 가능(로그인 필요 상태면 체크박스 비활성).</summary>
+    public bool CanKeepAlive => StatusKind != AccountStatus.NeedLogin;
+
     // ---------------- 세션 한도 ----------------
     /// <summary>세션(5시간) 남은 사용량 표시 텍스트(예: "73%"). 비동기 조회가 끝나면 갱신된다.</summary>
     [ObservableProperty]

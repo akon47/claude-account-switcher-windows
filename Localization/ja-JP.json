@@ -9,6 +9,8 @@
   "ColPlan": "プラン",
   "ColSession": "セッション残量",
   "ColStatus": "状態",
+  "ColKeepAlive": "セッション維持",
+  "TipKeepAlive": "5時間セッションがリセットされると、自動で短いメッセージを送り新しいセッションを開始します。",
   "BtnCapture": "現在のアカウントを取り込む",
   "BtnAdd": "アカウントを追加",
   "BtnSwitch": "切り替え",

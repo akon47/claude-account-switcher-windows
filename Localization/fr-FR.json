@@ -9,6 +9,8 @@
   "ColPlan": "Formule",
   "ColSession": "Session restante",
   "ColStatus": "Statut",
+  "ColKeepAlive": "Garder active",
+  "TipKeepAlive": "Lorsque la session de 5 heures est réinitialisée, envoie automatiquement un court message pour démarrer une nouvelle session.",
   "BtnCapture": "Capturer le compte actuel",
   "BtnAdd": "Ajouter un compte",
   "BtnSwitch": "Changer",

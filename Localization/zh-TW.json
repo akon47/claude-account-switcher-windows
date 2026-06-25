@@ -9,6 +9,8 @@
   "ColPlan": "方案",
   "ColSession": "剩餘工作階段",
   "ColStatus": "狀態",
+  "ColKeepAlive": "保持工作階段",
+  "TipKeepAlive": "5 小時工作階段重設後，自動傳送一則訊息以開始新的工作階段。",
   "BtnCapture": "擷取目前帳號",
   "BtnAdd": "新增帳號",
   "BtnSwitch": "切換",

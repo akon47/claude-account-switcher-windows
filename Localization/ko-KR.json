@@ -10,6 +10,8 @@
   "ColPlan": "플랜",
   "ColSession": "남은 세션 한도",
   "ColStatus": "상태",
+  "ColKeepAlive": "세션 유지",
+  "TipKeepAlive": "5시간 세션이 리셋되면 자동으로 한마디를 보내 새 세션을 시작합니다.",
 
   "BtnCapture": "현재 계정 캡처",
   "BtnAdd": "새 계정 추가",

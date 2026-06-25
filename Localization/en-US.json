@@ -10,6 +10,8 @@
   "ColPlan": "Plan",
   "ColSession": "Session left",
   "ColStatus": "Status",
+  "ColKeepAlive": "Keep alive",
+  "TipKeepAlive": "When the 5-hour session resets, automatically send a short message to start a new session.",
 
   "BtnCapture": "Capture current",
   "BtnAdd": "Add account",

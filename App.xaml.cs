@@ -75,6 +75,9 @@ public partial class App : Application
         // 수동 실행(자동 실행 인자 없음)이면 트레이에 들어갔음을 토스트로 알린다(첫 사용자 "안 켜졌나?" 혼란 방지).
         if (!e.Args.Contains("--autostart")) ShowRunningInTrayToast();
 
+        // 세션 자동 유지 감시 시작(KeepSessionAlive 켜진 프로필의 5시간 창을 리셋 즉시 재시작).
+        _services.GetRequiredService<SessionKeepAliveService>().Start();
+
         // 시작 시 1회 백그라운드 업데이트 확인(조용히; 새 버전이 있을 때만 안내).
         _ = CheckForUpdatesAsync(manual: false);
     }
@@ -142,6 +145,7 @@ public partial class App : Application
         var sc = new ServiceCollection();
         sc.AddSingleton<ProfileStore>();
         sc.AddSingleton<UsageService>();
+        sc.AddSingleton<SessionKeepAliveService>();
         sc.AddSingleton<IDialogService, DialogService>();
         sc.AddSingleton<MainViewModel>();
         sc.AddTransient<MainWindow>();

@@ -9,6 +9,8 @@
   "ColPlan": "Plan",
   "ColSession": "Session verbleibend",
   "ColStatus": "Status",
+  "ColKeepAlive": "Aktiv halten",
+  "TipKeepAlive": "Wenn die 5-Stunden-Sitzung zurückgesetzt wird, wird automatisch eine kurze Nachricht gesendet, um eine neue Sitzung zu starten.",
   "BtnCapture": "Aktuelles erfassen",
   "BtnAdd": "Konto hinzufügen",
   "BtnSwitch": "Wechseln",

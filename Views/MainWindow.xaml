@@ -9,7 +9,7 @@
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     mc:Ignorable="d"
     Title="{loc:Loc WinMainTitle}"
-    Width="760"
+    Width="860"
     Height="500"
     MinWidth="600"
     MinHeight="380"
@@ -254,6 +254,25 @@
                                         </Ellipse>
                                         <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
                                     </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <!-- Keep alive: 세션 자동 유지 토글 -->
+                        <GridViewColumn
+                            Header="{loc:Loc ColKeepAlive}"
+                            Width="86"
+                            >
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding KeepAlive, Mode=TwoWay}"
+                                        IsEnabled="{Binding CanKeepAlive}"
+                                        ToolTip="{loc:Loc TipKeepAlive}"
+                                        Command="{Binding DataContext.ToggleKeepAliveCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                        CommandParameter="{Binding}"
+                                        />
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>

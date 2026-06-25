@@ -57,6 +57,7 @@ public partial class MainViewModel : ObservableObject
             {
                 Profile = p, IsActive = isActive, StatusKind = kind, Status = status,
                 SessionRemaining = usage, SessionPercent = hasCreds ? p.SessionPercent : null, EditName = p.Name,
+                KeepAlive = p.KeepSessionAlive,
             });
         }
         if (selectedId is not null)
@@ -99,6 +100,15 @@ public partial class MainViewModel : ObservableObject
     /// <summary>창이 활성화될 때(앞으로 올 때) 목록을 다시 그린다. WindowActivated 동작에서 호출.</summary>
     [RelayCommand]
     private void Reload() => ReloadFromStore();
+
+    /// <summary>세션 자동 유지 토글(체크박스)을 프로필에 반영하고 저장한다. 감시자는 다음 틱에 새 값을 본다.</summary>
+    [RelayCommand]
+    private void ToggleKeepAlive(ProfileItemViewModel? item)
+    {
+        if (item is null) return;
+        item.Profile.KeepSessionAlive = item.KeepAlive;
+        _store.Save();
+    }
 
     /// <summary>드래그로 행 순서를 바꾼다(삽입선 위치 기준). ListView 드래그 동작에서 호출.</summary>
     [RelayCommand]
