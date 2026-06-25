@@ -77,8 +77,8 @@ public class EditableTextBlock : Control
         }
     }
 
-    // 셀 전체(투명 배경 포함)에서 더블클릭을 받아 편집을 시작한다. e.Handled=true 로 막아
-    // 행 더블클릭(전환)과 겹치지 않게 한다. 글자 위만 반응하던 기존 동작의 사각지대를 없앤다.
+    // 셀 전체(투명 배경 포함)에서 더블클릭을 받아 편집을 시작한다. 글자 위만 반응하던 기존 동작의 사각지대를 없앤다.
+    // (행 더블클릭=전환과의 충돌은 DoubleClickCommandBehavior 가 이름 셀 출처를 보고 막는다 — Handled 로는 못 막음.)
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);

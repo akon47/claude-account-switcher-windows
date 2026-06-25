@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using ClaudeAccountSwitcher.Controls;
 
 namespace ClaudeAccountSwitcher.Behaviors;
 
@@ -36,9 +38,30 @@ public static class DoubleClickCommandBehavior
 
     private static void OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
+        // 이름 셀(EditableTextBlock) 안에서 시작된 더블클릭은 인라인 편집용이다.
+        // Control.MouseDoubleClick 은 MouseDown 의 Handled 여부와 무관하게 발생하므로,
+        // 여기서 출처를 보고 전환 커맨드 실행을 막아야 한다(편집 진입/편집 중 모두).
+        if (e.OriginalSource is DependencyObject src && FindAncestor<EditableTextBlock>(src) is not null)
+            return;
+
         var element = (DependencyObject)sender;
         var command = GetCommand(element);
         var parameter = GetCommandParameter(element);
         if (command?.CanExecute(parameter) == true) command.Execute(parameter);
+    }
+
+    /// <summary>시각/논리 트리를 거슬러 올라가며 T 형식 조상을 찾는다(없으면 null).</summary>
+    private static T? FindAncestor<T>(DependencyObject? node)
+        where T : DependencyObject
+    {
+        while (node is not null)
+        {
+            if (node is T match) return match;
+            node = node is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(node)
+                : LogicalTreeHelper.GetParent(node);
+        }
+
+        return null;
     }
 }

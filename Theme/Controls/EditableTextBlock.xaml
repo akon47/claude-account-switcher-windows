@@ -6,42 +6,49 @@
         <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Theme/Effects.xaml" />
     </ResourceDictionary.MergedDictionaries>
-<!-- ===================================================================
-     EditableTextBlock - double-click to edit inline. Shows a TextBlock
-     normally; swaps to a (themed) TextBox while IsEditing. The implicit
-     TextBox style provides the dark chrome.
-     ==================================================================== -->
-<Style TargetType="{x:Type ctrl:EditableTextBlock}">
-    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
-    <Setter Property="FontSize" Value="13" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="SnapsToDevicePixels" Value="True" />
-    <Setter Property="Template">
-        <Setter.Value>
-            <ControlTemplate TargetType="{x:Type ctrl:EditableTextBlock}">
-                <Grid Background="Transparent">
-                    <TextBlock x:Name="PART_TextBlock"
-                               VerticalAlignment="Center"
-                               Cursor="Hand"
-                               Foreground="{TemplateBinding Foreground}"
-                               Text="{TemplateBinding Text}"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{loc:Loc TipRename}" />
+    <!--
+        ===================================================================
+        EditableTextBlock - double-click to edit inline. Shows a TextBlock
+        normally; swaps to a (themed) TextBox while IsEditing. The implicit
+        TextBox style provides the dark chrome.
+        ====================================================================
+    -->
+    <Style TargetType="{x:Type ctrl:EditableTextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ctrl:EditableTextBlock}">
+                    <Grid Background="Transparent">
+                        <Border Padding="3,1" BorderThickness="{Binding BorderThickness, ElementName=PART_TextBox, Mode=OneWay}">
+                            <TextBlock x:Name="PART_TextBlock"
+                                       Margin="0,2"
+                                       Cursor="Hand"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       Text="{TemplateBinding Text}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{loc:Loc TipRename}" />
+                        </Border>
 
-                    <TextBox x:Name="PART_TextBox"
-                             Padding="2,1"
-                             FontSize="{TemplateBinding FontSize}"
-                             Visibility="Collapsed"
-                             Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                </Grid>
-                <ControlTemplate.Triggers>
-                    <Trigger Property="IsEditing" Value="True">
-                        <Setter TargetName="PART_TextBlock" Property="Visibility" Value="Collapsed" />
-                        <Setter TargetName="PART_TextBox" Property="Visibility" Value="Visible" />
-                    </Trigger>
-                </ControlTemplate.Triggers>
-            </ControlTemplate>
-        </Setter.Value>
-    </Setter>
-</Style>
+                        <TextBox x:Name="PART_TextBox"
+                                 Margin="0"
+                                 Padding="0,1"
+                                 Foreground="{StaticResource BlackBrush}"
+                                 Background="{StaticResource WhiteBrush}"
+                                 FontSize="{TemplateBinding FontSize}"
+                                 Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Visibility="Hidden" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditing" Value="True">
+                            <Setter TargetName="PART_TextBlock" Property="Visibility" Value="Hidden" />
+                            <Setter TargetName="PART_TextBox" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>
