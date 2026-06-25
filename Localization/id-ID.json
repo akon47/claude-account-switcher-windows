@@ -44,6 +44,7 @@
   "SetLangHeader": "Bahasa",
   "SetLangDesc": "Pilih bahasa tampilan.",
   "SetGeneralHeader": "Umum",
+  "SetStatusLine": "Tampilkan baris status akun di Claude (eksekusi bersamaan)",
   "SetClose": "Tutup",
   "SetVersion": "Versi",
   "SkipStateAsk": "Tanya setiap kali",

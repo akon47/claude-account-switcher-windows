@@ -44,6 +44,7 @@
   "SetLangHeader": "語言",
   "SetLangDesc": "選擇顯示語言。",
   "SetGeneralHeader": "一般",
+  "SetStatusLine": "在 Claude 中顯示帳戶狀態列（並行執行）",
   "SetClose": "關閉",
   "SetVersion": "版本",
   "SkipStateAsk": "每次詢問",

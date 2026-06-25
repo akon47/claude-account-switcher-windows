@@ -44,6 +44,7 @@
   "SetLangHeader": "Язык",
   "SetLangDesc": "Выберите язык интерфейса.",
   "SetGeneralHeader": "Общие",
+  "SetStatusLine": "Показывать строку состояния аккаунта в Claude (одновременный запуск)",
   "SetClose": "Закрыть",
   "SetVersion": "Версия",
   "SkipStateAsk": "Спрашивать каждый раз",

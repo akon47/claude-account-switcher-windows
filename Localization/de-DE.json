@@ -44,6 +44,7 @@
   "SetLangHeader": "Sprache",
   "SetLangDesc": "Anzeigesprache auswählen.",
   "SetGeneralHeader": "Allgemein",
+  "SetStatusLine": "Kontostatuszeile in Claude anzeigen (parallele Ausführung)",
   "SetClose": "Schließen",
   "SetVersion": "Version",
   "SkipStateAsk": "Jedes Mal fragen",

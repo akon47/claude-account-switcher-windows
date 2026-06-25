@@ -44,6 +44,7 @@
   "SetLangHeader": "Ngôn ngữ",
   "SetLangDesc": "Chọn ngôn ngữ hiển thị.",
   "SetGeneralHeader": "Chung",
+  "SetStatusLine": "Hiển thị dòng trạng thái tài khoản trong Claude (chạy đồng thời)",
   "SetClose": "Đóng",
   "SetVersion": "Phiên bản",
   "SkipStateAsk": "Hỏi mỗi lần",

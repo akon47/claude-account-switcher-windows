@@ -44,6 +44,7 @@
   "SetLangHeader": "Dil",
   "SetLangDesc": "Görüntüleme dilini seçin.",
   "SetGeneralHeader": "Genel",
+  "SetStatusLine": "Claude'da hesap durum satırını göster (eşzamanlı çalıştırma)",
   "SetClose": "Kapat",
   "SetVersion": "Sürüm",
   "SkipStateAsk": "Her seferinde sor",
