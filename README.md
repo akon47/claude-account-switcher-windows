@@ -13,6 +13,10 @@ click, or run several accounts side by side in parallel.
 ![.NET](https://img.shields.io/badge/.NET%209-WPF-512BD4)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/images/main-window.png" alt="Account manager — switch between Claude Code accounts with one click" width="720">
+</p>
+
 ## What it does
 
 - **Switch** — make any saved account the active one with a single click. Your usual `claude`
@@ -49,6 +53,21 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
   简体中文, 繁體中文, Español, Français, Deutsch, Português, Русский, Italiano, Türkçe, Tiếng Việt,
   Bahasa Indonesia). Each is a self-describing `Localization/<culture>.json` discovered at runtime —
   adding a language is just dropping in a new JSON file.
+
+## Screenshots
+
+Right-click any folder in Explorer → **Run with Claude** → pick an account. It opens a terminal
+in that folder running `claude` as the chosen account (no switching needed):
+
+![Explorer right-click "Run with Claude" submenu](docs/images/explorer-context-menu.png)
+
+<p align="center">
+  <img src="docs/images/tray-menu.png" alt="System-tray menu with quick account switch" height="340">
+  &nbsp;&nbsp;
+  <img src="docs/images/settings.png" alt="Settings window" height="340">
+</p>
+
+<p align="center"><sub>Tray menu (quick switch &amp; toggles) · Settings</sub></p>
 
 ## Install
 
