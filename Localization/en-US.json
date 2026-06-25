@@ -33,6 +33,7 @@
   "TrayOpen": "Open manager…",
   "TrayAutostart": "Run at Windows startup",
   "TrayExplorer": "Add Explorer context menu",
+  "ExplorerRunWith": "Run with Claude",
   "TraySettings": "Settings…",
   "TrayExit": "Exit",
   "TraySwitchedTitle": "Switched",

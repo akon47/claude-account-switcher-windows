@@ -28,6 +28,7 @@
   "TrayOpen": "Ouvrir le gestionnaire…",
   "TrayAutostart": "Démarrer avec Windows",
   "TrayExplorer": "Ajouter au menu contextuel de l'Explorateur",
+  "ExplorerRunWith": "Exécuter avec Claude",
   "TraySettings": "Paramètres…",
   "TrayExit": "Quitter",
   "TraySwitchedTitle": "Compte changé",

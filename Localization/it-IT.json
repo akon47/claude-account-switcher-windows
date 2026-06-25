@@ -28,6 +28,7 @@
   "TrayOpen": "Apri gestore…",
   "TrayAutostart": "Avvia con Windows",
   "TrayExplorer": "Aggiungi menu contestuale Esplora risorse",
+  "ExplorerRunWith": "Esegui con Claude",
   "TraySettings": "Impostazioni…",
   "TrayExit": "Esci",
   "TraySwitchedTitle": "Cambiato",

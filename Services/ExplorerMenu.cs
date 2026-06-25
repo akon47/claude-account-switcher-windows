@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.Win32;
+using ClaudeAccountSwitcher.Localization;
 using ClaudeAccountSwitcher.Models;
 
 namespace ClaudeAccountSwitcher.Services;
@@ -15,8 +16,10 @@ public static class ExplorerMenu
     //       (DeleteRegKey, line 131-133)에도 문자열로 복제돼 있다. 키 이름을 바꾸면 제거 시 정리가 깨지니
     //       NSI 와 함께 수정할 것.
     private const string Verb = "ClaudeAccountSwitcher";
-    private const string DisplayName = "Claude로 실행";
     private const string SubKeyName = "ClaudeAccountSwitcher.Sub"; // ExtendedSubCommandsKey (Software\Classes 기준)
+
+    // 최상위 메뉴 라벨은 현재 언어로 현지화한다(키 없으면 영어 폴백). 언어 변경 시 App 이 Install 을 다시 호출해 갱신.
+    private static string DisplayName => LocalizationManager.Instance["ExplorerRunWith"];
 
     private static string ExePath => Environment.ProcessPath ?? "";
     private static string Classes(string sub) => $@"Software\Classes\{sub}";

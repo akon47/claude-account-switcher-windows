@@ -28,6 +28,7 @@
   "TrayOpen": "Yöneticiyi aç…",
   "TrayAutostart": "Windows başlangıcında çalıştır",
   "TrayExplorer": "Gezgin bağlam menüsü ekle",
+  "ExplorerRunWith": "Claude ile çalıştır",
   "TraySettings": "Ayarlar…",
   "TrayExit": "Çıkış",
   "TraySwitchedTitle": "Geçiş yapıldı",

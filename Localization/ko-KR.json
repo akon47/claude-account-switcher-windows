@@ -33,6 +33,7 @@
   "TrayOpen": "관리 창 열기…",
   "TrayAutostart": "Windows 시작 시 자동 실행",
   "TrayExplorer": "탐색기 우클릭 메뉴 등록",
+  "ExplorerRunWith": "Claude로 실행",
   "TraySettings": "설정…",
   "TrayExit": "종료",
   "TraySwitchedTitle": "전환 완료",

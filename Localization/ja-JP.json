@@ -28,6 +28,7 @@
   "TrayOpen": "マネージャーを開く…",
   "TrayAutostart": "Windows 起動時に実行",
   "TrayExplorer": "エクスプローラーのコンテキストメニューに追加",
+  "ExplorerRunWith": "Claude で実行",
   "TraySettings": "設定…",
   "TrayExit": "終了",
   "TraySwitchedTitle": "切り替え完了",

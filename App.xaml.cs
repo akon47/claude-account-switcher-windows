@@ -132,6 +132,9 @@ public partial class App : Application
     {
         RebuildMenu();
         _mainVm.ReloadFromStore();
+
+        // 탐색기 우클릭 메뉴 최상위 라벨도 현재 언어로 다시 쓴다(설치돼 있을 때만).
+        if (ExplorerMenu.IsInstalled()) ExplorerMenu.Install(_store.Data.Profiles);
     }
 
     private static IServiceProvider BuildServiceProvider()

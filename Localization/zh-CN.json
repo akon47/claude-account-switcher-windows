@@ -28,6 +28,7 @@
   "TrayOpen": "打开管理器…",
   "TrayAutostart": "开机自启动",
   "TrayExplorer": "添加资源管理器右键菜单",
+  "ExplorerRunWith": "使用 Claude 运行",
   "TraySettings": "设置…",
   "TrayExit": "退出",
   "TraySwitchedTitle": "已切换",

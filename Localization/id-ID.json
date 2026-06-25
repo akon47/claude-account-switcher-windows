@@ -28,6 +28,7 @@
   "TrayOpen": "Buka pengelola…",
   "TrayAutostart": "Jalankan saat startup Windows",
   "TrayExplorer": "Tambahkan menu konteks Explorer",
+  "ExplorerRunWith": "Jalankan dengan Claude",
   "TraySettings": "Pengaturan…",
   "TrayExit": "Keluar",
   "TraySwitchedTitle": "Beralih",

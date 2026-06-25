@@ -28,6 +28,7 @@
   "TrayOpen": "Abrir administrador…",
   "TrayAutostart": "Ejecutar al iniciar Windows",
   "TrayExplorer": "Agregar menú contextual del Explorador",
+  "ExplorerRunWith": "Ejecutar con Claude",
   "TraySettings": "Configuración…",
   "TrayExit": "Salir",
   "TraySwitchedTitle": "Cambiado",

@@ -28,6 +28,7 @@
   "TrayOpen": "開啟管理員…",
   "TrayAutostart": "Windows 啟動時執行",
   "TrayExplorer": "加入檔案總管右鍵選單",
+  "ExplorerRunWith": "以 Claude 執行",
   "TraySettings": "設定…",
   "TrayExit": "結束",
   "TraySwitchedTitle": "已切換",

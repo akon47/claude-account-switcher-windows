@@ -28,6 +28,7 @@
   "TrayOpen": "Открыть менеджер…",
   "TrayAutostart": "Запускать при старте Windows",
   "TrayExplorer": "Добавить в контекстное меню Проводника",
+  "ExplorerRunWith": "Запустить с Claude",
   "TraySettings": "Настройки…",
   "TrayExit": "Выход",
   "TraySwitchedTitle": "Переключено",

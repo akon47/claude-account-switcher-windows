@@ -28,6 +28,7 @@
   "TrayOpen": "Manager öffnen…",
   "TrayAutostart": "Beim Windows-Start ausführen",
   "TrayExplorer": "Explorer-Kontextmenü hinzufügen",
+  "ExplorerRunWith": "Mit Claude ausführen",
   "TraySettings": "Einstellungen…",
   "TrayExit": "Beenden",
   "TraySwitchedTitle": "Gewechselt",

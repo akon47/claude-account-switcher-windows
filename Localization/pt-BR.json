@@ -28,6 +28,7 @@
   "TrayOpen": "Abrir gerenciador…",
   "TrayAutostart": "Executar na inicialização do Windows",
   "TrayExplorer": "Adicionar ao menu de contexto do Explorer",
+  "ExplorerRunWith": "Executar com Claude",
   "TraySettings": "Configurações…",
   "TrayExit": "Sair",
   "TraySwitchedTitle": "Alternado",
