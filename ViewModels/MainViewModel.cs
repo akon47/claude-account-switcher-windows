@@ -165,7 +165,7 @@ public partial class MainViewModel : ObservableObject
         var p = _store.CreateForLogin(name);
         try
         {
-            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value);
+            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
             ReloadFromStore();
             Changed?.Invoke();
             _dialogs.ShowInfo(L["MsgAddTitle"], L["MsgAddInfo"]);
@@ -213,7 +213,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            Launcher.LaunchInProfile(p, dlg.FolderName, _store.Data.Shell, skip.Value);
+            Launcher.LaunchInProfile(p, dlg.FolderName, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
             _store.Data.LastWorkingDir = dlg.FolderName;
             p.LastUsed = DateTime.Now;
             _store.Save();

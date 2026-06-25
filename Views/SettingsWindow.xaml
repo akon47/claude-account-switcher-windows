@@ -111,6 +111,11 @@
             Margin="0 10 0 0"
             IsChecked="{Binding ExplorerMenuEnabled, Mode=TwoWay}"
             />
+        <CheckBox
+            Content="{loc:Loc SetStatusLine}"
+            Margin="0 10 0 0"
+            IsChecked="{Binding StatusLineEnabled, Mode=TwoWay}"
+            />
 
         <Grid Margin="0 24 0 0">
             <TextBlock

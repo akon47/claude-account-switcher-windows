@@ -10,9 +10,11 @@ namespace ClaudeAccountSwitcher.Services;
 /// </summary>
 public static class Launcher
 {
-    public static void LaunchInProfile(Profile p, string? workingDir, ShellKind shell, bool skipPermissions)
+    public static void LaunchInProfile(Profile p, string? workingDir, ShellKind shell, bool skipPermissions, bool statusLine)
     {
         Directory.CreateDirectory(p.ConfigDir);
+        // 이 계정으로 띄운 claude 하단의 계정 상태줄: 설정이 켜져 있으면 설치/갱신, 꺼져 있으면 우리 것 제거.
+        StatusLineProvisioner.Ensure(p, statusLine);
 
         string cwd = workingDir is not null && Directory.Exists(workingDir) ? workingDir : AppPaths.UserHome;
         string command = skipPermissions ? "claude --dangerously-skip-permissions" : "claude";

@@ -51,6 +51,7 @@
   "SetLangHeader": "Language",
   "SetLangDesc": "Choose the display language.",
   "SetGeneralHeader": "General",
+  "SetStatusLine": "Show account status line in Claude (concurrent runs)",
   "SetClose": "Close",
   "SetVersion": "Version",
 

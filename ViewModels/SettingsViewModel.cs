@@ -61,6 +61,19 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>동시 실행 claude 하단에 계정 상태줄 표시 여부. 끄면 모든 프로필에서 우리 statusLine 을 즉시 제거한다.</summary>
+    public bool StatusLineEnabled
+    {
+        get => _store.Data.StatusLine;
+        set
+        {
+            _store.Data.StatusLine = value;
+            _store.Save();
+            foreach (var p in _store.Data.Profiles) StatusLineProvisioner.Ensure(p, value);
+            OnPropertyChanged();
+        }
+    }
+
     partial void OnSelectedShellChanged(ShellKind value)
     {
         _store.Data.Shell = value;

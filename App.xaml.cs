@@ -354,7 +354,7 @@ public partial class App : Application
         {
             // 탐색기 메뉴 실행은 UI 없이 동작하므로 기억된 설정만 사용한다(기본: 권한 부여 안 함).
             bool skip = _store.Data.SkipPermissions ?? false;
-            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip); } catch { /* best effort */ }
+            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip, _store.Data.StatusLine); } catch { /* best effort */ }
         }
         return true;
     }

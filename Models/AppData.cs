@@ -34,4 +34,7 @@ public class AppData
 
     /// <summary>탐색기 우클릭 메뉴 등록 사용자 설정(진짜 값). null = 아직 미초기화. (자동실행과 동일한 복원 로직)</summary>
     public bool? ExplorerMenu { get; set; }
+
+    /// <summary>동시 실행 시 claude 하단에 계정 상태줄(👤 이메일·플랜·이름·세션%)을 설치할지. 기본 켜짐.</summary>
+    public bool StatusLine { get; set; } = true;
 }

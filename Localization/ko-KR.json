@@ -51,6 +51,7 @@
   "SetLangHeader": "언어",
   "SetLangDesc": "표시 언어를 선택합니다.",
   "SetGeneralHeader": "일반",
+  "SetStatusLine": "동시 실행 시 claude에 계정 상태줄 표시",
   "SetClose": "닫기",
   "SetVersion": "버전",
 
