@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 PackageIdentifier: akon47.ClaudeAccountSwitcher
-PackageVersion: 0.2.1
+PackageVersion: 0.5.0
 PackageLocale: en-US
 Publisher: Kim, Hwan
 PublisherUrl: https://github.com/akon47

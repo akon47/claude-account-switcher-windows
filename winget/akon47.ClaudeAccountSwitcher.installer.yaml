@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 PackageIdentifier: akon47.ClaudeAccountSwitcher
-PackageVersion: 0.2.1
+PackageVersion: 0.5.0
 InstallerType: nullsoft
 Scope: user
 InstallModes:
@@ -11,10 +11,10 @@ InstallerSwitches:
   Silent: /S
   SilentWithProgress: /S
 UpgradeBehavior: install
-ReleaseDate: 2026-06-24
+ReleaseDate: 2026-06-25
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/akon47/claude-account-switcher-windows/releases/download/v0.2.1/Claude-Account-Switcher-Setup_v0.2.1.exe
-    InstallerSha256: 64C9A9EF7D02A8A1F5C1CDE321DCA2F787F260557DBF69E098D0D09A80681716
+    InstallerUrl: https://github.com/akon47/claude-account-switcher-windows/releases/download/v0.5.0/Claude-Account-Switcher-Setup_v0.5.0.exe
+    InstallerSha256: D588E91D3A5B535983E6DF02AFCBFD41CC28852B3E779A781039C4D43CB63520
 ManifestType: installer
 ManifestVersion: 1.6.0
