@@ -12,6 +12,9 @@
   "ColStatus": "Status",
   "ColKeepAlive": "Keep alive",
   "TipKeepAlive": "When the 5-hour session resets, automatically send a short message to start a new session.",
+  "SessionResetsHm": "{0}h {1}m",
+  "SessionResetsM": "{0}m",
+  "SessionResetsTip": "Session resets in {0} (at {1})",
 
   "BtnCapture": "Capture current",
   "BtnAdd": "Add account",

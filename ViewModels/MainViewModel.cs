@@ -53,10 +53,12 @@ public partial class MainViewModel : ObservableObject
             string status = isActive ? L["StatusActive"] : (hasCreds ? L["StatusSignedIn"] : L["StatusNeedLogin"]);
             // 마지막 조회값이 있으면 즉시 보여주고, 없으면 로딩/미표시 상태로 시작
             string usage = !hasCreds ? "—" : (p.SessionRemaining ?? "…");
+            var (resetIn, resetTip) = hasCreds ? FormatReset(p.SessionResetsAt) : ("", (string?)null);
             Profiles.Add(new ProfileItemViewModel
             {
                 Profile = p, IsActive = isActive, StatusKind = kind, Status = status,
                 SessionRemaining = usage, SessionPercent = hasCreds ? p.SessionPercent : null, EditName = p.Name,
+                SessionResetsIn = resetIn, SessionResetsTip = resetTip,
                 KeepAlive = p.KeepSessionAlive,
             });
         }
@@ -80,6 +82,9 @@ public partial class MainViewModel : ObservableObject
             {
                 item.SessionRemaining = p.SessionRemaining = "—";
                 item.SessionPercent = p.SessionPercent = null;
+                p.SessionResetsAt = null;
+                item.SessionResetsIn = "";
+                item.SessionResetsTip = null;
                 return;
             }
 
@@ -91,10 +96,32 @@ public partial class MainViewModel : ObservableObject
             string text = usage is null ? "—" : $"{usage.RemainingPercent:0}%";
             item.SessionRemaining = p.SessionRemaining = text;
             item.SessionPercent = p.SessionPercent = usage?.RemainingPercent;
+            p.SessionResetsAt = usage?.ResetsAt;
+            var (resetIn, resetTip) = FormatReset(usage?.ResetsAt);
+            item.SessionResetsIn = resetIn;
+            item.SessionResetsTip = resetTip;
         });
 
         try { await Task.WhenAll(tasks); } catch { /* 개별 실패는 "—"로 처리됨 */ }
         if (gen == _usageGen) UsageUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// 세션(5시간) 창이 리셋되기까지 남은 시간을 표시 문자열로 만든다.
+    /// 반환: (Inline = "↻ 2시간 13분", Tooltip = 전체 문장). 리셋 시각이 없거나 이미 지났으면 ("", null).
+    /// 절대 리셋 시각을 캐시해 두므로 조회가 몇 분 전이어도 표시 시점 기준으로 정확하다.
+    /// </summary>
+    private static (string Inline, string? Tip) FormatReset(DateTimeOffset? resetsAt)
+    {
+        if (resetsAt is not { } at) return ("", null);
+        var span = at - DateTimeOffset.Now;
+        if (span <= TimeSpan.Zero) return ("", null); // 이미 리셋됨 → 카운트다운 숨김
+
+        int hours = (int)span.TotalHours;
+        int mins = span.TotalMinutes < 1 ? 1 : span.Minutes; // 1분 미만도 "1분"으로 보이게
+        string compact = hours > 0 ? L.Tr("SessionResetsHm", hours, mins) : L.Tr("SessionResetsM", mins);
+        string tip = L.Tr("SessionResetsTip", compact, at.ToLocalTime().ToString("t"));
+        return ("↻ " + compact, tip); // "↻"(U+21BB) 리셋 글리프 — 기존 "—"/"…" 리터럴과 동일
     }
 
     /// <summary>창이 활성화될 때(앞으로 올 때) 목록을 다시 그린다. WindowActivated 동작에서 호출.</summary>

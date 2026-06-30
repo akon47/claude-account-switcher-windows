@@ -61,6 +61,14 @@ public sealed partial class ProfileItemViewModel : ObservableObject
         _ => SessionLevel.Low,
     };
 
+    /// <summary>세션 리셋까지 남은 시간 표시(예: "↻ 2시간 13분"). 빈 문자열이면 표시하지 않는다.</summary>
+    [ObservableProperty]
+    private string _sessionResetsIn = "";
+
+    /// <summary>리셋 카운트다운 툴팁(예: "2시간 13분 후 세션 초기화 …"). null이면 툴팁 없음.</summary>
+    [ObservableProperty]
+    private string? _sessionResetsTip;
+
     private static PlanKind ResolvePlanKind(string? sub) => sub?.Trim().ToLowerInvariant() switch
     {
         null or "" => PlanKind.None,

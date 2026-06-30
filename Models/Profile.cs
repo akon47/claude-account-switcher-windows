@@ -50,4 +50,8 @@ public class Profile
     /// <summary>세션 남은 비율(0~100). 색 구간 표시용 메모리 캐시(영속 안 함).</summary>
     [JsonIgnore]
     public double? SessionPercent { get; set; }
+
+    /// <summary>세션(5시간) 창이 리셋되는 절대 시각. 남은 시간 표시용 메모리 캐시(영속 안 함).</summary>
+    [JsonIgnore]
+    public DateTimeOffset? SessionResetsAt { get; set; }
 }

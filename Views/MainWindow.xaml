@@ -9,7 +9,7 @@
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     mc:Ignorable="d"
     Title="{loc:Loc WinMainTitle}"
-    Width="860"
+    Width="900"
     Height="500"
     MinWidth="600"
     MinHeight="380"
@@ -184,35 +184,49 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <!-- Session: 남은 한도에 따라 녹색→주황→버밀리온 -->
+                        <!-- Session: 남은 한도(녹색→주황→버밀리온) + 리셋까지 남은 시간(↻ 카운트다운) -->
                         <GridViewColumn
                             Header="{loc:Loc ColSession}"
-                            Width="104"
+                            Width="140"
                             >
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock
-                                        Text="{Binding SessionRemaining}"
-                                        FontWeight="SemiBold"
+                                    <StackPanel
+                                        Orientation="Horizontal"
                                         VerticalAlignment="Center"
                                         >
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="High">
-                                                        <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="Medium">
-                                                        <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding SessionLevel}" Value="Low">
-                                                        <Setter Property="Foreground" Value="{DynamicResource VermilionBrush}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                        <TextBlock
+                                            Text="{Binding SessionRemaining}"
+                                            FontWeight="SemiBold"
+                                            VerticalAlignment="Center"
+                                            >
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="High">
+                                                            <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="Medium">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="Low">
+                                                            <Setter Property="Foreground" Value="{DynamicResource VermilionBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <!-- 리셋까지 남은 시간. 값이 없으면 빈 문자열 → 표시 안 함. 툴팁에 정확한 초기화 시각. -->
+                                        <TextBlock
+                                            Text="{Binding SessionResetsIn}"
+                                            ToolTip="{Binding SessionResetsTip}"
+                                            Margin="8 0 0 0"
+                                            FontSize="11"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource SageMistBrush}"
+                                            />
+                                    </StackPanel>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
