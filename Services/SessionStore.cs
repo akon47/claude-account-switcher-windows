@@ -87,7 +87,58 @@ public sealed class SessionStore
             File.Copy(s.FilePath, destFile);
         }
 
+        CopyLinkedSubAgents(s, destProjects);
         return s.SessionId;
+    }
+
+    /// <summary>
+    /// 이 세션에 연결된 서브에이전트(sidechain) 트랜스크립트도 대상 폴더로 함께 복사한다.
+    /// 서브에이전트 파일(agent-*.jsonl)은 내부 sessionId 에 부모 세션 id 를 기록하므로 그걸로 매칭한다.
+    /// (이어하기 자체엔 없어도 되지만, 대상 계정에서 서브에이전트 상세까지 온전히 재현되도록 가져온다.)
+    /// </summary>
+    private static void CopyLinkedSubAgents(SessionEntry s, string destProjects)
+    {
+        try
+        {
+            string? srcDir = Path.GetDirectoryName(s.FilePath);
+            if (srcDir is null) return;
+
+            foreach (var agentFile in Directory.EnumerateFiles(srcDir, "agent-*.jsonl"))
+            {
+                try
+                {
+                    if (ReadSessionId(agentFile) != s.SessionId) continue;
+                    string dest = Path.Combine(destProjects, Path.GetFileName(agentFile));
+                    if (!File.Exists(dest)) File.Copy(agentFile, dest);
+                }
+                catch { /* 개별 서브에이전트 복사 실패는 무시(이어하기엔 필수 아님) */ }
+            }
+        }
+        catch { /* best effort */ }
+    }
+
+    /// <summary>트랜스크립트 앞부분에서 sessionId 필드를 읽는다(없으면 null).</summary>
+    private static string? ReadSessionId(string file)
+    {
+        using var reader = new StreamReader(file);
+        for (int i = 0; i < 5; i++)
+        {
+            string? line = reader.ReadLine();
+            if (line is null) break;
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                    doc.RootElement.TryGetProperty("sessionId", out var idEl) &&
+                    idEl.ValueKind == JsonValueKind.String)
+                {
+                    return idEl.GetString();
+                }
+            }
+            catch { /* 다음 줄 시도 */ }
+        }
+        return null;
     }
 
     /// <summary>파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부)를 뽑는다. summary 우선, 없으면 첫 사용자 메시지.</summary>

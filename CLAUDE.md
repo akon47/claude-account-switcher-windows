@@ -62,7 +62,8 @@ Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거
                           세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
                           ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기 파싱. ImportInto: 같은 enc 로 복사(있으면 보존).
                           서브에이전트(sidechain) 트랜스크립트는 제외(agent-*.jsonl 파일명 + isSidechain). 미리보기는
-                          summary 우선, 없으면 첫 '실제' 사용자 메시지(isMeta·<태그> 합성 메시지는 건너뜀 → 영어 보일러플레이트 방지)
+                          summary 우선, 없으면 첫 '실제' 사용자 메시지(isMeta·<태그> 합성 메시지는 건너뜀 → 영어 보일러플레이트 방지).
+                          ImportInto 는 연결된 서브에이전트(agent-*.jsonl, 내부 sessionId==부모)도 대상 폴더로 함께 복사(완전 재현)
 Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시(App 시작 시 가동). KeepSessionAlive 켜진 프로필을
                           60초 주기로 점검해 5시간 창 resets_at 이 지나면 Launcher.FireKeepAlive 로 `claude -p "hi"`
                           (headless) 발동 → 새 창 즉시 시작. 5분 쿨다운으로 중복 발동 방지
