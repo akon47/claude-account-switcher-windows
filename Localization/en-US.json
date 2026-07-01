@@ -15,6 +15,7 @@
   "SessionResetsHm": "{0}h {1}m",
   "SessionResetsM": "{0}m",
   "SessionResetsTip": "Session resets in {0} (at {1})",
+  "WeeklyResetsTip": "Weekly limit reached — resets in {0} ({1})",
 
   "BtnCapture": "Capture current",
   "BtnAdd": "Add account",

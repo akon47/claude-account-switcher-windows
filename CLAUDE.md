@@ -116,7 +116,12 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **세션 자동 유지**: 프로필별 토글(목록 "세션 유지" 체크박스). 켜면 그 계정의 5시간 창이 리셋되는 즉시
   `claude -p "hi"`(headless, 창 없음)로 새 창을 시작시킴. 활성 프로필은 ~/.claude, 그 외는 CLAUDE_CONFIG_DIR
   격리본으로 발동. 트레이 앱 상주 중에만 동작(서비스 분리해도 PC 켜짐·로그인 전제는 동일해 앱 내부 감시자로 둠).
-  판정: usage 엔드포인트 resets_at 가 지났으면(=활성 창 없음) 발동, null/미래면 미발동(무료·오류 스팸 방지).
+  판정: **유효한 usage 응답**인데 5시간 창 resets_at 가 **null(=100%, 활성 창 없음)이거나 지났으면 발동**
+  (예전엔 null 을 놓쳐 100%+리셋없음에 고착되던 구멍이 있었음). usage 가 null(무료/조회실패)이거나 미래면 미발동.
+  주간(seven_day) 한도 소진 시엔 어차피 못 쓰므로 미발동.
+- **세션 사용량 표시(UsageService)**: oauth/usage 의 `five_hour`(5시간) + `seven_day`(주간) 파싱. 평소엔 5시간
+  잔여%+리셋 카운트다운 표시. **주간 소진 시(seven_day 잔여 0) 0%로 표시하고 카운트다운을 주간 리셋까지로 전환**
+  (SessionUsage.DisplayPercent/DisplayResetsAt). 주간 소진이어도 keep-alive 5시간 판정엔 원본 five_hour resets_at 사용.
 
 ## 남은 일 / 다음 후보
 

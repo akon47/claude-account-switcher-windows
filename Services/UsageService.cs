@@ -8,8 +8,25 @@ using System.Text.Json.Nodes;
 
 namespace ClaudeAccountSwitcher.Services;
 
-/// <summary>세션(5시간) 사용량. RemainingPercent = 100 - 사용률(%).</summary>
-public record SessionUsage(double RemainingPercent, DateTimeOffset? ResetsAt);
+/// <summary>
+/// 세션 사용량. RemainingPercent = 100 - 5시간 창 사용률(%). ResetsAt = 5시간 창 리셋 시각(원본).
+/// 주간(7일) 한도도 함께 담는다 — 주간이 소진되면 5시간 창이 100%라도 실제로는 사용할 수 없다.
+/// </summary>
+public record SessionUsage(
+    double RemainingPercent,
+    DateTimeOffset? ResetsAt,
+    double? WeeklyRemainingPercent = null,
+    DateTimeOffset? WeeklyResetsAt = null)
+{
+    /// <summary>주간 한도 소진(만료) 여부. 소진 시 표시상 0%로 취급한다.</summary>
+    public bool WeeklyExhausted => WeeklyRemainingPercent is <= 0;
+
+    /// <summary>화면 표시용 남은 비율: 주간이 소진됐으면 0%, 아니면 5시간 창 잔여.</summary>
+    public double DisplayPercent => WeeklyExhausted ? 0 : RemainingPercent;
+
+    /// <summary>화면 표시용 리셋 시각: 주간 소진 시 주간 리셋까지, 아니면 5시간 창 리셋까지.</summary>
+    public DateTimeOffset? DisplayResetsAt => WeeklyExhausted ? WeeklyResetsAt : ResetsAt;
+}
 
 /// <summary>
 /// 각 프로필의 Claude 세션 사용량을 oauth/usage 엔드포인트에서 조회한다.
@@ -124,23 +141,37 @@ public sealed class UsageService
         try
         {
             using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("five_hour", out var fh) || fh.ValueKind != JsonValueKind.Object)
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("five_hour", out var fh) || fh.ValueKind != JsonValueKind.Object)
                 return null;
 
-            double util = fh.TryGetProperty("utilization", out var u) && u.ValueKind == JsonValueKind.Number
-                ? u.GetDouble() : 0;
+            var (remaining, reset) = ReadWindow(fh);
 
-            DateTimeOffset? reset = null;
-            if (fh.TryGetProperty("resets_at", out var r) && r.ValueKind == JsonValueKind.String
-                && DateTimeOffset.TryParse(r.GetString(), out var dt))
-            {
-                reset = dt;
-            }
+            // 주간(7일) 한도. 없으면 null(=미소진 취급).
+            double? weeklyRemaining = null;
+            DateTimeOffset? weeklyReset = null;
+            if (root.TryGetProperty("seven_day", out var wk) && wk.ValueKind == JsonValueKind.Object)
+                (weeklyRemaining, weeklyReset) = ReadWindow(wk);
 
-            double remaining = Math.Clamp(100 - util, 0, 100);
-            return new SessionUsage(remaining, reset);
+            return new SessionUsage(remaining, reset, weeklyRemaining, weeklyReset);
         }
         catch { return null; }
+    }
+
+    /// <summary>usage 창 객체(five_hour/seven_day)에서 (남은 %, 리셋 시각)을 뽑는다.</summary>
+    private static (double Remaining, DateTimeOffset? ResetsAt) ReadWindow(JsonElement win)
+    {
+        double util = win.TryGetProperty("utilization", out var u) && u.ValueKind == JsonValueKind.Number
+            ? u.GetDouble() : 0;
+
+        DateTimeOffset? reset = null;
+        if (win.TryGetProperty("resets_at", out var r) && r.ValueKind == JsonValueKind.String
+            && DateTimeOffset.TryParse(r.GetString(), out var dt))
+        {
+            reset = dt;
+        }
+
+        return (Math.Clamp(100 - util, 0, 100), reset);
     }
 
     private record RefreshedTokens(string Access, string Refresh, long ExpiresAtMs);

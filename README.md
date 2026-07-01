@@ -42,9 +42,18 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
 - System-tray resident, dark themed UI, custom window chrome.
 - Capture the currently logged-in account, add a new account (isolated login), switch, rename, delete.
 - Launch a profile in a new terminal in a chosen folder.
+- **Session usage at a glance** — each account shows its remaining 5-hour session limit with a
+  reset countdown. When the **weekly limit** is used up it shows **0%** with the time until the
+  weekly reset (since a full 5-hour window can't be used while the weekly cap is exhausted).
+- **Keep session alive** (per-account toggle) — the moment an account's 5-hour window resets, the app
+  sends a tiny headless message so a fresh window starts right away. Runs while the tray app is resident.
+- **Resume sessions across accounts** — browse any account's past Claude Code conversations and
+  continue one under a *different* account (opens a copy, so the original stays put).
+- **Account status line** — when running an account concurrently, claude shows a bottom status line
+  with the account email · plan · name · live session %.
 - **Run options**: choose **PowerShell or cmd**, and decide whether to pass
   `--dangerously-skip-permissions` (with an optional *don't ask again* that remembers your choice —
-  reset it any time in **Settings**).
+  reset it any time in **Settings**). Applies to Explorer right-click launches too.
 - Optional Explorer right-click **"Run with Claude"** submenu (per account).
 - Start with Windows (autostart).
 - **Automatic updates** — checks GitHub Releases on startup (and on demand from the tray menu) and

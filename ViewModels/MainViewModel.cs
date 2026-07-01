@@ -93,11 +93,12 @@ public partial class MainViewModel : ObservableObject
             var usage = await _usage.GetSessionUsageAsync(path, p.Id, force);
             if (gen != _usageGen) return; // 더 최신 새로고침이 시작됨
 
-            string text = usage is null ? "—" : $"{usage.RemainingPercent:0}%";
+            // 주간(7일) 한도가 소진되면 5시간 창이 100%라도 못 쓰므로 0% + 주간 리셋까지로 표시한다.
+            string text = usage is null ? "—" : $"{usage.DisplayPercent:0}%";
             item.SessionRemaining = p.SessionRemaining = text;
-            item.SessionPercent = p.SessionPercent = usage?.RemainingPercent;
-            p.SessionResetsAt = usage?.ResetsAt;
-            var (resetIn, resetTip) = FormatReset(usage?.ResetsAt);
+            item.SessionPercent = p.SessionPercent = usage?.DisplayPercent;
+            p.SessionResetsAt = usage?.DisplayResetsAt;
+            var (resetIn, resetTip) = FormatReset(usage?.DisplayResetsAt, usage?.WeeklyExhausted == true);
             item.SessionResetsIn = resetIn;
             item.SessionResetsTip = resetTip;
         });
@@ -111,7 +112,7 @@ public partial class MainViewModel : ObservableObject
     /// 반환: (Inline = "↻ 2시간 13분", Tooltip = 전체 문장). 리셋 시각이 없거나 이미 지났으면 ("", null).
     /// 절대 리셋 시각을 캐시해 두므로 조회가 몇 분 전이어도 표시 시점 기준으로 정확하다.
     /// </summary>
-    private static (string Inline, string? Tip) FormatReset(DateTimeOffset? resetsAt)
+    private static (string Inline, string? Tip) FormatReset(DateTimeOffset? resetsAt, bool weekly = false)
     {
         if (resetsAt is not { } at) return ("", null);
         var span = at - DateTimeOffset.Now;
@@ -120,7 +121,8 @@ public partial class MainViewModel : ObservableObject
         int hours = (int)span.TotalHours;
         int mins = span.TotalMinutes < 1 ? 1 : span.Minutes; // 1분 미만도 "1분"으로 보이게
         string compact = hours > 0 ? L.Tr("SessionResetsHm", hours, mins) : L.Tr("SessionResetsM", mins);
-        string tip = L.Tr("SessionResetsTip", compact, at.ToLocalTime().ToString("t"));
+        // 주간 소진이면 툴팁을 주간 리셋 문구로(카운트다운 인라인은 동일한 ↻ 글리프).
+        string tip = L.Tr(weekly ? "WeeklyResetsTip" : "SessionResetsTip", compact, at.ToLocalTime().ToString(weekly ? "g" : "t"));
         return ("↻ " + compact, tip); // "↻"(U+21BB) 리셋 글리프 — 기존 "—"/"…" 리터럴과 동일
     }
 

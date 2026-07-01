@@ -11,10 +11,11 @@ namespace ClaudeAccountSwitcher.Services;
 /// 어떤 방식으로도 발동 불가 — 이는 별도 서비스로 빼도 동일한 한계라 앱 내부 감시자로 둔다.
 ///
 /// 판정 규칙(스팸 방지):
-/// - usage 엔드포인트에서 resets_at 을 받았고 그 시각이 '지났다' = 활성 창 없음(다음 첫 메시지 전까지 시계 멈춤)
-///   → 한마디 발동.
+/// - 유효한 usage 응답(five_hour 정보 수신)인데 5시간 창이 없거나(resets_at null = 100%, 활성 창 없음)
+///   그 시각이 이미 '지났다' → 활성 창 없음 → 한마디 발동. (resets_at null 케이스를 놓치던 구멍 보완)
 /// - resets_at 이 미래면 창이 살아있으므로 발동하지 않는다.
 /// - usage 가 null(무료 플랜/조회 실패 등)이면 확신 없음 → 발동하지 않는다.
+/// - 주간(7일) 한도가 소진됐으면 발동해도 못 쓰므로 건너뛴다.
 /// - 발동 후엔 쿨다운 동안 재발동을 막는다(엔드포인트가 새 창을 반영하기까지의 지연 흡수).
 /// </summary>
 public sealed class SessionKeepAliveService
@@ -61,13 +62,19 @@ public sealed class SessionKeepAliveService
                 // 활성 프로필은 ~/.claude 의 라이브 토큰을, 그 외엔 프로필 보관본을 쓴다(UsageService 와 동일).
                 string path = isActive ? AppPaths.ClaudeCredentials : p.CredentialsPath;
 
-                // 캐시된 창이 곧 끝나거나 이미 지났으면 강제 새로고침으로 리셋 순간을 놓치지 않는다.
+                // 캐시된 창이 곧 끝나거나(2분 내) 이미 지났거나 창 정보가 애매하면(resets_at 없음)
+                // 강제 새로고침으로 리셋 순간을 놓치지 않는다.
                 var cached = await _usage.GetSessionUsageAsync(path, p.Id);
-                bool soonOrPast = cached?.ResetsAt is { } r && r <= DateTimeOffset.UtcNow.AddMinutes(2);
+                bool soonOrPast = cached is not null && (cached.ResetsAt is null || cached.ResetsAt <= DateTimeOffset.UtcNow.AddMinutes(2));
                 var usage = soonOrPast ? await _usage.GetSessionUsageAsync(path, p.Id, force: true) : cached;
 
-                // resets_at 을 받았고 그 시각이 지났다 = 활성 창 없음 → 한마디로 새 5시간 창 시작.
-                if (usage?.ResetsAt is { } reset && reset <= DateTimeOffset.UtcNow)
+                // 유효한 usage 응답(=활성 5시간 창 정보를 받음)인데 5시간 창이 없거나(resets_at 없음, 100%)
+                // 이미 지났다 = 활성 창 없음 → 한마디로 새 5시간 창을 시작한다.
+                // (usage 가 null 이면 무료 플랜/조회 실패 등 불확실 → 발동 안 함.)
+                // 단, 주간 한도가 소진됐으면 발동해도 어차피 못 쓰므로 건너뛴다(무의미한 재시도 방지).
+                bool noActiveWindow = usage is not null && !usage.WeeklyExhausted
+                    && (usage.ResetsAt is null || usage.ResetsAt <= DateTimeOffset.UtcNow);
+                if (noActiveWindow)
                 {
                     Launcher.FireKeepAlive(p, isActive);
                     _lastFired[p.Id] = DateTime.UtcNow;

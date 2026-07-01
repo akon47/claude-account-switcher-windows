@@ -15,6 +15,7 @@
   "SessionResetsHm": "{0}시간 {1}분",
   "SessionResetsM": "{0}분",
   "SessionResetsTip": "{0} 후 세션 초기화 ({1})",
+  "WeeklyResetsTip": "주간 한도 소진 — {0} 후 초기화 ({1})",
 
   "BtnCapture": "현재 계정 캡처",
   "BtnAdd": "새 계정 추가",
