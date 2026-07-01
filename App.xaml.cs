@@ -359,9 +359,22 @@ public partial class App : Application
         var p = _store.Data.Profiles.FirstOrDefault(x => x.Id == id);
         if (p is not null)
         {
-            // 탐색기 메뉴 실행은 UI 없이 동작하므로 기억된 설정만 사용한다(기본: 권한 부여 안 함).
-            bool skip = _store.Data.SkipPermissions ?? false;
-            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip, _store.Data.StatusLine); } catch { /* best effort */ }
+            // 스킵권한: 기억값이 있으면 그대로 쓰고, "매번 묻기"(null)면 다이얼로그로 물어본다(취소 시 실행 안 함).
+            bool? skip = _store.Data.SkipPermissions;
+            if (skip is null)
+            {
+                InitLanguage(); // 독립 실행이라 다이얼로그를 현재 언어로 띄우려면 먼저 언어를 적용
+                var res = _services.GetRequiredService<IDialogService>().AskSkipPermissions(p.Name);
+                if (res is null) return true; // 사용자가 취소 → 실행하지 않음
+                if (res.Remember)
+                {
+                    _store.Data.SkipPermissions = res.SkipPermissions;
+                    _store.Save();
+                }
+                skip = res.SkipPermissions;
+            }
+
+            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip.Value, _store.Data.StatusLine); } catch { /* best effort */ }
         }
         return true;
     }
