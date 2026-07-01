@@ -51,12 +51,16 @@ Views/InputDialog          이름 입력 다이얼로그(테마)
 Views/MessageDialog        정보/오류/확인 다이얼로그(테마)
 Views/SkipPermissionsDialog --dangerously-skip-permissions 부여 여부 + "다시 묻지 않음"
 Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd) + 스킵권한 기억값 재설정
+Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/마지막사용/미리보기), 대상 계정 골라 이어하기(resume)
 ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / Settings / ProfileItem
 Services/IDialogService    테마 다이얼로그 추상화(ShowInput/Confirm/ShowInfo/ShowError/AskSkipPermissions/ShowSettings)
 Services/DialogService     IDialogService 구현(ProfileStore 주입). 활성 창을 owner로 잡음.
 Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 실행(셸·스킵권한 선택)
 Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
+Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
+                          세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
+                          ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기 파싱. ImportInto: 같은 enc 로 복사(있으면 보존)
 Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시(App 시작 시 가동). KeepSessionAlive 켜진 프로필을
                           60초 주기로 점검해 5시간 창 resets_at 이 지나면 Launcher.FireKeepAlive 로 `claude -p "hi"`
                           (headless) 발동 → 새 창 즉시 시작. 5분 쿨다운으로 중복 발동 방지
@@ -105,6 +109,10 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **다국어 14개** + 런타임 JSON 스캔(메타 기반) / **자동 업데이트**(GitHub Releases)
 - **계정 상태줄**(claude statusLine): 동시 실행 시 하단에 `👤 이메일·플랜·이름·세션%` 고정. 세션%는 claude stdin(rate_limits.five_hour)에서 실시간. 설정 토글로 on/off(기본 on, 사용자 커스텀 statusLine 보존)
 - **CI/CD**: GitHub Actions(build/bump-version/release/winget) + winget 매니페스트 + README(영/한)
+- **계정 간 세션 이어하기(resume)**: 메인창 툴바 🕘 → 세션 브라우저. 소스 계정의 대화 세션 목록을 보고,
+  대상 계정을 골라 "이어하기"하면 그 세션 `.jsonl`을 대상 프로필 폴더의 같은 `projects\<enc>`로 복사하고
+  `claude --resume <id>`를 원본 cwd에서 새 창으로 실행. 사본이므로 원본은 소스 계정에 보존(포크). 원본 폴더가
+  없으면 중단(resume 이 세션 파일을 못 찾음). `Launcher.LaunchInProfile(..., resumeSessionId)` 로 실행.
 - **세션 자동 유지**: 프로필별 토글(목록 "세션 유지" 체크박스). 켜면 그 계정의 5시간 창이 리셋되는 즉시
   `claude -p "hi"`(headless, 창 없음)로 새 창을 시작시킴. 활성 프로필은 ~/.claude, 그 외는 CLAUDE_CONFIG_DIR
   격리본으로 발동. 트레이 앱 상주 중에만 동작(서비스 분리해도 PC 켜짐·로그인 전제는 동일해 앱 내부 감시자로 둠).

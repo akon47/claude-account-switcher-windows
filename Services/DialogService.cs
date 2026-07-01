@@ -9,8 +9,13 @@ namespace ClaudeAccountSwitcher.Services;
 public sealed class DialogService : IDialogService
 {
     private readonly ProfileStore _store;
+    private readonly SessionStore _sessions;
 
-    public DialogService(ProfileStore store) => _store = store;
+    public DialogService(ProfileStore store, SessionStore sessions)
+    {
+        _store = store;
+        _sessions = sessions;
+    }
 
     public string? ShowInput(string title, string message, string defaultValue = "")
     {
@@ -39,6 +44,13 @@ public sealed class DialogService : IDialogService
     public void ShowSettings()
     {
         var dlg = new SettingsWindow { DataContext = new SettingsViewModel(_store) };
+        SetOwner(dlg);
+        dlg.ShowDialog();
+    }
+
+    public void ShowSessionBrowser()
+    {
+        var dlg = new SessionBrowserWindow { DataContext = new SessionBrowserViewModel(_store, _sessions, this) };
         SetOwner(dlg);
         dlg.ShowDialog();
     }

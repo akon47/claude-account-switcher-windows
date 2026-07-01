@@ -10,7 +10,7 @@ namespace ClaudeAccountSwitcher.Services;
 /// </summary>
 public static class Launcher
 {
-    public static void LaunchInProfile(Profile p, string? workingDir, ShellKind shell, bool skipPermissions, bool statusLine)
+    public static void LaunchInProfile(Profile p, string? workingDir, ShellKind shell, bool skipPermissions, bool statusLine, string? resumeSessionId = null)
     {
         Directory.CreateDirectory(p.ConfigDir);
         // 이 계정으로 띄운 claude 하단의 계정 상태줄: 설정이 켜져 있으면 설치/갱신, 꺼져 있으면 우리 것 제거.
@@ -18,6 +18,8 @@ public static class Launcher
 
         string cwd = workingDir is not null && Directory.Exists(workingDir) ? workingDir : AppPaths.UserHome;
         string command = skipPermissions ? "claude --dangerously-skip-permissions" : "claude";
+        // 특정 세션 이어하기(--resume <id>): 세션 파일은 호출 측에서 이 프로필 폴더로 복사해 둔다.
+        if (!string.IsNullOrEmpty(resumeSessionId)) command += " --resume " + resumeSessionId;
         string title = "Claude: " + p.Name;
 
         var psi = shell switch

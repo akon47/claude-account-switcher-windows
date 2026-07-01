@@ -105,5 +105,25 @@
   "UpdTitle": "업데이트",
   "UpdNone": "최신 버전입니다.",
   "UpdAvailable": "새 버전 {0} 이(가) 있습니다. 지금 업데이트할까요?",
-  "UpdDownloading": "업데이트 {0} 다운로드 중…"
+  "UpdDownloading": "업데이트 {0} 다운로드 중…",
+
+  "TipSessions": "세션 훑어보기 / 다른 계정으로 이어하기",
+  "SessWinTitle": "세션 — 다른 계정으로 이어하기",
+  "SessSourceLabel": "훑어볼 계정:",
+  "SessDestLabel": "이어할 계정:",
+  "SessColProject": "프로젝트",
+  "SessColWhen": "마지막 사용",
+  "SessColPreview": "미리보기",
+  "SessLoading": "세션 불러오는 중…",
+  "SessEmpty": "이 계정의 세션이 없습니다.",
+  "SessResume": "이어하기",
+  "SessClose": "닫기",
+  "SessResumeTitle": "세션 이어하기",
+  "SessResumeConfirm": "'{0}' 계정의 세션을 '{1}' 계정으로 이어할까요?\n\n'{1}' 계정에 사본으로 열리므로 원본은 '{0}'에 그대로 남고, 이후 대화는 '{1}' 계정으로 청구됩니다.",
+  "SessResumeNoCwd": "이어할 수 없습니다: 원본 작업 폴더가 더 이상 존재하지 않습니다.\n({0})",
+
+  "TimeJustNow": "방금",
+  "TimeMinutesAgo": "{0}분 전",
+  "TimeHoursAgo": "{0}시간 전",
+  "TimeDaysAgo": "{0}일 전"
 }

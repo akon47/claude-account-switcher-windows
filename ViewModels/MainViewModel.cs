@@ -303,6 +303,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Settings() => _dialogs.ShowSettings();
 
+    [RelayCommand]
+    private void Sessions() => _dialogs.ShowSessionBrowser();
+
     /// <summary>스킵 권한 값을 결정한다. 기억값이 있으면 그대로, 없으면 다이얼로그로 묻는다. 취소 시 null.</summary>
     private bool? ResolveSkipPermissions(string profileName)
     {

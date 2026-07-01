@@ -21,4 +21,7 @@ public interface IDialogService
 
     /// <summary>설정 창을 모달로 연다.</summary>
     void ShowSettings();
+
+    /// <summary>계정별 세션 훑어보기 + 다른 계정으로 이어하기(resume) 창을 모달로 연다.</summary>
+    void ShowSessionBrowser();
 }

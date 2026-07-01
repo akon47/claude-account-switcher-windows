@@ -144,6 +144,7 @@ public partial class App : Application
     {
         var sc = new ServiceCollection();
         sc.AddSingleton<ProfileStore>();
+        sc.AddSingleton<SessionStore>();
         sc.AddSingleton<UsageService>();
         sc.AddSingleton<SessionKeepAliveService>();
         sc.AddSingleton<IDialogService, DialogService>();

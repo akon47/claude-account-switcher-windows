@@ -105,5 +105,25 @@
   "UpdTitle": "Update",
   "UpdNone": "You're on the latest version.",
   "UpdAvailable": "A new version {0} is available. Update now?",
-  "UpdDownloading": "Downloading update {0}…"
+  "UpdDownloading": "Downloading update {0}…",
+
+  "TipSessions": "Browse sessions / resume across accounts",
+  "SessWinTitle": "Sessions — resume across accounts",
+  "SessSourceLabel": "Account to browse:",
+  "SessDestLabel": "Resume with:",
+  "SessColProject": "Project",
+  "SessColWhen": "Last used",
+  "SessColPreview": "Preview",
+  "SessLoading": "Loading sessions…",
+  "SessEmpty": "No sessions found for this account.",
+  "SessResume": "Resume",
+  "SessClose": "Close",
+  "SessResumeTitle": "Resume session",
+  "SessResumeConfirm": "Resume a session from '{0}' using the '{1}' account?\n\nA copy is opened under '{1}', so the original stays with '{0}' and further messages are billed to '{1}'.",
+  "SessResumeNoCwd": "Can't resume: the original working folder no longer exists.\n({0})",
+
+  "TimeJustNow": "just now",
+  "TimeMinutesAgo": "{0} min ago",
+  "TimeHoursAgo": "{0} hr ago",
+  "TimeDaysAgo": "{0} days ago"
 }

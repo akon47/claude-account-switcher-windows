@@ -1,0 +1,181 @@
+<ctrl:ThemedWindow
+    x:Class="ClaudeAccountSwitcher.Views.SessionBrowserWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
+    xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
+    Title="{loc:Loc SessWinTitle}"
+    Width="760"
+    Height="540"
+    MinWidth="560"
+    MinHeight="380"
+    ResizeMode="CanResize"
+    WindowStartupLocation="CenterOwner"
+    Style="{DynamicResource ThemedWindowStyle}"
+    >
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Source account selector -->
+        <StackPanel
+            Grid.Row="0"
+            Orientation="Horizontal"
+            Margin="0 0 0 12"
+            >
+            <TextBlock
+                Text="{loc:Loc SessSourceLabel}"
+                VerticalAlignment="Center"
+                Margin="0 0 8 0"
+                Foreground="{DynamicResource WhiteBrush}"
+                />
+            <ComboBox
+                Width="360"
+                ItemsSource="{Binding SourceAccounts}"
+                SelectedItem="{Binding SelectedSource, Mode=TwoWay}"
+                DisplayMemberPath="Display"
+                />
+        </StackPanel>
+
+        <!-- Session list + busy/empty overlay -->
+        <Border
+            Grid.Row="1"
+            Background="{DynamicResource ControlBackgroundBrush}"
+            BorderBrush="{DynamicResource CharcoalAshBrush}"
+            BorderThickness="1"
+            >
+            <Grid>
+                <ListView
+                    BorderThickness="0"
+                    Background="Transparent"
+                    ItemsSource="{Binding Sessions}"
+                    SelectedItem="{Binding SelectedSession, Mode=TwoWay}"
+                    >
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn
+                                Header="{loc:Loc SessColProject}"
+                                Width="180"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock
+                                            Text="{Binding Project}"
+                                            ToolTip="{Binding Cwd}"
+                                            TextTrimming="CharacterEllipsis"
+                                            />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn
+                                Header="{loc:Loc SessColWhen}"
+                                Width="96"
+                                DisplayMemberBinding="{Binding When}"
+                                />
+                            <GridViewColumn
+                                Header="{loc:Loc SessColPreview}"
+                                Width="360"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock
+                                            Text="{Binding Preview}"
+                                            ToolTip="{Binding Preview}"
+                                            TextTrimming="CharacterEllipsis"
+                                            Foreground="{DynamicResource SageMistBrush}"
+                                            />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock
+                    Text="{loc:Loc SessLoading}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource SageMistBrush}"
+                    >
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock
+                    Text="{loc:Loc SessEmpty}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    TextWrapping="Wrap"
+                    MaxWidth="360"
+                    TextAlignment="Center"
+                    Foreground="{DynamicResource SageMistBrush}"
+                    >
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Resume action: destination account + button -->
+        <Grid
+            Grid.Row="2"
+            Margin="0 12 0 0"
+            >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                Grid.Column="0"
+                Text="{loc:Loc SessDestLabel}"
+                VerticalAlignment="Center"
+                Margin="0 0 8 0"
+                Foreground="{DynamicResource WhiteBrush}"
+                />
+            <ComboBox
+                Grid.Column="1"
+                HorizontalAlignment="Left"
+                Width="320"
+                ItemsSource="{Binding DestAccounts}"
+                SelectedItem="{Binding SelectedDest, Mode=TwoWay}"
+                DisplayMemberPath="Display"
+                />
+            <Button
+                Grid.Column="2"
+                Content="{loc:Loc SessResume}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding ResumeCommand}"
+                Style="{DynamicResource AccentButtonStyle}"
+                />
+            <Button
+                Grid.Column="3"
+                Content="{loc:Loc SessClose}"
+                Margin="6 0 0 0"
+                Padding="12 6"
+                IsCancel="True"
+                />
+        </Grid>
+    </Grid>
+</ctrl:ThemedWindow>

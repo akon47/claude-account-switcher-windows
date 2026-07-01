@@ -61,6 +61,13 @@
                 >
                 <Button
                     Style="{DynamicResource IconButtonStyle}"
+                    Content="&#xE81C;"
+                    ToolTip="{loc:Loc TipSessions}"
+                    Margin="0 0 4 0"
+                    Command="{Binding SessionsCommand}"
+                    />
+                <Button
+                    Style="{DynamicResource IconButtonStyle}"
                     Content="&#xE72C;"
                     ToolTip="{loc:Loc TipRefresh}"
                     Command="{Binding RefreshCommand}"
