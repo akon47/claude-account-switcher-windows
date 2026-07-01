@@ -13,7 +13,7 @@ namespace ClaudeAccountSwitcher.Services;
 public sealed class SessionStore
 {
     private const string ProjectsFolder = "projects";
-    private const int MaxScanLines = 60; // cwd/미리보기는 파일 앞부분에 있으므로 앞줄만 훑는다.
+    private const int MaxScanLines = 120; // cwd/미리보기는 앞부분에 있음. 앞선 슬래시 명령·메타 메시지를 건너뛸 여유.
 
     /// <summary>
     /// 프로필의 세션 목록. 활성 프로필이면 실제 라이브 저장소(~/.claude)도 함께 훑는다
@@ -41,10 +41,15 @@ public sealed class SessionStore
             {
                 try
                 {
+                    // 서브에이전트(sidechain) 트랜스크립트는 이어하기 대상이 아니다(대량으로 생기고 영어
+                    // 에이전트 프롬프트가 첫 메시지) → 제외. Claude Code 는 이를 agent-*.jsonl 로 만든다(빠른 필터).
+                    if (Path.GetFileName(file).StartsWith("agent-", StringComparison.OrdinalIgnoreCase)) continue;
+
                     string id = Path.GetFileNameWithoutExtension(file);
                     if (!seen.Add(id)) continue;
 
-                    var (cwd, preview) = ScanHead(file);
+                    var (cwd, preview, isSidechain) = ScanHead(file);
+                    if (isSidechain) continue; // agent- 규칙을 벗어난 sidechain 까지 방어
                     result.Add(new SessionEntry
                     {
                         SessionId = id,
@@ -85,12 +90,13 @@ public sealed class SessionStore
         return s.SessionId;
     }
 
-    /// <summary>파일 앞부분만 훑어 (cwd, 미리보기)를 뽑는다. summary 우선, 없으면 첫 사용자 메시지.</summary>
-    private static (string? Cwd, string? Preview) ScanHead(string file)
+    /// <summary>파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부)를 뽑는다. summary 우선, 없으면 첫 사용자 메시지.</summary>
+    private static (string? Cwd, string? Preview, bool IsSidechain) ScanHead(string file)
     {
         string? cwd = null;
         string? summary = null;
         string? firstUser = null;
+        bool isSidechain = false;
 
         using var reader = new StreamReader(file);
         for (int i = 0; i < MaxScanLines; i++)
@@ -104,6 +110,9 @@ public sealed class SessionStore
             catch { continue; }
 
             if (root.ValueKind != JsonValueKind.Object) continue;
+
+            if (!isSidechain && root.TryGetProperty("isSidechain", out var scEl) && scEl.ValueKind == JsonValueKind.True)
+                isSidechain = true;
 
             if (cwd is null && root.TryGetProperty("cwd", out var cwdEl) && cwdEl.ValueKind == JsonValueKind.String)
             {
@@ -120,10 +129,15 @@ public sealed class SessionStore
 
             if (firstUser is null && root.TryGetProperty("type", out var t2) &&
                 t2.ValueKind == JsonValueKind.String && t2.GetString() == "user" &&
+                // 메타(caveat 등 하네스 주입) 메시지는 건너뛴다.
+                !(root.TryGetProperty("isMeta", out var metaEl) && metaEl.ValueKind == JsonValueKind.True) &&
                 root.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.Object &&
                 msg.TryGetProperty("content", out var content))
             {
-                firstUser = ExtractText(content);
+                var txt = ExtractText(content);
+                // 슬래시 명령 래퍼(<command-name>…)·시스템 리마인더(<system-reminder>)·명령 출력
+                // (<local-command-stdout>) 등 <태그>로 시작하는 합성 메시지는 미리보기로 부적합 → 건너뛴다.
+                if (!IsSynthetic(txt)) firstUser = txt;
             }
 
             // cwd 와 미리보기(요약이면 최상)를 확보했으면 조기 종료.
@@ -131,7 +145,7 @@ public sealed class SessionStore
         }
 
         string? preview = Clean(summary ?? firstUser);
-        return (cwd, preview);
+        return (cwd, preview, isSidechain);
     }
 
     /// <summary>메시지 content(문자열 또는 파트 배열)에서 첫 텍스트를 뽑는다.</summary>
@@ -153,12 +167,15 @@ public sealed class SessionStore
         return null;
     }
 
+    /// <summary>합성/주입 메시지(슬래시 명령 래퍼·시스템 리마인더·명령 출력 등 &lt;태그&gt;로 시작)인지.</summary>
+    private static bool IsSynthetic(string? s) =>
+        string.IsNullOrWhiteSpace(s) || s.TrimStart().StartsWith('<');
+
     /// <summary>미리보기 텍스트를 한 줄로 정리하고 길이를 제한한다.</summary>
     private static string? Clean(string? s)
     {
         if (string.IsNullOrWhiteSpace(s)) return null;
         s = string.Join(' ', s.Split(new[] { '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)).Trim();
-        // 슬래시 명령(<command-name> 등 하네스 주입)으로 시작하면 미리보기로 부적합 → 그대로 두되 길이만 제한.
         const int max = 140;
         return s.Length <= max ? s : s[..max] + "…";
     }
