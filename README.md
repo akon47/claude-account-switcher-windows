@@ -128,6 +128,17 @@ Claude Code itself stores `.credentials.json` in plaintext on Windows. This app 
 credentials at the same level, under your user profile folder (`%APPDATA%`). DPAPI-based encryption
 at rest is on the roadmap.
 
+## Disclaimer
+
+This is an **unofficial, independent** tool and is **not affiliated with, endorsed by, or sponsored
+by Anthropic**. "Claude" and "Claude Code" are trademarks of their respective owners.
+
+The app only manages accounts **you legitimately own**, on your own machine, by copying local
+credential files and setting environment variables — it does not bypass authentication or any
+technical protection. You are responsible for using it in compliance with the terms of service and
+usage policies of any account you add (including limits on account sharing and on circumventing
+rate/usage limits). Use at your own risk; provided "as is" without warranty (see [MIT](LICENSE)).
+
 ## License
 
 [MIT](LICENSE)
