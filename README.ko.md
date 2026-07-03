@@ -5,6 +5,7 @@
 *[English README](README.md)*
 
 [![Release](https://img.shields.io/github/v/release/akon47/claude-account-switcher-windows?logo=github)](https://github.com/akon47/claude-account-switcher-windows/releases/latest)
+[![winget](https://img.shields.io/winget/v/akon47.ClaudeAccountSwitcher?label=winget)](https://github.com/microsoft/winget-pkgs/tree/master/manifests/a/akon47/ClaudeAccountSwitcher)
 [![Downloads](https://img.shields.io/github/downloads/akon47/claude-account-switcher-windows/total?color=brightgreen)](https://github.com/akon47/claude-account-switcher-windows/releases)
 ![.NET](https://img.shields.io/badge/.NET%209-WPF-512BD4)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -81,7 +82,6 @@ Claude Code는 로그인 정보를 `~/.claude/.credentials.json`(OAuth 토큰)�
 ```powershell
 winget install akon47.ClaudeAccountSwitcher
 ```
-*[winget-pkgs](https://github.com/microsoft/winget-pkgs)에 등록 PR이 검토 중 — 머지되면 동작합니다.*
 
 ### 인스톨러
 
