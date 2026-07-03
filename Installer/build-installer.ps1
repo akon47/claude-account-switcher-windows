@@ -1,7 +1,7 @@
 ﻿<#
   Claude Account Switcher 인스톨러 빌드
   1) 자기완결(self-contained) 단일 exe 로 publish
-  2) NSIS(makensis)로 Setup.nsi 컴파일 → dist\Claude-Account-Switcher-Setup_v<버전>.exe
+  2) NSIS(makensis)로 Setup.nsi 컴파일 → dist\Claude-Account-Switcher-Setup_v<버전>-x64.exe
 
   -Version 0.2.0  으로 버전을 주입할 수 있다(CI에서 태그 기반으로 전달). 생략 시 csproj 의 <Version> 사용.
 #>
@@ -63,7 +63,7 @@ Write-Host '== [3/3] makensis 컴파일 ==' -ForegroundColor Cyan
 & $makensis "/DPRODUCT_VERSION=$ver" "/DSETUP_VERSION=$setupVer" "/DPUBLISH_DIR=$publishDir" "/DOUT_DIR=$distDir" $nsi
 if ($LASTEXITCODE -ne 0) { throw 'makensis 컴파일 실패' }
 
-$out = Join-Path $distDir "Claude-Account-Switcher-Setup_v$setupVer.exe"
+$out = Join-Path $distDir "Claude-Account-Switcher-Setup_v$setupVer-x64.exe"
 Write-Host ""
 Write-Host "완료: $out" -ForegroundColor Green
 if (Test-Path $out) {

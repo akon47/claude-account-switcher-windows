@@ -17,17 +17,22 @@ winget install akon47.ClaudeAccountSwitcher
 
    ```powershell
    powershell Installer\build-installer.ps1
-   # -> dist\Claude-Account-Switcher-Setup_vX.Y.Z.exe  (NSIS, per-user, supports /S silent)
+   # -> dist\Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe  (NSIS, per-user, supports /S silent)
    ```
 
-2. **Create a GitHub Release** tagged `vX.Y.Z` and upload `Claude-Account-Switcher-Setup_vX.Y.Z.exe` as an asset.
+   > The `-x64` suffix in the file name matters: the NSIS stub is an x86 PE, so automated
+   > manifest tools (komac / wingetcreate) mis-detect the architecture as `x86` unless the
+   > URL itself says `x64` — and winget-pkgs validation then rejects the update as
+   > "Missing x64 installer".
+
+2. **Create a GitHub Release** tagged `vX.Y.Z` and upload `Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe` as an asset.
    The download URL must be the stable release-asset URL:
-   `https://github.com/akon47/claude-account-switcher-windows/releases/download/vX.Y.Z/Claude-Account-Switcher-Setup_vX.Y.Z.exe`
+   `https://github.com/akon47/claude-account-switcher-windows/releases/download/vX.Y.Z/Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe`
 
 3. **Compute the installer hash** and put it in `*.installer.yaml` → `InstallerSha256`:
 
    ```powershell
-   (Get-FileHash dist\Claude-Account-Switcher-Setup_vX.Y.Z.exe -Algorithm SHA256).Hash
+   (Get-FileHash dist\Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe -Algorithm SHA256).Hash
    ```
 
 4. **Bump versions** in all three manifests (`PackageVersion`), the `InstallerUrl` tag, and `ReleaseDate`.
@@ -38,7 +43,7 @@ winget install akon47.ClaudeAccountSwitcher
    ```powershell
    winget install Microsoft.WingetCreate
    wingetcreate update akon47.ClaudeAccountSwitcher --version X.Y.Z `
-     --urls https://github.com/akon47/claude-account-switcher-windows/releases/download/vX.Y.Z/Claude-Account-Switcher-Setup_vX.Y.Z.exe `
+     --urls https://github.com/akon47/claude-account-switcher-windows/releases/download/vX.Y.Z/Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe `
      --submit
    # or validate the local manifests:
    winget validate --manifest winget

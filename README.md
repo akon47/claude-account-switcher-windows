@@ -89,7 +89,7 @@ winget install akon47.ClaudeAccountSwitcher
 
 ### Installer
 
-Download `Claude-Account-Switcher-Setup_vX.Y.Z.exe` from the
+Download `Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe` from the
 [Releases](https://github.com/akon47/claude-account-switcher-windows/releases) page and run it.
 It's a self-contained, per-user installer (`%LOCALAPPDATA%\Programs`, no admin, ~54 MB).
 
@@ -100,7 +100,7 @@ Requires the **.NET 9 SDK**. NSIS (`makensis`) is needed only to build the insta
 ```powershell
 dotnet build Claude-Account-Switcher.csproj -c Debug     # build
 dotnet run --project Claude-Account-Switcher.csproj      # run (tray)
-powershell Installer\build-installer.ps1                 # build installer -> dist\Claude-Account-Switcher-Setup.exe
+powershell Installer\build-installer.ps1                 # build installer -> dist\Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe
 ```
 
 ## Releasing (maintainers)
@@ -110,7 +110,7 @@ Releases are automated with GitHub Actions:
 - **`build`** — compiles on every push / PR to `main`.
 - **`bump-version`** (manual) — bumps `<Version>` in the csproj, commits, and pushes a `vX.Y.Z` tag.
 - **`release`** — on a `vX.Y.Z` tag, builds the self-contained installer and publishes a GitHub
-  Release with `Claude-Account-Switcher-Setup.exe`.
+  Release with `Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe`.
 - **`winget`** — on a published release, opens an update PR to `microsoft/winget-pkgs`
   (requires a `WINGET_TOKEN` repo secret; see [`winget/README.md`](winget/README.md)).
 

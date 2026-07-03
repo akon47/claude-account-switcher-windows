@@ -86,7 +86,7 @@ winget install akon47.ClaudeAccountSwitcher
 ### 인스톨러
 
 [Releases](https://github.com/akon47/claude-account-switcher-windows/releases)에서
-`Claude-Account-Switcher-Setup_vX.Y.Z.exe`를 받아 실행하세요. 자기완결·현재 사용자 설치
+`Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe`를 받아 실행하세요. 자기완결·현재 사용자 설치
 (`%LOCALAPPDATA%\Programs`, 관리자 불필요, ~55MB).
 
 ## 소스 빌드
@@ -96,7 +96,7 @@ winget install akon47.ClaudeAccountSwitcher
 ```powershell
 dotnet build Claude-Account-Switcher.csproj -c Debug     # 빌드
 dotnet run --project Claude-Account-Switcher.csproj      # 실행(트레이)
-powershell Installer\build-installer.ps1                 # 인스톨러 빌드 -> dist\Claude-Account-Switcher-Setup.exe
+powershell Installer\build-installer.ps1                 # 인스톨러 빌드 -> dist\Claude-Account-Switcher-Setup_vX.Y.Z-x64.exe
 ```
 
 ## 릴리스 (메인테이너)

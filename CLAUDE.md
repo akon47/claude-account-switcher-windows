@@ -90,7 +90,7 @@ winget/                    winget 매니페스트 3종 + README(식별자 akon47
 ```
 dotnet build Claude-Account-Switcher.csproj -c Debug      # 빌드
 dotnet run --project Claude-Account-Switcher.csproj       # 실행(트레이)
-powershell Installer\build-installer.ps1                  # 인스톨러 빌드 -> dist\Claude-Account-Switcher-Setup.exe
+powershell Installer\build-installer.ps1                  # 인스톨러 빌드 -> dist\Claude-Account-Switcher-Setup_v<버전>-x64.exe
 powershell Installer\build-installer.ps1 -Version 0.3.0   # 버전 주입(CI는 태그값 전달)
 powershell Resources\generate-icon.ps1                    # app.ico 재생성
 ```
@@ -154,6 +154,12 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **winget 자동 제출은 패키지가 winget-pkgs에 이미 존재해야 성공**(winget-releaser는 업데이트만 처리).
   최초 등록(0.5.0) 심사 중에 낸 릴리스(0.6.0~0.7.3)는 winget 잡이 실패했음(continue-on-error라 런은 초록으로 보임).
   이런 경우 버전을 새로 올릴 필요 없이 해당 release 런의 **winget 잡만 재실행**하면 그 태그 버전으로 제출된다.
+- **winget 매니페스트 아키텍처(중요)**: NSIS 스텁은 x86 PE 라 komac(winget-releaser)이 파일 분석만으로는
+  아키텍처를 x86 으로 오검지 → 게시된 x64 매니페스트와 불일치로 winget-pkgs 검증이 거부("Missing x64 installer",
+  0.7.3 PR 에서 실제 발생 → fork 브랜치에서 x86→x64 수동 수정으로 해결). komac 은 **URL 에 x64 가 있으면 그 값을
+  우선**하므로 인스톨러 파일명에 `-x64` 를 붙였다(Setup.nsi OutFile + release.yml installers-regex, v0.7.3 이후).
+  파일명을 바꾸거나 접미사를 빼지 말 것. `Target amd64-unicode`(진짜 x64 스텁)는 표준 NSIS 배포판에 스텁이
+  없어(로컬 3.11·choco 동일) 쓸 수 없다. 구버전 자동 업데이트는 무영향(UpdateService 는 "Setup" 포함 + .exe 로 매칭).
 - **다국어 추가는 JSON만**: 빌드에 포함하려면 `Localization/xx-XX.json`에 `_culture`/`_name` 포함해 추가
   (csproj `Content` 글롭이 출력 `locale\`로 복사). 재컴파일 없이 늘리려면 **설치 폴더 `locale\`에 JSON을
   직접 떨궈** 넣으면 된다(런타임에 그 폴더를 스캔). 매니저엔 손대지 말 것. JSON은 UTF-8(BOM 무관),

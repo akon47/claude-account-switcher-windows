@@ -70,5 +70,6 @@ jobs:
         with:
           identifier: akon47.ClaudeAccountSwitcher
           release-tag: ${{ github.ref_name }}
-          installers-regex: 'Setup_v[\d.]+\.exe$'
+          # 파일명의 -x64 로 komac 이 아키텍처를 x64 로 인식한다(NSIS 스텁은 x86 PE 라 파일 분석만으론 오검지).
+          installers-regex: 'Setup_v[\d.]+-x64\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}

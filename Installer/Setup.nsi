@@ -55,10 +55,13 @@ LangString RunAppText   ${LANG_ENGLISH} "Run Claude Account Switcher"
 LangString RunAppText   ${LANG_KOREAN}  "Claude Account Switcher 실행"
 
 Name "${PRODUCT_NAME}"
+; 파일명의 -x64 는 winget 자동 제출용: NSIS 스텁이 x86 PE 라 komac 이 아키텍처를 x86 으로
+; 오검지하는데, URL(파일명)에 x64 가 있으면 그 값을 우선한다. 빼면 winget-pkgs 검증에서
+; 기존 x64 매니페스트와 불일치("Missing x64 installer")로 거부된다.
 !ifdef OUT_DIR
-  OutFile "${OUT_DIR}\Claude-Account-Switcher-Setup_v${SETUP_VERSION}.exe"
+  OutFile "${OUT_DIR}\Claude-Account-Switcher-Setup_v${SETUP_VERSION}-x64.exe"
 !else
-  OutFile "Claude-Account-Switcher-Setup_v${SETUP_VERSION}.exe"
+  OutFile "Claude-Account-Switcher-Setup_v${SETUP_VERSION}-x64.exe"
 !endif
 InstallDir "$LOCALAPPDATA\Programs\${PRODUCT_NAME}"
 InstallDirRegKey HKCU "${PRODUCT_UNINST_KEY}" "InstallLocation"
