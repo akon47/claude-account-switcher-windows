@@ -112,6 +112,8 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **다국어 14개** + 런타임 JSON 스캔(메타 기반) / **자동 업데이트**(GitHub Releases)
 - **계정 상태줄**(claude statusLine): 동시 실행 시 하단에 `👤 이메일·플랜·이름·세션%` 고정. 세션%는 claude stdin(rate_limits.five_hour)에서 실시간. 설정 토글로 on/off(기본 on, 사용자 커스텀 statusLine 보존)
 - **CI/CD**: GitHub Actions(build/bump-version/release/winget) + winget 매니페스트 + README(영/한)
+- **winget 정식 등록 완료**(2026-07): `winget install akon47.ClaudeAccountSwitcher` 동작(0.5.0부터 게시).
+  이후 릴리스는 release 워크플로의 `winget` 잡(winget-releaser)이 winget-pkgs 업데이트 PR을 자동 생성
 - **계정 간 세션 이어하기(resume)**: 메인창 툴바 🕘 → 세션 브라우저. 소스 계정의 대화 세션 목록을 보고,
   대상 계정을 골라 "이어하기"하면 그 세션 `.jsonl`을 대상 프로필 폴더의 같은 `projects\<enc>`로 복사하고
   `claude --resume <id>`를 원본 cwd에서 새 창으로 실행. 사본이므로 원본은 소스 계정에 보존(포크). 원본 폴더가
@@ -128,7 +130,6 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 
 ## 남은 일 / 다음 후보
 
-- winget **최초 등록**(`wingetcreate`)과 자동 제출용 `WINGET_TOKEN` 시크릿 등록 (워크플로/매니페스트는 준비됨)
 - 코드 서명(SmartScreen 제거 — 인증서 필요)
 - DPAPI로 저장 자격증명 암호화
 - 자동 업데이트 옵션(자동 확인 끄기/주기) 설정 노출, 다국어 추가
@@ -150,6 +151,9 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **릴리스 모델**: `main`에 **일반 커밋**을 선형으로 쌓는다(squash/force-push 안 함 — CONTRIBUTING.md 기준).
   배포 시 `<Version>`을 올린 커밋을 푸시하고 `vX.Y.Z` 태그를 밀면 `release` 워크플로가 자기완결 인스톨러를
   빌드해 GitHub Release로 올린다(공개되면 `winget` 워크플로가 PR 생성). 브랜치는 `main` 유지(master로 안 바꿈).
+- **winget 자동 제출은 패키지가 winget-pkgs에 이미 존재해야 성공**(winget-releaser는 업데이트만 처리).
+  최초 등록(0.5.0) 심사 중에 낸 릴리스(0.6.0~0.7.3)는 winget 잡이 실패했음(continue-on-error라 런은 초록으로 보임).
+  이런 경우 버전을 새로 올릴 필요 없이 해당 release 런의 **winget 잡만 재실행**하면 그 태그 버전으로 제출된다.
 - **다국어 추가는 JSON만**: 빌드에 포함하려면 `Localization/xx-XX.json`에 `_culture`/`_name` 포함해 추가
   (csproj `Content` 글롭이 출력 `locale\`로 복사). 재컴파일 없이 늘리려면 **설치 폴더 `locale\`에 JSON을
   직접 떨궈** 넣으면 된다(런타임에 그 폴더를 스캔). 매니저엔 손대지 말 것. JSON은 UTF-8(BOM 무관),
