@@ -19,6 +19,7 @@
 
   "BtnCapture": "Capture current",
   "BtnAdd": "Add account",
+  "BtnRelogin": "Re-sign in",
   "BtnSwitch": "Switch",
   "BtnLaunch": "Launch window",
 
@@ -75,6 +76,11 @@
   "MsgAddTitle": "Add account",
   "MsgAddNamePrompt": "Name of the account to add:",
   "MsgAddInfo": "claude will start in a new window. Sign in there, then press Refresh.\n(This profile is an isolated login that does not touch ~/.claude.)",
+
+  "MsgReloginTitle": "Re-sign in",
+  "MsgReloginSelect": "Select a profile to re-sign in.",
+  "MsgReloginConfirm": "Re-sign in to the '{0}' account?\n\nUse this when a plan or subscription change isn't reflected yet. claude opens in a new window and asks you to sign in — complete the sign-in there.\n(Your saved login is backed up first. The current ~/.claude login is not affected.)",
+  "MsgReloginInfo": "claude will start in a new window. Sign in there, then press Refresh.\n(If the sign-in screen doesn't appear, type /login.)",
 
   "MsgSwitchTitle": "Switch",
   "MsgSwitchSelect": "Select a profile to switch to.",

@@ -104,6 +104,29 @@ public class ProfileStore
         return p;
     }
 
+    /// <summary>
+    /// 기존 프로필을 다시 로그인할 수 있도록 저장된 자격증명을 백업 후 비운다.
+    /// 이후 이 프로필로 격리 실행하면(CLAUDE_CONFIG_DIR) 자격증명이 없어 claude 가 로그인 프롬프트를 띄운다.
+    /// 구독/플랜이 바뀌었을 때 재로그인으로 갱신하는 용도(삭제 후 재추가와 동일 효과, 프로필·세션은 보존).
+    /// .claude.json(온보딩/폴더 신뢰 상태)은 남겨 재프롬프트를 피한다. 활성 프로필이어도 ~/.claude(라이브
+    /// 토큰)는 건드리지 않는다 — 격리 폴더 사본만 비우므로 현재 활성 세션은 그대로 유지된다.
+    /// </summary>
+    public void PrepareRelogin(Profile p)
+    {
+        Directory.CreateDirectory(p.ConfigDir);
+        if (!File.Exists(p.CredentialsPath)) return;
+
+        try
+        {
+            string backup = Path.Combine(AppPaths.BackupsDir, $"credentials-{p.Id}-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+            File.Copy(p.CredentialsPath, backup, overwrite: true);
+            PruneBackups(20);
+        }
+        catch { /* best effort */ }
+
+        try { File.Delete(p.CredentialsPath); } catch { /* best effort */ }
+    }
+
     /// <summary>대상 프로필을 ~/.claude 활성 계정으로 전환한다.</summary>
     public void SwitchTo(Profile target)
     {

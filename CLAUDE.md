@@ -127,6 +127,12 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **세션 사용량 표시(UsageService)**: oauth/usage 의 `five_hour`(5시간) + `seven_day`(주간) 파싱. 평소엔 5시간
   잔여%+리셋 카운트다운 표시. **주간 소진 시(seven_day 잔여 0) 0%로 표시하고 카운트다운을 주간 리셋까지로 전환**
   (SessionUsage.DisplayPercent/DisplayResetsAt). 주간 소진이어도 keep-alive 5시간 판정엔 원본 five_hour resets_at 사용.
+- **다시 로그인(재로그인)**: 하단 버튼 바 "다시 로그인". 구독/플랜이 바뀌면 재로그인해야 새 값이 읽히는데,
+  삭제 후 재추가 대신 **프로필을 유지한 채 재로그인**한다. `ProfileStore.PrepareRelogin` 가 프로필 폴더의
+  `.credentials.json` 을 백업 후 삭제(=.claude.json 온보딩/신뢰 상태는 보존) → `AddNew` 와 동일하게 격리
+  로그인(`CLAUDE_CONFIG_DIR`)으로 claude 를 띄우면 자격증명이 없어 로그인 프롬프트가 자동으로 뜬다.
+  활성 프로필이어도 ~/.claude(라이브 토큰)는 안 건드림(격리 폴더 사본만 비움 → 현재 활성 세션 유지).
+  로그인 후 [새로고침]하면 갱신된 플랜/이메일이 반영. 로그인 화면이 안 뜨면 터미널에서 `/login`.
 
 ## 남은 일 / 다음 후보
 

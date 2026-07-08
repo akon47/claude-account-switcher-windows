@@ -338,6 +338,12 @@
                 Command="{Binding AddNewCommand}"
                 />
             <Button
+                Content="{loc:Loc BtnRelogin}"
+                Margin="6 0"
+                Padding="12 6"
+                Command="{Binding ReloginCommand}"
+                />
+            <Button
                 Content="{loc:Loc BtnSwitch}"
                 Margin="6 0"
                 Padding="12 6"

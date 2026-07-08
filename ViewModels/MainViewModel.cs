@@ -212,6 +212,31 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex) { _dialogs.ShowError(ex.Message); }
     }
 
+    /// <summary>선택한 프로필을 다시 로그인시킨다. 구독/플랜이 바뀌었을 때 갱신용.
+    /// 저장된 자격증명을 백업 후 비우고, 격리 로그인으로 claude 를 띄워 로그인 프롬프트를 자동으로 낸다.</summary>
+    [RelayCommand]
+    private void Relogin()
+    {
+        var p = Selected;
+        if (p is null) { _dialogs.ShowInfo(L["MsgReloginTitle"], L["MsgReloginSelect"]); return; }
+
+        if (!_dialogs.Confirm(L["MsgReloginTitle"], L.Tr("MsgReloginConfirm", p.Name)))
+            return;
+
+        var skip = ResolveSkipPermissions(p.Name);
+        if (skip is null) return; // 취소
+
+        try
+        {
+            _store.PrepareRelogin(p);
+            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
+            ReloadFromStore();
+            Changed?.Invoke();
+            _dialogs.ShowInfo(L["MsgReloginTitle"], L["MsgReloginInfo"]);
+        }
+        catch (Exception ex) { _dialogs.ShowError(ex.Message); }
+    }
+
     [RelayCommand]
     private void Switch() => DoSwitch(Selected);
 

@@ -19,6 +19,7 @@
 
   "BtnCapture": "현재 계정 캡처",
   "BtnAdd": "새 계정 추가",
+  "BtnRelogin": "다시 로그인",
   "BtnSwitch": "전환",
   "BtnLaunch": "새 창 실행",
 
@@ -75,6 +76,11 @@
   "MsgAddTitle": "새 계정 추가",
   "MsgAddNamePrompt": "추가할 계정의 이름:",
   "MsgAddInfo": "새 창에서 claude가 실행됩니다. 로그인을 마친 뒤 [새로고침]을 누르세요.\n(이 프로필은 ~/.claude를 건드리지 않는 격리 로그인입니다.)",
+
+  "MsgReloginTitle": "다시 로그인",
+  "MsgReloginSelect": "다시 로그인할 프로필을 선택하세요.",
+  "MsgReloginConfirm": "'{0}' 계정으로 다시 로그인할까요?\n\n플랜·구독 변경이 아직 반영되지 않을 때 사용하세요. 새 창에서 claude가 열리며 로그인을 요청합니다. 거기서 로그인을 마치세요.\n(기존 로그인 정보는 먼저 백업됩니다. ~/.claude의 현재 로그인에는 영향 없음.)",
+  "MsgReloginInfo": "새 창에서 claude가 실행됩니다. 로그인을 마친 뒤 [새로고침]을 누르세요.\n(로그인 화면이 안 뜨면 /login 을 입력하세요.)",
 
   "MsgSwitchTitle": "전환",
   "MsgSwitchSelect": "전환할 프로필을 선택하세요.",
