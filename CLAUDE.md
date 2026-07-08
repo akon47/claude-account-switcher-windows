@@ -51,7 +51,8 @@ Views/InputDialog          이름 입력 다이얼로그(테마)
 Views/MessageDialog        정보/오류/확인 다이얼로그(테마)
 Views/SkipPermissionsDialog --dangerously-skip-permissions 부여 여부 + "다시 묻지 않음"
 Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd) + 스킵권한 기억값 재설정
-Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/마지막사용/미리보기), 대상 계정 골라 이어하기(resume)
+Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/이름/마지막사용/미리보기), 대상 계정 골라 이어하기(resume).
+                          다중선택 후 "내보내기"로 번들(.claudesession) 저장 / "파일에서 가져오기"로 다른 PC 번들 열어 이어하기
 ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / Settings / ProfileItem
 Services/IDialogService    테마 다이얼로그 추상화(ShowInput/Confirm/ShowInfo/ShowError/AskSkipPermissions/ShowSettings)
 Services/DialogService     IDialogService 구현(ProfileStore 주입). 활성 창을 owner로 잡음.
@@ -60,10 +61,18 @@ Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
 Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
                           세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
-                          ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기 파싱. ImportInto: 같은 enc 로 복사(있으면 보존).
+                          ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기/이름 파싱. ImportInto: enc 로 복사(있으면 보존).
                           서브에이전트(sidechain) 트랜스크립트는 제외(agent-*.jsonl 파일명 + isSidechain). 미리보기는
                           summary 우선, 없으면 첫 '실제' 사용자 메시지(isMeta·<태그> 합성 메시지는 건너뜀 → 영어 보일러플레이트 방지).
-                          ImportInto 는 연결된 서브에이전트(agent-*.jsonl, 내부 sessionId==부모)도 대상 폴더로 함께 복사(완전 재현)
+                          세션 이름은 트랜스크립트의 `ai-title`(대화 진행 중 갱신 → 파일 꼬리에서 마지막 값 = 현재 이름; ReadLastAiTitle).
+                          서브에이전트는 신구조 모두 복사: (신) 세션 사이드카 폴더 `<enc>\<id>\`(subagents 등) 통째 + (구) 평면 agent-*.jsonl(내부 sessionId==부모).
+                          ImportInto(overrideProjectFolder): 다른 PC 로 옮겨 작업 폴더가 바뀌면 새 cwd 로 다시 인코딩한 enc 폴더로 복사(resume 가 찾게)
+Services/SessionBundle.cs  세션 내보내기/가져오기(단일 파일 `.claudesession`, 실체는 zip). 저장소 구조(projects\<enc>\)를 그대로 미러링
+                          (본문 + 사이드카/서브에이전트) + manifest.json(id/enc/cwd/이름/미리보기/원본계정). Read 는 임시폴더에 풀어 ImportInto 가능.
+                          선택 시 작업 폴더(cwd)도 workdirs\<enc>\ 로 담음(무거운/재생성 폴더 제외: node_modules·.git·bin/obj·dist 등).
+                          Read 는 담긴 작업 폴더를 SessionEntry.BundleWorkdirPath 로 노출 → 가져올 때 사용자가 고른 위치에 RestoreWorkdir.
+                          Export/Read/RestoreWorkdir 모두 IProgress+CancellationToken(진행률 다이얼로그, 큰 폴더 대비)
+Services/ProjectFolderEncoder.cs  cwd → projects\<enc> 폴더명 인코딩(영숫자 아닌 문자 → '-', 문자당 1개). 다른 PC resume 시 새 폴더 기준 재인코딩용
 Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시(App 시작 시 가동). KeepSessionAlive 켜진 프로필을
                           60초 주기로 점검해 5시간 창 resets_at 이 지나면 Launcher.FireKeepAlive 로 `claude -p "hi"`
                           (headless) 발동 → 새 창 즉시 시작. 5분 쿨다운으로 중복 발동 방지
@@ -114,10 +123,18 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **CI/CD**: GitHub Actions(build/bump-version/release/winget) + winget 매니페스트 + README(영/한)
 - **winget 정식 등록 완료**(2026-07): `winget install akon47.ClaudeAccountSwitcher` 동작(0.5.0부터 게시).
   이후 릴리스는 release 워크플로의 `winget` 잡(winget-releaser)이 winget-pkgs 업데이트 PR을 자동 생성
-- **계정 간 세션 이어하기(resume)**: 메인창 툴바 🕘 → 세션 브라우저. 소스 계정의 대화 세션 목록을 보고,
+- **계정 간 세션 이어하기(resume)**: 메인창 툴바 🕘 → 세션 브라우저. 소스 계정의 대화 세션 목록(이름=ai-title 포함)을 보고,
   대상 계정을 골라 "이어하기"하면 그 세션 `.jsonl`을 대상 프로필 폴더의 같은 `projects\<enc>`로 복사하고
-  `claude --resume <id>`를 원본 cwd에서 새 창으로 실행. 사본이므로 원본은 소스 계정에 보존(포크). 원본 폴더가
-  없으면 중단(resume 이 세션 파일을 못 찾음). `Launcher.LaunchInProfile(..., resumeSessionId)` 로 실행.
+  `claude --resume <id>`를 원본 cwd에서 새 창으로 실행. 사본이므로 원본은 소스 계정에 보존(포크).
+  **원본 cwd 가 이 PC 에 없으면 폴더를 물어(ProjectFolderEncoder 로 재인코딩) 그 폴더에서 이어하기**(예전엔 중단).
+  `Launcher.LaunchInProfile(..., resumeSessionId)` 로 실행.
+- **세션 내보내기/가져오기(다른 PC 이식)**: 세션 브라우저에서 다중선택(Ctrl/Shift) 후 "내보내기" → 단일 번들
+  `*.claudesession`(zip: 본문+사이드카/서브에이전트+manifest) 저장(선택 없으면 목록 전체). 다른 PC 에서 "파일에서
+  가져오기"로 그 번들을 열면 안의 세션들(이름/미리보기)이 목록에 뜨고, 로컬 계정을 골라 이어하기 가능. 원본 폴더가
+  이 PC 에 없으면 위 폴더 선택 흐름으로 진행(SessionBundle.Export/Read + ProjectFolderEncoder).
+  **작업 폴더 포함(옵션)**: 내보낼 때 "작업 폴더도 포함할까요?"를 크기와 함께 물어봄(무거운/재생성 폴더 제외). 포함하면
+  번들이 cwd 내용을 담고, 가져와 이어할 때 원본 폴더가 없으면 "복원할까요?"→위치 선택→그 자리에 풀고 그 폴더에서 resume.
+  목록에서 폴더 포함 세션은 📁 로 표시. 내보내기/가져오기/복원은 진행률 다이얼로그(취소 가능)로 처리(큰 폴더 대비).
 - **세션 자동 유지**: 프로필별 토글(목록 "세션 유지" 체크박스). 켜면 그 계정의 5시간 창이 리셋되는 즉시
   `claude -p "hi"`(headless, 창 없음)로 새 창을 시작시킴. 활성 프로필은 ~/.claude, 그 외는 CLAUDE_CONFIG_DIR
   격리본으로 발동. 트레이 앱 상주 중에만 동작(서비스 분리해도 PC 켜짐·로그인 전제는 동일해 앱 내부 감시자로 둠).

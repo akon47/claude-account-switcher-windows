@@ -55,6 +55,68 @@ public sealed class DialogService : IDialogService
         dlg.ShowDialog();
     }
 
+    public string? ShowSaveFile(string title, string filter, string defaultFileName)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            FileName = defaultFileName,
+            AddExtension = true,
+            OverwritePrompt = true,
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
+    public string? ShowOpenFile(string title, string filter)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            CheckFileExists = true,
+        };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
+    public string? PickFolder(string title, string? initialDir)
+    {
+        var dlg = new Microsoft.Win32.OpenFolderDialog { Title = title };
+        if (!string.IsNullOrEmpty(initialDir) && System.IO.Directory.Exists(initialDir))
+            dlg.InitialDirectory = initialDir;
+        return dlg.ShowDialog() == true ? dlg.FolderName : null;
+    }
+
+    public async Task<bool> RunWithProgress(string title, string status, Func<IProgress<double>, CancellationToken, Task> work)
+    {
+        using var cts = new CancellationTokenSource();
+        var vm = new ProgressDialogViewModel { Status = status };
+        var dlg = new ProgressDialog { DataContext = vm, Title = title };
+        SetOwner(dlg);
+        vm.CancelRequested += cts.Cancel;
+        dlg.Show();
+
+        void Close() { if (dlg.IsVisible) dlg.Close(); }
+
+        try
+        {
+            var progress = new Progress<double>(p => vm.Progress = p);
+            await work(progress, cts.Token);
+            Close();
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            Close();
+            return false;
+        }
+        catch
+        {
+            Close();
+            throw;
+        }
+    }
+
     private static bool ShowMessage(string title, string message, MessageDialogKind kind)
     {
         var vm = new MessageDialogViewModel { Title = title, Message = message, Kind = kind };

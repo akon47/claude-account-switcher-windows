@@ -48,8 +48,13 @@ public sealed class SessionStore
                     string id = Path.GetFileNameWithoutExtension(file);
                     if (!seen.Add(id)) continue;
 
-                    var (cwd, preview, isSidechain) = ScanHead(file);
+                    var (cwd, preview, isSidechain, firstTitle) = ScanHead(file);
                     if (isSidechain) continue; // agent- 규칙을 벗어난 sidechain 까지 방어
+
+                    // 세션 이름(ai-title)은 대화가 진행되며 갱신되므로 파일 끝쪽의 마지막 값이 현재 이름.
+                    // 앞부분(firstTitle)은 꼬리를 못 읽었을 때의 폴백.
+                    string? name = ReadLastAiTitle(file) ?? firstTitle;
+
                     result.Add(new SessionEntry
                     {
                         SessionId = id,
@@ -58,8 +63,10 @@ public sealed class SessionStore
                         FilePath = file,
                         ProfileId = p.Id,
                         ProfileName = p.Name,
+                        SourceEmail = string.IsNullOrEmpty(p.Email) ? null : p.Email,
                         LastModified = File.GetLastWriteTime(file),
                         Preview = preview,
+                        Name = Clean(name),
                     });
                 }
                 catch { /* 한 파일이 깨져도 나머지는 계속 */ }
@@ -71,12 +78,15 @@ public sealed class SessionStore
     }
 
     /// <summary>
-    /// 세션 파일을 대상 프로필의 격리 설정 폴더로 복사한다(같은 projects\&lt;enc&gt; 경로).
+    /// 세션 파일을 대상 프로필의 격리 설정 폴더로 복사한다(projects\&lt;enc&gt; 경로).
     /// 이미 있으면 덮어쓰지 않는다(대상에서 이미 이어가던 대화를 보존). 실행할 세션 id 를 반환.
+    /// <paramref name="overrideProjectFolder"/> 를 주면 소스 폴더명 대신 그걸 대상 enc 폴더로 쓴다
+    /// (다른 PC 로 옮겨 작업 폴더가 바뀌었을 때 cwd 로 다시 인코딩한 폴더명 전달).
     /// </summary>
-    public string ImportInto(SessionEntry s, Profile dest)
+    public string ImportInto(SessionEntry s, Profile dest, string? overrideProjectFolder = null)
     {
-        string destProjects = Path.Combine(dest.ConfigDir, ProjectsFolder, s.ProjectFolder);
+        string projectFolder = string.IsNullOrEmpty(overrideProjectFolder) ? s.ProjectFolder : overrideProjectFolder;
+        string destProjects = Path.Combine(dest.ConfigDir, ProjectsFolder, projectFolder);
         Directory.CreateDirectory(destProjects);
         string destFile = Path.Combine(destProjects, s.SessionId + ".jsonl");
 
@@ -93,7 +103,9 @@ public sealed class SessionStore
 
     /// <summary>
     /// 이 세션에 연결된 서브에이전트(sidechain) 트랜스크립트도 대상 폴더로 함께 복사한다.
-    /// 서브에이전트 파일(agent-*.jsonl)은 내부 sessionId 에 부모 세션 id 를 기록하므로 그걸로 매칭한다.
+    /// 두 구조를 모두 다룬다:
+    /// (신) 세션별 사이드카 폴더 <c>&lt;enc&gt;\&lt;id&gt;\</c>(subagents\agent-*.jsonl 등)를 통째로 복사.
+    /// (구) <c>&lt;enc&gt;</c> 에 평평하게 놓인 agent-*.jsonl 중 내부 sessionId 가 이 세션인 것.
     /// (이어하기 자체엔 없어도 되지만, 대상 계정에서 서브에이전트 상세까지 온전히 재현되도록 가져온다.)
     /// </summary>
     private static void CopyLinkedSubAgents(SessionEntry s, string destProjects)
@@ -103,11 +115,14 @@ public sealed class SessionStore
             string? srcDir = Path.GetDirectoryName(s.FilePath);
             if (srcDir is null) return;
 
-            foreach (var agentFile in Directory.EnumerateFiles(srcDir, "agent-*.jsonl"))
+            string sidecar = Path.Combine(srcDir, s.SessionId);
+            if (Directory.Exists(sidecar))
+                CopyDirectory(sidecar, Path.Combine(destProjects, s.SessionId));
+
+            foreach (var agentFile in LinkedSubAgentFiles(srcDir, s.SessionId))
             {
                 try
                 {
-                    if (ReadSessionId(agentFile) != s.SessionId) continue;
                     string dest = Path.Combine(destProjects, Path.GetFileName(agentFile));
                     if (!File.Exists(dest)) File.Copy(agentFile, dest);
                 }
@@ -115,6 +130,37 @@ public sealed class SessionStore
             }
         }
         catch { /* best effort */ }
+    }
+
+    /// <summary>
+    /// 세션 폴더(enc)에 평평하게 놓인 레거시 서브에이전트(agent-*.jsonl) 중 내부 sessionId 가
+    /// <paramref name="sessionId"/> 인 파일들의 경로. 내보내기·복사에서 공용으로 쓴다.
+    /// </summary>
+    internal static IEnumerable<string> LinkedSubAgentFiles(string sessionDir, string sessionId)
+    {
+        IEnumerable<string> files;
+        try { files = Directory.EnumerateFiles(sessionDir, "agent-*.jsonl"); }
+        catch { yield break; }
+
+        foreach (var f in files)
+        {
+            string? sid = null;
+            try { sid = ReadSessionId(f); }
+            catch { /* 다음 파일 */ }
+            if (sid == sessionId) yield return f;
+        }
+    }
+
+    /// <summary>디렉터리 트리를 재귀 복사한다(대상에 이미 있는 파일은 보존).</summary>
+    internal static void CopyDirectory(string src, string dest)
+    {
+        foreach (var file in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
+        {
+            string rel = Path.GetRelativePath(src, file);
+            string target = Path.Combine(dest, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            if (!File.Exists(target)) File.Copy(file, target);
+        }
     }
 
     /// <summary>트랜스크립트 앞부분에서 sessionId 필드를 읽는다(없으면 null).</summary>
@@ -141,12 +187,16 @@ public sealed class SessionStore
         return null;
     }
 
-    /// <summary>파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부)를 뽑는다. summary 우선, 없으면 첫 사용자 메시지.</summary>
-    private static (string? Cwd, string? Preview, bool IsSidechain) ScanHead(string file)
+    /// <summary>
+    /// 파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부, 앞쪽 세션이름)을 뽑는다.
+    /// 미리보기는 summary 우선, 없으면 첫 사용자 메시지. 세션이름은 처음 만난 ai-title(폴백용).
+    /// </summary>
+    private static (string? Cwd, string? Preview, bool IsSidechain, string? FirstTitle) ScanHead(string file)
     {
         string? cwd = null;
         string? summary = null;
         string? firstUser = null;
+        string? firstTitle = null;
         bool isSidechain = false;
 
         using var reader = new StreamReader(file);
@@ -171,6 +221,13 @@ public sealed class SessionStore
                 if (!string.IsNullOrWhiteSpace(v)) cwd = v;
             }
 
+            if (firstTitle is null && root.TryGetProperty("type", out var tt) &&
+                tt.ValueKind == JsonValueKind.String && tt.GetString() == "ai-title" &&
+                root.TryGetProperty("aiTitle", out var titEl) && titEl.ValueKind == JsonValueKind.String)
+            {
+                firstTitle = titEl.GetString();
+            }
+
             if (summary is null && root.TryGetProperty("type", out var typeEl) &&
                 typeEl.ValueKind == JsonValueKind.String && typeEl.GetString() == "summary" &&
                 root.TryGetProperty("summary", out var sumEl) && sumEl.ValueKind == JsonValueKind.String)
@@ -191,12 +248,53 @@ public sealed class SessionStore
                 if (!IsSynthetic(txt)) firstUser = txt;
             }
 
-            // cwd 와 미리보기(요약이면 최상)를 확보했으면 조기 종료.
-            if (cwd is not null && summary is not null) break;
+            // cwd·미리보기(요약)·세션이름을 확보했으면 조기 종료.
+            if (cwd is not null && summary is not null && firstTitle is not null) break;
         }
 
         string? preview = Clean(summary ?? firstUser);
-        return (cwd, preview, isSidechain);
+        return (cwd, preview, isSidechain, firstTitle);
+    }
+
+    /// <summary>
+    /// 파일 끝쪽 일부만 읽어 마지막 <c>ai-title</c>(현재 세션 이름)를 찾는다. 파일 크기와 무관하게
+    /// 상수 시간에 가깝다. 꼬리 청크에 ai-title 이 없으면 null(호출부에서 앞쪽 값으로 폴백).
+    /// </summary>
+    internal static string? ReadLastAiTitle(string file)
+    {
+        const int chunk = 64 * 1024;
+        try
+        {
+            using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            long start = Math.Max(0, fs.Length - chunk);
+            fs.Seek(start, SeekOrigin.Begin);
+            using var reader = new StreamReader(fs);
+            string text = reader.ReadToEnd();
+
+            var lines = text.Split('\n');
+            // 청크 중간에서 시작했으면 첫 줄은 잘렸을 수 있으니 뒤에서부터 훑되 첫(부분) 줄은 무시.
+            int lower = start > 0 ? 1 : 0;
+            for (int i = lines.Length - 1; i >= lower; i--)
+            {
+                var line = lines[i].Trim();
+                if (line.Length == 0 || line[0] != '{') continue;
+                if (!line.Contains("\"ai-title\"", StringComparison.Ordinal)) continue;
+                try
+                {
+                    using var doc = JsonDocument.Parse(line);
+                    var root = doc.RootElement;
+                    if (root.ValueKind == JsonValueKind.Object &&
+                        root.TryGetProperty("type", out var t) && t.GetString() == "ai-title" &&
+                        root.TryGetProperty("aiTitle", out var tit) && tit.ValueKind == JsonValueKind.String)
+                    {
+                        return tit.GetString();
+                    }
+                }
+                catch { /* 잘린/깨진 줄 — 계속 위로 */ }
+            }
+        }
+        catch { /* best effort */ }
+        return null;
     }
 
     /// <summary>메시지 content(문자열 또는 파트 배열)에서 첫 텍스트를 뽑는다.</summary>

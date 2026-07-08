@@ -18,6 +18,12 @@ public sealed class SessionItemViewModel
     /// <summary>전체 작업 폴더 경로(툴팁).</summary>
     public string Cwd => Entry.Cwd;
 
+    /// <summary>Claude Code 가 붙인 세션 이름(ai-title). 없으면 빈 문자열.</summary>
+    public string Name => Entry.Name ?? "";
+
+    /// <summary>번들에 이 세션의 작업 폴더가 함께 담겨 있는지(가져오기 목록에서 📁 표시).</summary>
+    public bool HasWorkdir => Entry.BundleWorkdirPath is not null;
+
     public string Preview => Entry.Preview ?? "";
 
     public string ProfileName => Entry.ProfileName;
