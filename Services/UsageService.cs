@@ -28,10 +28,34 @@ public record SessionUsage(
     public DateTimeOffset? DisplayResetsAt => WeeklyExhausted ? WeeklyResetsAt : ResetsAt;
 }
 
+/// <summary>사용량 조회 결과의 상태.</summary>
+public enum UsageState
+{
+    /// <summary>정상 조회.</summary>
+    Ok,
+
+    /// <summary>저장된 자격증명이 더 이상 유효하지 않다(리프레시 토큰 거부/토큰 없음) → 다시 로그인 필요.</summary>
+    Unauthorized,
+
+    /// <summary>일시적 실패(오프라인·429·서버 오류·무료 플랜 등). 자격증명 문제라고 단정할 수 없다.</summary>
+    Unavailable,
+}
+
+/// <summary>사용량 조회 결과. Usage 는 State == Ok 일 때만 채워진다.</summary>
+public record UsageResult(SessionUsage? Usage, UsageState State)
+{
+    public static readonly UsageResult Unauthorized = new(null, UsageState.Unauthorized);
+    public static readonly UsageResult Unavailable = new(null, UsageState.Unavailable);
+
+    /// <summary>이 계정은 다시 로그인해야 한다(토큰 만료·폐기).</summary>
+    public bool NeedsRelogin => State == UsageState.Unauthorized;
+}
+
 /// <summary>
 /// 각 프로필의 Claude 세션 사용량을 oauth/usage 엔드포인트에서 조회한다.
 /// 저장된 액세스 토큰이 만료됐으면 refresh_token으로 갱신한 뒤 자격증명 파일에 되돌려 저장한다.
 /// (토큰 회전·저장 방식은 claude 자신이 하는 것과 동일하다. 갱신은 성공 시에만 기록한다.)
+/// 갱신 자체가 거부되면(=재로그인 필요) Unauthorized 로 알려 목록이 "다시 로그인 필요"를 보여줄 수 있게 한다.
 /// </summary>
 public sealed class UsageService
 {
@@ -45,75 +69,98 @@ public sealed class UsageService
     // 계정별 결과 캐시. usage는 5시간 창이라 자주 부를 필요가 없고,
     // 과도한 호출은 429(rate limit)를 유발하므로 TTL 동안 캐시한다.
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-    private readonly Dictionary<string, (SessionUsage? Usage, DateTime At)> _cache = new();
+    private readonly Dictionary<string, (UsageResult Result, DateTime At, DateTime Stamp)> _cache = new();
     private readonly object _cacheLock = new();
 
     /// <summary>
     /// 캐시를 적용해 세션 사용량을 조회한다. cacheKey는 보통 프로필 Id.
     /// force=true면 TTL을 무시하고 새로 조회한다(새로고침 버튼).
-    /// 실패(429 등) 시엔 직전 캐시 값을 유지하고 재시도 시점을 늦춘다.
+    /// 자격증명 파일이 바뀌면(재로그인·토큰 회전) TTL 이 남아 있어도 캐시를 버린다 —
+    /// 로그인 직후까지 "다시 로그인 필요"가 남아 보이지 않게 한다.
+    /// 일시적 실패(429 등) 시엔 직전 정상값을 유지하고 재시도 시점을 늦춘다.
     /// </summary>
-    public async Task<SessionUsage?> GetSessionUsageAsync(string credentialsPath, string cacheKey, bool force = false)
+    public async Task<UsageResult> GetSessionUsageAsync(string credentialsPath, string cacheKey, bool force = false)
     {
+        var stamp = Stamp(credentialsPath);
         lock (_cacheLock)
         {
-            if (!force && _cache.TryGetValue(cacheKey, out var c) && DateTime.UtcNow - c.At < CacheTtl)
-                return c.Usage;
+            if (!force && _cache.TryGetValue(cacheKey, out var c)
+                && c.Stamp == stamp && DateTime.UtcNow - c.At < CacheTtl)
+            {
+                return c.Result;
+            }
         }
 
-        var usage = await FetchWithRefreshAsync(credentialsPath);
+        var result = await FetchWithRefreshAsync(credentialsPath);
+        var after = Stamp(credentialsPath); // 조회 중 토큰이 갱신됐을 수 있다
 
         lock (_cacheLock)
         {
-            if (usage is not null)
+            if (result.State is UsageState.Unavailable
+                && _cache.TryGetValue(cacheKey, out var prev) && prev.Result.State is UsageState.Ok)
             {
-                _cache[cacheKey] = (usage, DateTime.UtcNow);
+                // 일시적 실패: 마지막 정상값을 유지하되 At을 갱신해 잠시 재시도하지 않는다(백오프).
+                _cache[cacheKey] = (prev.Result, DateTime.UtcNow, after);
+                return prev.Result;
             }
-            else if (_cache.TryGetValue(cacheKey, out var prev))
-            {
-                // 조회 실패: 마지막 값을 유지하되 At을 갱신해 잠시 재시도하지 않는다(백오프).
-                _cache[cacheKey] = (prev.Usage, DateTime.UtcNow);
-                return prev.Usage;
-            }
+
+            _cache[cacheKey] = (result, DateTime.UtcNow, after);
         }
-        return usage;
+        return result;
     }
 
-    private async Task<SessionUsage?> FetchWithRefreshAsync(string credentialsPath)
+    /// <summary>자격증명 파일의 마지막 쓰기 시각(없으면 기본값). 캐시 무효화 기준.</summary>
+    private static DateTime Stamp(string path)
+    {
+        try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : default; }
+        catch { return default; }
+    }
+
+    private async Task<UsageResult> FetchWithRefreshAsync(string credentialsPath)
     {
         try
         {
-            if (!File.Exists(credentialsPath)) return null;
+            if (!File.Exists(credentialsPath)) return UsageResult.Unauthorized;
 
             var (token, refresh, expiresAt) = ReadTokens(credentialsPath);
-            if (token is null) return null;
+            if (token is null) return UsageResult.Unauthorized; // 자격증명 파일에 토큰이 없다
 
             // 만료(또는 임박)면 먼저 갱신
             bool nearExpiry = expiresAt is null || expiresAt <= DateTimeOffset.UtcNow.AddMinutes(1);
-            if (nearExpiry && refresh is not null)
+            if (nearExpiry)
             {
-                var refreshed = await TryRefreshAsync(refresh);
-                if (refreshed is { } r1)
+                if (refresh is null) return UsageResult.Unauthorized; // 만료됐는데 갱신 수단이 없다
+
+                var (tokens, rejected) = await TryRefreshAsync(refresh);
+                if (tokens is { } r1)
                 {
                     token = r1.Access;
                     WriteTokens(credentialsPath, r1.Access, r1.Refresh, r1.ExpiresAtMs);
                 }
+                else if (rejected)
+                {
+                    return UsageResult.Unauthorized; // 리프레시 토큰이 폐기됨 → 재로그인만이 답
+                }
+
+                // 거부가 아니면 네트워크 문제일 수 있으니 기존 토큰으로 한 번 시도해 본다.
             }
 
             var (usage, unauthorized) = await FetchUsageAsync(token);
-            if (usage is null && unauthorized && refresh is not null)
-            {
-                // 토큰이 (예상과 달리) 거부됨 → 한 번 더 갱신 재시도
-                var refreshed = await TryRefreshAsync(refresh);
-                if (refreshed is { } r2)
-                {
-                    WriteTokens(credentialsPath, r2.Access, r2.Refresh, r2.ExpiresAtMs);
-                    (usage, _) = await FetchUsageAsync(r2.Access);
-                }
-            }
-            return usage;
+            if (usage is not null) return new UsageResult(usage, UsageState.Ok);
+            if (!unauthorized) return UsageResult.Unavailable; // 429·오프라인·무료 플랜 등
+
+            // 토큰이 (예상과 달리) 거부됨 → 한 번 더 갱신 재시도
+            if (refresh is null) return UsageResult.Unauthorized;
+
+            var (retry, retryRejected) = await TryRefreshAsync(refresh);
+            if (retry is not { } r2) return retryRejected ? UsageResult.Unauthorized : UsageResult.Unavailable;
+
+            WriteTokens(credentialsPath, r2.Access, r2.Refresh, r2.ExpiresAtMs);
+            var (usage2, unauthorized2) = await FetchUsageAsync(r2.Access);
+            if (usage2 is not null) return new UsageResult(usage2, UsageState.Ok);
+            return unauthorized2 ? UsageResult.Unauthorized : UsageResult.Unavailable;
         }
-        catch { return null; }
+        catch { return UsageResult.Unavailable; }
     }
 
     /// <summary>usage 엔드포인트 호출. (결과, 인증실패여부). 인증실패면 토큰 갱신이 필요하다는 신호.</summary>
@@ -176,7 +223,12 @@ public sealed class UsageService
 
     private record RefreshedTokens(string Access, string Refresh, long ExpiresAtMs);
 
-    private static async Task<RefreshedTokens?> TryRefreshAsync(string refreshToken)
+    /// <summary>
+    /// 리프레시 토큰으로 액세스 토큰을 재발급한다.
+    /// 반환: (토큰, 거부됨). 거부됨(4xx) = 리프레시 토큰이 폐기/만료 → 재로그인 필요.
+    /// 네트워크 오류·5xx·429 는 거부가 아니라 일시적 실패로 본다.
+    /// </summary>
+    private static async Task<(RefreshedTokens? Tokens, bool Rejected)> TryRefreshAsync(string refreshToken)
     {
         try
         {
@@ -192,13 +244,19 @@ public sealed class UsageService
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
             using var resp = await Http.SendAsync(req);
-            if (!resp.IsSuccessStatusCode) return null;
+            if (!resp.IsSuccessStatusCode)
+            {
+                // 4xx = 서버가 이 리프레시 토큰을 거부(invalid_grant 등). 5xx·429 는 일시적.
+                bool rejected = (int)resp.StatusCode is >= 400 and < 500
+                    && resp.StatusCode != HttpStatusCode.TooManyRequests;
+                return (null, rejected);
+            }
 
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             var root = doc.RootElement;
 
             string? access = root.TryGetProperty("access_token", out var a) ? a.GetString() : null;
-            if (string.IsNullOrEmpty(access)) return null;
+            if (string.IsNullOrEmpty(access)) return (null, false);
 
             // refresh_token은 회전될 수 있다(없으면 기존 것 유지).
             string refresh = root.TryGetProperty("refresh_token", out var rt) && rt.GetString() is { } s && s.Length > 0
@@ -209,9 +267,9 @@ public sealed class UsageService
                 ? nowMs + ei.GetInt64() * 1000
                 : nowMs + 3600_000;
 
-            return new RefreshedTokens(access, refresh, expiresAtMs);
+            return (new RefreshedTokens(access, refresh, expiresAtMs), false);
         }
-        catch { return null; }
+        catch { return (null, false); }
     }
 
     private static (string? Token, string? Refresh, DateTimeOffset? ExpiresAt) ReadTokens(string path)

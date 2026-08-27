@@ -269,6 +269,10 @@
                                                         <DataTrigger Binding="{Binding StatusKind}" Value="NeedLogin">
                                                             <Setter Property="Fill" Value="{DynamicResource VermilionBrush}" />
                                                         </DataTrigger>
+                                                        <!-- 토큰 만료: 자격증명은 있지만 못 쓴다 → 다시 로그인 필요(주황) -->
+                                                        <DataTrigger Binding="{Binding StatusKind}" Value="Expired">
+                                                            <Setter Property="Fill" Value="{DynamicResource AmberBrush}" />
+                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Ellipse.Style>

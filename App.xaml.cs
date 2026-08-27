@@ -375,7 +375,7 @@ public partial class App : Application
                 skip = res.SkipPermissions;
             }
 
-            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip.Value, _store.Data.StatusLine); } catch { /* best effort */ }
+            try { Launcher.LaunchInProfile(p, dir, _store.Data.Shell, skip.Value, _store.Data.StatusLine, runAsAdmin: _store.Data.RunAsAdmin); } catch { /* best effort */ }
         }
         return true;
     }
@@ -384,9 +384,13 @@ public partial class App : Application
     private static string Label(Profile p) =>
         string.IsNullOrEmpty(p.Email) ? p.Name : $"{p.Name}  ({p.Email})";
 
-    /// <summary>세션 남은 사용량을 메뉴 라벨 뒤에 붙인다(조회 전/실패면 빈 문자열).</summary>
+    /// <summary>
+    /// 세션 남은 사용량을 메뉴 라벨 뒤에 붙인다(조회 전/실패면 빈 문자열).
+    /// 토큰이 만료된 계정은 사용량 대신 "다시 로그인 필요"를 붙인다.
+    /// </summary>
     private static string UsageSuffix(Profile p) =>
-        string.IsNullOrEmpty(p.SessionRemaining) || p.SessionRemaining is "—" or "…"
+        p.NeedsRelogin ? LocalizationManager.Instance["TrayNeedRelogin"]
+        : string.IsNullOrEmpty(p.SessionRemaining) || p.SessionRemaining is "—" or "…"
             ? "" : $"   · {LocalizationManager.Instance["TraySessionPrefix"]}{p.SessionRemaining}";
 
     /// <summary>

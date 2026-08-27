@@ -114,17 +114,23 @@ public class ProfileStore
     public void PrepareRelogin(Profile p)
     {
         Directory.CreateDirectory(p.ConfigDir);
-        if (!File.Exists(p.CredentialsPath)) return;
 
-        try
+        if (File.Exists(p.CredentialsPath))
         {
-            string backup = Path.Combine(AppPaths.BackupsDir, $"credentials-{p.Id}-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-            File.Copy(p.CredentialsPath, backup, overwrite: true);
-            PruneBackups(20);
-        }
-        catch { /* best effort */ }
+            try
+            {
+                string backup = Path.Combine(AppPaths.BackupsDir, $"credentials-{p.Id}-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+                File.Copy(p.CredentialsPath, backup, overwrite: true);
+                PruneBackups(20);
+            }
+            catch { /* best effort */ }
 
-        try { File.Delete(p.CredentialsPath); } catch { /* best effort */ }
+            try { File.Delete(p.CredentialsPath); } catch { /* best effort */ }
+        }
+
+        // 자격증명뿐 아니라 .claude.json 의 oauthAccount 도 비운다 — 남겨 두면 claude 가 로그인된 것으로
+        // 보고 로그인 화면 없이 REPL 로 들어간다. 화면 표시용 이메일은 oauthAccount.json 사본에서 계속 읽는다.
+        ClaudeConfig.RemoveOAuthAccount(p.ClaudeJsonPath);
     }
 
     /// <summary>대상 프로필을 ~/.claude 활성 계정으로 전환한다.</summary>

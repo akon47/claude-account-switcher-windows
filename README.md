@@ -52,9 +52,14 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
   continue one under a *different* account (opens a copy, so the original stays put).
 - **Account status line** — when running an account concurrently, claude shows a bottom status line
   with the account email · plan · name · live session %.
-- **Run options**: choose **PowerShell or cmd**, and decide whether to pass
-  `--dangerously-skip-permissions` (with an optional *don't ask again* that remembers your choice —
-  reset it any time in **Settings**). Applies to Explorer right-click launches too.
+- **Re-login without losing the profile** — when a plan or subscription changes (or a token expires),
+  **Re-login** re-authenticates in place: the stored credentials are backed up and the isolated window
+  opens straight on the sign-in screen. Accounts whose token can no longer be refreshed are shown as
+  **"Re-login required"** instead of *Active*, in both the list and the tray menu.
+- **Run options**: choose **PowerShell or cmd**, optionally **run as administrator** (Windows shows a
+  UAC prompt each time), and decide whether to pass `--dangerously-skip-permissions` (with an optional
+  *don't ask again* that remembers your choice — reset it any time in **Settings**). Applies to
+  Explorer right-click launches too.
 - Optional Explorer right-click **"Run with Claude"** submenu (per account).
 - Start with Windows (autostart).
 - **Automatic updates** — checks GitHub Releases on startup (and on demand from the tray menu) and

@@ -49,8 +49,7 @@ public partial class MainViewModel : ObservableObject
         {
             bool isActive = p.Id == activeId;
             bool hasCreds = _store.HasCredentials(p);
-            AccountStatus kind = isActive ? AccountStatus.Active : (hasCreds ? AccountStatus.SignedIn : AccountStatus.NeedLogin);
-            string status = isActive ? L["StatusActive"] : (hasCreds ? L["StatusSignedIn"] : L["StatusNeedLogin"]);
+            var (kind, status) = ResolveStatus(hasCreds, isActive, p.NeedsRelogin);
             // 마지막 조회값이 있으면 즉시 보여주고, 없으면 로딩/미표시 상태로 시작
             string usage = !hasCreds ? "—" : (p.SessionRemaining ?? "…");
             var (resetIn, resetTip) = hasCreds ? FormatReset(p.SessionResetsAt) : ("", (string?)null);
@@ -83,6 +82,7 @@ public partial class MainViewModel : ObservableObject
                 item.SessionRemaining = p.SessionRemaining = "—";
                 item.SessionPercent = p.SessionPercent = null;
                 p.SessionResetsAt = null;
+                p.NeedsRelogin = false; // 자격증명 자체가 없음 = "로그인 필요"(재로그인 상태가 아님)
                 item.SessionResetsIn = "";
                 item.SessionResetsTip = null;
                 return;
@@ -90,8 +90,16 @@ public partial class MainViewModel : ObservableObject
 
             // 활성 프로필은 ~/.claude 의 살아있는 토큰을, 나머지는 프로필 보관본을 사용한다.
             string path = p.Id == activeId ? AppPaths.ClaudeCredentials : p.CredentialsPath;
-            var usage = await _usage.GetSessionUsageAsync(path, p.Id, force);
+            var result = await _usage.GetSessionUsageAsync(path, p.Id, force);
             if (gen != _usageGen) return; // 더 최신 새로고침이 시작됨
+
+            // 토큰 갱신이 거부되면(만료·폐기) 사용량을 못 읽는 데서 끝나지 않고 계정을 쓸 수 없다
+            // → "활성"이 아니라 "다시 로그인 필요"로 보여준다.
+            var usage = result.Usage;
+            p.NeedsRelogin = result.NeedsRelogin;
+            var (kind, status) = ResolveStatus(true, p.Id == activeId, p.NeedsRelogin);
+            item.StatusKind = kind;
+            item.Status = status;
 
             // 주간(7일) 한도가 소진되면 5시간 창이 100%라도 못 쓰므로 0% + 주간 리셋까지로 표시한다.
             string text = usage is null ? "—" : $"{usage.DisplayPercent:0}%";
@@ -105,6 +113,20 @@ public partial class MainViewModel : ObservableObject
 
         try { await Task.WhenAll(tasks); } catch { /* 개별 실패는 "—"로 처리됨 */ }
         if (gen == _usageGen) UsageUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// 계정 상태(표시등 종류 + 텍스트)를 계산한다.
+    /// 자격증명 없음 &gt; 만료(다시 로그인 필요) &gt; 활성 &gt; 로그인됨 순으로 우선한다 —
+    /// 토큰이 죽은 계정을 "활성"으로 보여주면 왜 안 되는지 알 수 없기 때문.
+    /// </summary>
+    private static (AccountStatus Kind, string Text) ResolveStatus(bool hasCredentials, bool isActive, bool needsRelogin)
+    {
+        if (!hasCredentials) return (AccountStatus.NeedLogin, L["StatusNeedLogin"]);
+        if (needsRelogin) return (AccountStatus.Expired, L["StatusExpired"]);
+        return isActive
+            ? (AccountStatus.Active, L["StatusActive"])
+            : (AccountStatus.SignedIn, L["StatusSignedIn"]);
     }
 
     /// <summary>
@@ -204,7 +226,7 @@ public partial class MainViewModel : ObservableObject
         var p = _store.CreateForLogin(name);
         try
         {
-            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
+            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value, _store.Data.StatusLine, runAsAdmin: _store.Data.RunAsAdmin);
             ReloadFromStore();
             Changed?.Invoke();
             _dialogs.ShowInfo(L["MsgAddTitle"], L["MsgAddInfo"]);
@@ -223,13 +245,11 @@ public partial class MainViewModel : ObservableObject
         if (!_dialogs.Confirm(L["MsgReloginTitle"], L.Tr("MsgReloginConfirm", p.Name)))
             return;
 
-        var skip = ResolveSkipPermissions(p.Name);
-        if (skip is null) return; // 취소
-
         try
         {
             _store.PrepareRelogin(p);
-            Launcher.LaunchInProfile(p, null, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
+            // 평범한 claude 대신 `claude auth login` 으로 띄운다 — 로그인 화면이 곧바로 열린다.
+            Launcher.LaunchLogin(p, _store.Data.Shell);
             ReloadFromStore();
             Changed?.Invoke();
             _dialogs.ShowInfo(L["MsgReloginTitle"], L["MsgReloginInfo"]);
@@ -277,7 +297,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            Launcher.LaunchInProfile(p, dlg.FolderName, _store.Data.Shell, skip.Value, _store.Data.StatusLine);
+            Launcher.LaunchInProfile(p, dlg.FolderName, _store.Data.Shell, skip.Value, _store.Data.StatusLine, runAsAdmin: _store.Data.RunAsAdmin);
             _store.Data.LastWorkingDir = dlg.FolderName;
             p.LastUsed = DateTime.Now;
             _store.Save();

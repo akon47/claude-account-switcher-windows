@@ -34,6 +34,21 @@ public partial class SettingsViewModel : ObservableObject
         _selectedLanguage = Languages.FirstOrDefault(l => l.Culture == L.Culture) ?? Languages[0];
     }
 
+    /// <summary>
+    /// 새 창을 관리자 권한으로 띄울지. 앱 자신은 일반 권한이라 켜면 실행할 때마다 UAC 창이 뜬다.
+    /// 로그인 실행(새 계정 추가/다시 로그인)은 브라우저 인증 때문에 승격하지 않는다.
+    /// </summary>
+    public bool RunAsAdmin
+    {
+        get => _store.Data.RunAsAdmin;
+        set
+        {
+            _store.Data.RunAsAdmin = value;
+            _store.Save();
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>Windows 로그인 시 자동 실행(HKCU Run). 트레이 메뉴 토글과 같은 레지스트리를 가리킨다.</summary>
     public bool RunAtStartup
     {

@@ -214,7 +214,7 @@ public partial class SessionBrowserViewModel : ObservableObject
         try
         {
             string id = _sessions.ImportInto(entry, dest.Profile, target.Value.ProjectFolder);
-            Launcher.LaunchInProfile(dest.Profile, target.Value.Cwd, _store.Data.Shell, skip.Value, _store.Data.StatusLine, resumeSessionId: id);
+            Launcher.LaunchInProfile(dest.Profile, target.Value.Cwd, _store.Data.Shell, skip.Value, _store.Data.StatusLine, resumeSessionId: id, runAsAdmin: _store.Data.RunAsAdmin);
             dest.Profile.LastUsed = DateTime.Now;
             _store.Save();
         }

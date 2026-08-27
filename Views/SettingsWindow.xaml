@@ -59,6 +59,17 @@
             ItemsSource="{Binding Shells}"
             SelectedItem="{Binding SelectedShell, Mode=TwoWay}"
             />
+        <CheckBox
+            Content="{loc:Loc SetShellAdmin}"
+            Margin="0 12 0 0"
+            IsChecked="{Binding RunAsAdmin, Mode=TwoWay}"
+            />
+        <TextBlock
+            Text="{loc:Loc SetShellAdminDesc}"
+            Margin="26 4 0 0"
+            TextWrapping="Wrap"
+            Foreground="{DynamicResource SageMistBrush}"
+            />
 
         <Border
             Height="1"

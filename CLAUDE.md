@@ -50,13 +50,16 @@ Views/MainWindow.xaml(.cs) 관리 창(ThemedWindow). 프로필 목록(플랜 색
 Views/InputDialog          이름 입력 다이얼로그(테마)
 Views/MessageDialog        정보/오류/확인 다이얼로그(테마)
 Views/SkipPermissionsDialog --dangerously-skip-permissions 부여 여부 + "다시 묻지 않음"
-Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd) + 스킵권한 기억값 재설정
+Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd)·관리자 권한으로 실행 + 스킵권한 기억값 재설정
 Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/이름/마지막사용/미리보기), 대상 계정 골라 이어하기(resume).
                           다중선택 후 "내보내기"로 번들(.claudesession) 저장 / "파일에서 가져오기"로 다른 PC 번들 열어 이어하기
 ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / Settings / ProfileItem
 Services/IDialogService    테마 다이얼로그 추상화(ShowInput/Confirm/ShowInfo/ShowError/AskSkipPermissions/ShowSettings)
 Services/DialogService     IDialogService 구현(ProfileStore 주입). 활성 창을 owner로 잡음.
-Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 실행(셸·스킵권한 선택)
+Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 실행(셸·스킵권한·관리자권한 선택).
+                          CLAUDE_CONFIG_DIR 은 ProcessStartInfo 가 아니라 셸 명령 안에서 설정한다 — 관리자 승격은
+                          ShellExecute(Verb=runas) 라 EnvironmentVariables 를 못 쓰기 때문(두 경로를 한 방식으로 통일).
+                          LaunchLogin = `claude auth login` 만 띄우는 로그인 전용(브라우저 인증 때문에 승격하지 않음)
 Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
 Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
@@ -81,7 +84,7 @@ Services/PlanFormatter.cs   구독→플랜 라벨(Pro/Max 5x) 공유 포맷(목
 Services/AppPaths/ClaudeConfig/CredentialsReader/AutoStart/ExplorerMenu  경로/설정/자동실행/탐색기메뉴
 Localization/              LocalizationManager(런타임 스캔) + LocExtension + <culture>.json 14개(_culture/_name 메타)
 Models/Profile.cs          프로필 모델(계산 속성). SessionRemaining/SessionPercent(메모리 캐시) 포함
-Models/AppData.cs          profiles.json 영속 데이터(Profiles, ActiveProfileId, LastWorkingDir, Shell, SkipPermissions, Language, StatusLine)
+Models/AppData.cs          profiles.json 영속 데이터(Profiles, ActiveProfileId, LastWorkingDir, Shell, RunAsAdmin, SkipPermissions, Language, StatusLine)
 Models/ShellKind.cs        PowerShell | Cmd
 ViewModels/ProfileItemVM   행 표시. PlanKind/PlanLabel(뱃지), StatusKind(표시등), SessionLevel(색 구간) 계산
 Theme/                     Colors/Brushes/Effects + Theme.xaml(엔트리) + Controls/*.xaml(컨트롤 스타일 8종). Violet=Max 뱃지
@@ -146,10 +149,22 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   (SessionUsage.DisplayPercent/DisplayResetsAt). 주간 소진이어도 keep-alive 5시간 판정엔 원본 five_hour resets_at 사용.
 - **다시 로그인(재로그인)**: 하단 버튼 바 "다시 로그인". 구독/플랜이 바뀌면 재로그인해야 새 값이 읽히는데,
   삭제 후 재추가 대신 **프로필을 유지한 채 재로그인**한다. `ProfileStore.PrepareRelogin` 가 프로필 폴더의
-  `.credentials.json` 을 백업 후 삭제(=.claude.json 온보딩/신뢰 상태는 보존) → `AddNew` 와 동일하게 격리
-  로그인(`CLAUDE_CONFIG_DIR`)으로 claude 를 띄우면 자격증명이 없어 로그인 프롬프트가 자동으로 뜬다.
-  활성 프로필이어도 ~/.claude(라이브 토큰)는 안 건드림(격리 폴더 사본만 비움 → 현재 활성 세션 유지).
-  로그인 후 [새로고침]하면 갱신된 플랜/이메일이 반영. 로그인 화면이 안 뜨면 터미널에서 `/login`.
+  `.credentials.json` 을 백업 후 삭제하고 **`.claude.json` 의 `oauthAccount` 도 제거**(온보딩/폴더 신뢰 상태는 보존)
+  → `Launcher.LaunchLogin` 이 격리(`CLAUDE_CONFIG_DIR`)로 **`claude auth login`** 을 띄워 로그인 화면이 곧바로 열린다.
+  (예전엔 자격증명만 지우고 평범한 `claude` 를 띄웠는데, `oauthAccount` 가 남아 있어 claude 가 "로그인됨"으로 보고
+  REPL 로 들어가 → 첫 대화에서야 "Run /login" 오류가 났다. 그래서 두 가지를 같이 손본다.)
+  스킵권한은 로그인 실행과 무관하므로 묻지 않는다. 활성 프로필이어도 ~/.claude(라이브 토큰)는 안 건드림
+  (격리 폴더 사본만 비움 → 현재 활성 세션 유지). 화면 표시용 이메일은 `oauthAccount.json` 사본에서 계속 읽는다.
+  로그인 후 [새로고침]하면 갱신된 플랜/이메일이 반영.
+- **토큰 만료 표시("다시 로그인 필요")**: `UsageService` 가 결과를 `UsageResult(Usage, UsageState)` 로 돌려준다 —
+  `Ok` / `Unauthorized`(리프레시 토큰이 **4xx 로 거부**됨·토큰 없음 = 재로그인만이 답) / `Unavailable`(오프라인·429·5xx·무료
+  플랜 등 불확실). Unauthorized 면 목록 상태가 **활성/로그인됨이 아니라 "다시 로그인 필요"**(주황 표시등,
+  `AccountStatus.Expired`)로 바뀌고 트레이 라벨에도 같은 문구가 붙는다(`Profile.NeedsRelogin` 메모리 캐시).
+  캐시는 TTL(5분) 외에 **자격증명 파일의 수정 시각**도 키로 삼는다 → 재로그인/토큰 회전 직후 바로 반영된다.
+- **관리자 권한으로 실행**: 설정 > 실행 셸 아래 체크박스(`AppData.RunAsAdmin`). 켜면 새 창(전환 후 실행/새 창 실행/
+  탐색기 메뉴/세션 이어하기)을 `Verb=runas` 로 띄운다 — 앱 자신은 일반 권한이라 **실행할 때마다 UAC 창**이 뜨고,
+  취소(ERROR_CANCELLED 1223)는 오류로 취급하지 않고 조용히 넘어간다. 로그인 실행(새 계정 추가/다시 로그인)은
+  브라우저 인증이 끼어들어 승격하지 않는다.
 
 ## 남은 일 / 다음 후보
 
@@ -167,6 +182,10 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - 탐색기 메뉴는 Win11에선 "더 많은 옵션 표시"(Shift+우클릭) 안에 나타남(클래식 메뉴).
 - 탐색기 `--launch` 실행: 스킵권한이 "매번 묻기"(SkipPermissions=null)면 실행 전에 스킵권한 다이얼로그를
   띄운다(취소하면 실행 안 함). 기억값이 있으면 UI 없이 그 값으로 바로 실행.
+- **관리자 권한 실행과 CLAUDE_CONFIG_DIR**: `Verb=runas`(ShellExecute) 경로에선 `ProcessStartInfo.EnvironmentVariables`
+  를 쓸 수 없다(설정해 두면 Start 에서 예외). 그래서 격리 폴더는 **셸 명령 안에서** 건다
+  (`cmd: set "CLAUDE_CONFIG_DIR=…" & …` / `pwsh: $env:CLAUDE_CONFIG_DIR='…'; …`). 일반 실행도 같은 방식으로
+  통일했으니 한쪽만 되돌리지 말 것(경로에 공백·`&`·작은따옴표가 들어가도 이 인용 방식으로 안전).
 - 설치 후엔 자동실행/탐색기메뉴 토글을 껐다 켜서 레지스트리가 설치된 exe 경로를 가리키게.
 - 커밋 작성자는 이 repo 한정 `Kim, Hwan <akon47@naver.com>` (로컬 git config).
 - 외부 프로젝트명/브랜드는 코드·주석·식별자·경로 어디에도 넣지 말 것(사용자 요청).

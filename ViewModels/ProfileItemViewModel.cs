@@ -5,7 +5,20 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace ClaudeAccountSwitcher.ViewModels;
 
 /// <summary>행 상태 표시등(왼쪽 동그라미)이 나타내는 계정 상태.</summary>
-public enum AccountStatus { NeedLogin, SignedIn, Active }
+public enum AccountStatus
+{
+    /// <summary>저장된 자격증명이 아예 없다.</summary>
+    NeedLogin,
+
+    /// <summary>자격증명 보관 중(비활성 계정).</summary>
+    SignedIn,
+
+    /// <summary>현재 ~/.claude 에 적용된 계정.</summary>
+    Active,
+
+    /// <summary>자격증명은 있지만 토큰이 만료·폐기됐다 → 다시 로그인해야 한다.</summary>
+    Expired,
+}
 
 /// <summary>플랜 뱃지 색을 결정하는 구독 종류.</summary>
 public enum PlanKind { None, Free, Pro, Max, Team, Enterprise, Other }
@@ -32,8 +45,15 @@ public sealed partial class ProfileItemViewModel : ObservableObject
     public string PlanLabel => PlanFormatter.Format(Profile.SubscriptionType, Profile.RateLimitTier);
 
     // ---------------- 상태 표시등 ----------------
-    public AccountStatus StatusKind { get; init; }
-    public string Status { get; init; } = "";
+
+    /// <summary>상태 표시등 종류. 사용량 조회에서 토큰 만료가 확인되면 Expired 로 바뀐다.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanKeepAlive))]
+    private AccountStatus _statusKind;
+
+    /// <summary>상태 텍스트(활성 / 로그인됨 / 로그인 필요 / 다시 로그인 필요).</summary>
+    [ObservableProperty]
+    private string _status = "";
 
     // ---------------- 세션 자동 유지 ----------------
     /// <summary>세션 자동 유지 토글(체크박스). 변경 시 MainViewModel.ToggleKeepAlive 가 프로필에 반영·저장한다.</summary>

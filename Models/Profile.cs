@@ -54,4 +54,11 @@ public class Profile
     /// <summary>세션(5시간) 창이 리셋되는 절대 시각. 남은 시간 표시용 메모리 캐시(영속 안 함).</summary>
     [JsonIgnore]
     public DateTimeOffset? SessionResetsAt { get; set; }
+
+    /// <summary>
+    /// 저장된 자격증명이 더 이상 유효하지 않음(토큰 갱신 거부 = 다시 로그인 필요).
+    /// 사용량 조회 결과에서 판정하는 메모리 캐시(영속 안 함).
+    /// </summary>
+    [JsonIgnore]
+    public bool NeedsRelogin { get; set; }
 }

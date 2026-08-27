@@ -53,6 +53,33 @@ public static class ClaudeConfig
         return new OAuthAccountInfo(raw, email, name, org);
     }
 
+    /// <summary>
+    /// 주어진 .claude.json 에서 oauthAccount 키만 제거한다(제거 전 백업). 나머지 상태(온보딩·폴더 신뢰 등)는 보존.
+    /// 다시 로그인 준비용 — oauthAccount 가 남아 있으면 claude 가 "이미 로그인된 계정"으로 보고
+    /// 로그인 화면 없이 REPL 로 들어가 버린다(첫 대화에서야 인증 오류가 난다).
+    /// </summary>
+    public static void RemoveOAuthAccount(string claudeJsonPath)
+    {
+        try
+        {
+            if (!File.Exists(claudeJsonPath)) return;
+
+            string text = File.ReadAllText(claudeJsonPath);
+            if (JsonNode.Parse(text) is not JsonObject root || !root.ContainsKey("oauthAccount")) return;
+
+            try
+            {
+                Directory.CreateDirectory(AppPaths.BackupsDir);
+                File.Copy(claudeJsonPath, Path.Combine(AppPaths.BackupsDir, $"claude.json-relogin-{DateTime.Now:yyyyMMdd-HHmmss}.bak"), overwrite: true);
+            }
+            catch { /* best effort */ }
+
+            root.Remove("oauthAccount");
+            SavePreservingStyle(claudeJsonPath, root, text);
+        }
+        catch { /* best effort — 실패해도 로그인 실행 자체는 진행한다 */ }
+    }
+
     /// <summary>~/.claude.json 의 oauthAccount 를 주어진 JSON 객체로 교체한다 (교체 전 백업).</summary>
     public static void PatchHomeOAuthAccount(string rawOAuthAccountJson)
     {
@@ -72,8 +99,13 @@ public static class ClaudeConfig
         if (root is null) return;
         root["oauthAccount"] = JsonNode.Parse(rawOAuthAccountJson);
 
-        // 원본이 들여쓰기 형식이면 최대한 유지
-        bool indented = text.Contains("\n  \"") || text.Contains("\n    \"");
+        SavePreservingStyle(path, root, text);
+    }
+
+    /// <summary>원본이 들여쓰기 형식이면 최대한 유지해서 저장한다.</summary>
+    private static void SavePreservingStyle(string path, JsonObject root, string original)
+    {
+        bool indented = original.Contains("\n  \"") || original.Contains("\n    \"");
         File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = indented }));
     }
 }
