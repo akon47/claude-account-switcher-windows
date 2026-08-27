@@ -88,9 +88,8 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // 활성 프로필은 ~/.claude 의 살아있는 토큰을, 나머지는 프로필 보관본을 사용한다.
-            string path = p.Id == activeId ? AppPaths.ClaudeCredentials : p.CredentialsPath;
-            var result = await _usage.GetSessionUsageAsync(path, p.Id, force);
+            // 활성 프로필은 ~/.claude 의 살아있는 토큰을 먼저 보고, 안 되면 프로필 보관본으로 넘어간다.
+            var result = await _usage.GetSessionUsageAsync(_store.CredentialSources(p), p.Id, force);
             if (gen != _usageGen) return; // 더 최신 새로고침이 시작됨
 
             // 토큰 갱신이 거부되면(만료·폐기) 사용량을 못 읽는 데서 끝나지 않고 계정을 쓸 수 없다

@@ -59,14 +59,13 @@ public sealed class SessionKeepAliveService
                     continue;
 
                 bool isActive = p.Id == activeId;
-                // 활성 프로필은 ~/.claude 의 라이브 토큰을, 그 외엔 프로필 보관본을 쓴다(UsageService 와 동일).
-                string path = isActive ? AppPaths.ClaudeCredentials : p.CredentialsPath;
+                var sources = _store.CredentialSources(p); // 활성이면 ~/.claude 우선, 아니면 프로필 보관본
 
                 // 캐시된 창이 곧 끝나거나(2분 내) 이미 지났거나 창 정보가 애매하면(resets_at 없음)
                 // 강제 새로고침으로 리셋 순간을 놓치지 않는다.
-                var cached = (await _usage.GetSessionUsageAsync(path, p.Id)).Usage;
+                var cached = (await _usage.GetSessionUsageAsync(sources, p.Id)).Usage;
                 bool soonOrPast = cached is not null && (cached.ResetsAt is null || cached.ResetsAt <= DateTimeOffset.UtcNow.AddMinutes(2));
-                var usage = soonOrPast ? (await _usage.GetSessionUsageAsync(path, p.Id, force: true)).Usage : cached;
+                var usage = soonOrPast ? (await _usage.GetSessionUsageAsync(sources, p.Id, force: true)).Usage : cached;
 
                 // 유효한 usage 응답(=활성 5시간 창 정보를 받음)인데 5시간 창이 없거나(resets_at 없음, 100%)
                 // 이미 지났다 = 활성 창 없음 → 한마디로 새 5시간 창을 시작한다.

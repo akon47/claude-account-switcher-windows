@@ -60,7 +60,10 @@ public record UsageResult(SessionUsage? Usage, UsageState State)
 public sealed class UsageService
 {
     private const string UsageUrl = "https://api.anthropic.com/api/oauth/usage";
-    private const string TokenUrl = "https://console.anthropic.com/v1/oauth/token";
+
+    // 토큰 갱신 엔드포인트. console.anthropic.com/v1/oauth/token 은 404(이전됨) —
+    // 잘못된 주소로 보내면 갱신이 조용히 실패해 토큰이 그대로 만료된다.
+    private const string TokenUrl = "https://api.anthropic.com/v1/oauth/token";
     private const string ClientId = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
     private const string BetaHeader = "oauth-2025-04-20";
 
@@ -69,19 +72,23 @@ public sealed class UsageService
     // 계정별 결과 캐시. usage는 5시간 창이라 자주 부를 필요가 없고,
     // 과도한 호출은 429(rate limit)를 유발하므로 TTL 동안 캐시한다.
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-    private readonly Dictionary<string, (UsageResult Result, DateTime At, DateTime Stamp)> _cache = new();
+    private readonly Dictionary<string, (UsageResult Result, DateTime At, long Stamp)> _cache = new();
     private readonly object _cacheLock = new();
 
     /// <summary>
     /// 캐시를 적용해 세션 사용량을 조회한다. cacheKey는 보통 프로필 Id.
+    /// credentialsPaths 는 이 계정의 자격증명 후보(우선순위 순) — 활성 프로필이면 ~/.claude 의 라이브
+    /// 토큰과 프로필 보관본이 모두 후보가 된다. 하나라도 살아 있으면 그 계정은 쓸 수 있는 것이다.
     /// force=true면 TTL을 무시하고 새로 조회한다(새로고침 버튼).
     /// 자격증명 파일이 바뀌면(재로그인·토큰 회전) TTL 이 남아 있어도 캐시를 버린다 —
     /// 로그인 직후까지 "다시 로그인 필요"가 남아 보이지 않게 한다.
     /// 일시적 실패(429 등) 시엔 직전 정상값을 유지하고 재시도 시점을 늦춘다.
     /// </summary>
-    public async Task<UsageResult> GetSessionUsageAsync(string credentialsPath, string cacheKey, bool force = false)
+    public async Task<UsageResult> GetSessionUsageAsync(IReadOnlyList<string> credentialsPaths, string cacheKey, bool force = false)
     {
-        var stamp = Stamp(credentialsPath);
+        if (credentialsPaths.Count == 0) return UsageResult.Unauthorized; // 저장된 자격증명 자체가 없음
+
+        var stamp = Stamp(credentialsPaths);
         lock (_cacheLock)
         {
             if (!force && _cache.TryGetValue(cacheKey, out var c)
@@ -91,8 +98,8 @@ public sealed class UsageService
             }
         }
 
-        var result = await FetchWithRefreshAsync(credentialsPath);
-        var after = Stamp(credentialsPath); // 조회 중 토큰이 갱신됐을 수 있다
+        var result = await FetchFirstUsableAsync(credentialsPaths);
+        var after = Stamp(credentialsPaths); // 조회 중 토큰이 갱신됐을 수 있다
 
         lock (_cacheLock)
         {
@@ -109,11 +116,33 @@ public sealed class UsageService
         return result;
     }
 
-    /// <summary>자격증명 파일의 마지막 쓰기 시각(없으면 기본값). 캐시 무효화 기준.</summary>
-    private static DateTime Stamp(string path)
+    /// <summary>자격증명 파일들의 마지막 쓰기 시각을 뭉친 값. 파일이 바뀌면 값이 달라져 캐시가 무효화된다.</summary>
+    private static long Stamp(IReadOnlyList<string> paths)
     {
-        try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : default; }
-        catch { return default; }
+        long stamp = 0;
+        foreach (var p in paths)
+        {
+            try { if (File.Exists(p)) stamp = (stamp * 31) + File.GetLastWriteTimeUtc(p).Ticks; }
+            catch { /* 접근 실패는 0 으로 취급 */ }
+        }
+        return stamp;
+    }
+
+    /// <summary>
+    /// 자격증명 후보를 순서대로 시도한다. 정상 결과가 나오면 그것으로 끝.
+    /// 거부(Unauthorized)면 다음 후보로 넘어가고, 불확실(Unavailable)이면 거기서 멈춘다
+    /// (오프라인·429 상황에서 후보마다 호출을 반복하지 않기 위해).
+    /// **모든** 후보가 거부돼야 "다시 로그인 필요"로 확정한다 — 하나라도 살아 있으면 계정은 멀쩡하다.
+    /// </summary>
+    private async Task<UsageResult> FetchFirstUsableAsync(IReadOnlyList<string> paths)
+    {
+        UsageResult last = UsageResult.Unauthorized;
+        foreach (var path in paths)
+        {
+            last = await FetchWithRefreshAsync(path);
+            if (last.State is UsageState.Ok or UsageState.Unavailable) return last;
+        }
+        return last;
     }
 
     private async Task<UsageResult> FetchWithRefreshAsync(string credentialsPath)
@@ -170,11 +199,11 @@ public sealed class UsageService
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, UsageUrl);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            req.Headers.TryAddWithoutValidation("anthropic-beta", BetaHeader);
-            req.Headers.UserAgent.ParseAdd("claude-cli/2.0.0 (external, cli)");
+            AddCliHeaders(req);
 
             using var resp = await Http.SendAsync(req);
-            if (resp.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            // 401 만 "이 토큰은 못 쓴다"로 본다. 403 은 WAF 차단·권한 없음 등일 수 있어 재로그인 신호가 아니다.
+            if (resp.StatusCode is HttpStatusCode.Unauthorized)
                 return (null, true);
             if (!resp.IsSuccessStatusCode) return (null, false);
 
@@ -243,13 +272,14 @@ public sealed class UsageService
             {
                 Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
+            AddCliHeaders(req); // User-Agent 가 없으면 Cloudflare 가 1010(403)으로 막는다
+
             using var resp = await Http.SendAsync(req);
             if (!resp.IsSuccessStatusCode)
             {
-                // 4xx = 서버가 이 리프레시 토큰을 거부(invalid_grant 등). 5xx·429 는 일시적.
-                bool rejected = (int)resp.StatusCode is >= 400 and < 500
-                    && resp.StatusCode != HttpStatusCode.TooManyRequests;
-                return (null, rejected);
+                // 상태코드만으로 판단하지 않는다 — 404(엔드포인트 이전)·403(WAF)·5xx·429 를 "재로그인 필요"로
+                // 오인하면 멀쩡한 계정이 만료로 보인다. 서버가 OAuth 거부를 명시했을 때만 거부로 본다.
+                return (null, IsOAuthRejection(await resp.Content.ReadAsStringAsync()));
             }
 
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
@@ -270,6 +300,37 @@ public sealed class UsageService
             return (new RefreshedTokens(access, refresh, expiresAtMs), false);
         }
         catch { return (null, false); }
+    }
+
+    /// <summary>claude CLI 와 동일한 헤더. User-Agent 가 없으면 Cloudflare 가 요청을 막는다(오류 1010).</summary>
+    private static void AddCliHeaders(HttpRequestMessage req)
+    {
+        req.Headers.TryAddWithoutValidation("anthropic-beta", BetaHeader);
+        req.Headers.UserAgent.ParseAdd("claude-cli/2.0.0 (external, cli)");
+        req.Headers.Accept.ParseAdd("application/json");
+    }
+
+    /// <summary>
+    /// 응답 본문이 "이 자격증명은 더 이상 유효하지 않다"는 OAuth 거부인지 판정한다.
+    /// (invalid_grant = 리프레시 토큰 만료/폐기). 그 외의 오류는 일시적/인프라 문제로 본다.
+    /// </summary>
+    private static bool IsOAuthRejection(string body)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return false;
+            if (!doc.RootElement.TryGetProperty("error", out var e)) return false;
+
+            string? code = e.ValueKind switch
+            {
+                JsonValueKind.String => e.GetString(),
+                JsonValueKind.Object => e.TryGetProperty("type", out var t) ? t.GetString() : null,
+                _ => null,
+            };
+            return code is "invalid_grant" or "invalid_client" or "unauthorized_client" or "invalid_token";
+        }
+        catch { return false; }
     }
 
     private static (string? Token, string? Refresh, DateTimeOffset? ExpiresAt) ReadTokens(string path)

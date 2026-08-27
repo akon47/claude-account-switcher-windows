@@ -60,7 +60,8 @@ Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 
                           CLAUDE_CONFIG_DIR 은 ProcessStartInfo 가 아니라 셸 명령 안에서 설정한다 — 관리자 승격은
                           ShellExecute(Verb=runas) 라 EnvironmentVariables 를 못 쓰기 때문(두 경로를 한 방식으로 통일).
                           LaunchLogin = `claude auth login` 만 띄우는 로그인 전용(브라우저 인증 때문에 승격하지 않음)
-Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직
+Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직. CredentialSources(계정의 자격증명 후보:
+                          활성이면 ~/.claude + 프로필 보관본) / HomeBelongsTo(~/.claude 가 이 프로필 계정인지)
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
 Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
                           세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
@@ -157,10 +158,13 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   (격리 폴더 사본만 비움 → 현재 활성 세션 유지). 화면 표시용 이메일은 `oauthAccount.json` 사본에서 계속 읽는다.
   로그인 후 [새로고침]하면 갱신된 플랜/이메일이 반영.
 - **토큰 만료 표시("다시 로그인 필요")**: `UsageService` 가 결과를 `UsageResult(Usage, UsageState)` 로 돌려준다 —
-  `Ok` / `Unauthorized`(리프레시 토큰이 **4xx 로 거부**됨·토큰 없음 = 재로그인만이 답) / `Unavailable`(오프라인·429·5xx·무료
-  플랜 등 불확실). Unauthorized 면 목록 상태가 **활성/로그인됨이 아니라 "다시 로그인 필요"**(주황 표시등,
-  `AccountStatus.Expired`)로 바뀌고 트레이 라벨에도 같은 문구가 붙는다(`Profile.NeedsRelogin` 메모리 캐시).
-  캐시는 TTL(5분) 외에 **자격증명 파일의 수정 시각**도 키로 삼는다 → 재로그인/토큰 회전 직후 바로 반영된다.
+  `Ok` / `Unauthorized`(**서버가 OAuth 거부를 명시**: invalid_grant 등·토큰 없음 = 재로그인만이 답) /
+  `Unavailable`(오프라인·429·5xx·404·WAF·무료 플랜 등 불확실). Unauthorized 면 목록 상태가
+  **활성/로그인됨이 아니라 "다시 로그인 필요"**(주황 표시등, `AccountStatus.Expired`)로 바뀌고 트레이 라벨에도
+  같은 문구가 붙는다(`Profile.NeedsRelogin` 메모리 캐시). 캐시는 TTL(5분) 외에 **자격증명 파일의 수정 시각**도
+  키로 삼는다 → 재로그인/토큰 회전 직후 바로 반영된다.
+  판정 자료는 **계정의 자격증명 후보 전부**(`ProfileStore.CredentialSources`) — 활성 프로필이면 ~/.claude 와
+  프로필 보관본 둘 다. **하나라도 살아 있으면 정상**으로 본다(거부면 다음 후보, 불확실이면 거기서 중단).
 - **관리자 권한으로 실행**: 설정 > 실행 셸 아래 체크박스(`AppData.RunAsAdmin`). 켜면 새 창(전환 후 실행/새 창 실행/
   탐색기 메뉴/세션 이어하기)을 `Verb=runas` 로 띄운다 — 앱 자신은 일반 권한이라 **실행할 때마다 UAC 창**이 뜨고,
   취소(ERROR_CANCELLED 1223)는 오류로 취급하지 않고 조용히 넘어간다. 로그인 실행(새 계정 추가/다시 로그인)은
@@ -182,6 +186,18 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - 탐색기 메뉴는 Win11에선 "더 많은 옵션 표시"(Shift+우클릭) 안에 나타남(클래식 메뉴).
 - 탐색기 `--launch` 실행: 스킵권한이 "매번 묻기"(SkipPermissions=null)면 실행 전에 스킵권한 다이얼로그를
   띄운다(취소하면 실행 안 함). 기억값이 있으면 UI 없이 그 값으로 바로 실행.
+- **oauth 토큰 갱신(반드시 지킬 것)**: 갱신 엔드포인트는 `https://api.anthropic.com/v1/oauth/token` 이다.
+  예전 주소 `console.anthropic.com/v1/oauth/token` 은 **404**(0.10.0 까지 이 주소여서 갱신이 조용히 실패 →
+  안 쓰는 계정의 리프레시 토큰이 그대로 만료됐다). 또 **User-Agent 를 안 보내면 Cloudflare 가 1010(403)** 으로
+  막는다 — 토큰 요청에도 usage 와 동일한 CLI 헤더(`AddCliHeaders`)를 붙일 것.
+  실패를 **상태코드로만 판정하지 말 것**: 404/403/5xx/429 를 "재로그인 필요"로 오인하면 멀쩡한 계정이
+  만료로 보인다(0.10.0 의 실제 증상). 본문의 OAuth 오류코드(`invalid_grant` 등)일 때만 거부로 취급한다.
+- **~/.claude 가 활성 프로필 것이 아닐 수 있다**: 전환 없이 오래 두면 `ActiveProfileId` 와 ~/.claude 의 실제
+  계정이 어긋난다(사용자가 격리 실행만 쓰면 ~/.claude 는 몇 달 전 상태로 멈춘다 — 액세스 토큰뿐 아니라
+  **리프레시 토큰까지 만료**된다). 그래서 ~/.claude 를 그 프로필 것으로 믿기 전에 `ProfileStore.HomeBelongsTo`
+  (= ~/.claude.json 의 oauthAccount 이메일 비교)로 확인한다. 두 곳에서 쓴다:
+  ① 사용량/상태 판정의 자격증명 후보(`CredentialSources`), ② `SwitchTo` 에서 떠나는 프로필로 토큰을 되돌려
+  저장할 때(아니면 **남의 낡은 토큰으로 멀쩡한 보관본을 덮어써** 계정이 망가진다).
 - **관리자 권한 실행과 CLAUDE_CONFIG_DIR**: `Verb=runas`(ShellExecute) 경로에선 `ProcessStartInfo.EnvironmentVariables`
   를 쓸 수 없다(설정해 두면 Start 에서 예외). 그래서 격리 폴더는 **셸 명령 안에서** 건다
   (`cmd: set "CLAUDE_CONFIG_DIR=…" & …` / `pwsh: $env:CLAUDE_CONFIG_DIR='…'; …`). 일반 실행도 같은 방식으로
