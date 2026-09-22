@@ -247,6 +247,11 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **winget 자동 제출은 패키지가 winget-pkgs에 이미 존재해야 성공**(winget-releaser는 업데이트만 처리).
   최초 등록(0.5.0) 심사 중에 낸 릴리스(0.6.0~0.7.3)는 winget 잡이 실패했음(continue-on-error라 런은 초록으로 보임).
   이런 경우 버전을 새로 올릴 필요 없이 해당 release 런의 **winget 잡만 재실행**하면 그 태그 버전으로 제출된다.
+- **winget 잡이 0.10.0·0.10.1·0.11.0 에서 연속 실패 중(2026-09-22 확인)**: komac 오류
+  `akon47 does not have the correct permissions to execute CreateRef` — `WINGET_TOKEN` 이 포크 `akon47/winget-pkgs`
+  에 브랜치를 만들 권한이 없다(만료/스코프 부족). 토큰을 재발급(classic PAT `public_repo`, 또는 fine-grained 로
+  포크 저장소 Contents·Pull requests 쓰기)해 저장소 시크릿을 갱신한 뒤 최신 release 런의 winget 잡만 재실행할 것.
+  릴리스 자체(인스톨러·자동 업데이트)는 이와 무관하게 정상이다.
 - **winget 매니페스트 아키텍처(중요)**: NSIS 스텁은 x86 PE 라 komac(winget-releaser)이 파일 분석만으로는
   아키텍처를 x86 으로 오검지 → 게시된 x64 매니페스트와 불일치로 winget-pkgs 검증이 거부("Missing x64 installer",
   0.7.3 PR 에서 실제 발생 → fork 브랜치에서 x86→x64 수동 수정으로 해결). komac 은 **URL 에 x64 가 있으면 그 값을
