@@ -11,7 +11,10 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    # windows-2022 이미지에는 NSIS 3.10 이 내장돼 있다(windows-latest=windows-2025 에는 없음).
+    # choco 피드(503)와 SourceForge(429/403)가 모두 불안정해 v0.11.0 릴리스가 두 번 실패한 뒤 고정했다.
+    # 아래 "Install NSIS" 단계는 내장 makensis 를 찾으면 아무것도 하지 않고, 없을 때만 설치를 시도한다.
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +29,7 @@ jobs:
           function Find-Makensis {
             $c = Get-Command makensis.exe -ErrorAction SilentlyContinue
             if ($c) { return $c.Source }
-            foreach ($p in @("${env:ProgramFiles(x86)}NSISmakensis.exe", "$env:ProgramFilesNSISmakensis.exe")) {
+            foreach ($p in @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe")) {
               if (Test-Path $p) { return $p }
             }
             return $null
