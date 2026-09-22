@@ -10,7 +10,7 @@
   "ColSession": "Sisa sesi",
   "ColStatus": "Status",
   "ColKeepAlive": "Jaga sesi",
-  "TipKeepAlive": "Saat sesi 5 jam diatur ulang, otomatis mengirim pesan singkat untuk memulai sesi baru.",
+  "TipKeepAlive": "Saat jendela 5 jam direset, kirim pesan singkat secara otomatis untuk memulai jendela baru. Klik label di sebelahnya untuk memilih mode (selalu / jadwal).",
   "SessionResetsHm": "{0} jam {1} mnt",
   "SessionResetsM": "{0} mnt",
   "SessionResetsTip": "Sesi diatur ulang dalam {0} (pukul {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "baru saja",
   "TimeMinutesAgo": "{0} mnt lalu",
   "TimeHoursAgo": "{0} jam lalu",
-  "TimeDaysAgo": "{0} hari lalu"
+  "TimeDaysAgo": "{0} hari lalu",
+
+  "KeepAliveAlways": "Selalu",
+  "TipKeepAliveSettings": "Atur mode jaga sesi (selalu / jadwal)…",
+  "KaTipAlways": "Selalu: memulai jendela baru begitu jendela 5 jam direset (sepanjang hari).\nKlik untuk beralih ke jadwal.",
+  "KaTipSchedule": "Jadwal: jendela mulai {0} → reset {1}\nJendela berikutnya mulai: {2}",
+  "KaDlgTitle": "Jaga sesi — {0}",
+  "KaModeAlways": "Mulai jendela baru segera setelah reset (sepanjang hari)",
+  "KaModeAlwaysDesc": "Jendela berikutnya dimulai saat jendela 5 jam berakhir. Waktu mulai jendela bergeser dari hari ke hari.",
+  "KaModeSchedule": "Ikuti jadwal (selaras dengan waktu reset yang Anda inginkan)",
+  "KaModeScheduleDesc": "Memulai jendela pertama 5 jam sebelum waktu reset pertama Anda, lalu menjaga sejumlah jendela 5 jam yang dipilih secara berurutan. Setelah jendela terakhir berakhir, tidak ada yang dimulai sampai jendela pertama hari berikutnya, sehingga jadwal tetap sama setiap hari. Contoh: reset pertama 11:00 → mulai 06:00, reset pada 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Reset pertama pada",
+  "KaWindowsPerDay": "Jendela per hari",
+  "KaPreviewFmt": "Jendela mulai {0} → reset {1}",
+  "KaNote": "Hanya bekerja saat PC menyala dan aplikasi ini berjalan di tray. Di dalam jadwal, jendela dimulai begitu tidak ada yang aktif; jika Anda memakai Claude di antaranya dan jendela sudah ada, waktunya bergeser sebesar itu.",
+  "SessReplaceAsk": "Akun '{0}' sudah memiliki salinan lain dari sesi ini, dan kedua salinan telah berbeda arah.\n\nSesi yang dipilih: terakhir dipakai {1}\nSalinan di '{0}': terakhir dipakai {2}\n\nGanti dengan sesi yang dipilih?\n(Ya: ganti — salinan yang ada dicadangkan · Tidak: lanjutkan salinan yang ada)"
 }

@@ -1,7 +1,12 @@
+using ClaudeAccountSwitcher.Models;
+
 namespace ClaudeAccountSwitcher.Services;
 
 /// <summary>스킵 권한 다이얼로그 결과. (취소하면 null 로 반환)</summary>
 public sealed record SkipPermissionsResult(bool SkipPermissions, bool Remember);
+
+/// <summary>세션 유지 방식 다이얼로그 결과. Schedule 이 null 이면 "항상" 모드. (취소하면 결과 자체가 null)</summary>
+public sealed record KeepAliveSettingsResult(KeepAliveSchedule? Schedule);
 
 /// <summary>테마가 적용된 다이얼로그를 띄우는 서비스. ViewModel은 WPF 창을 직접 참조하지 않는다.</summary>
 public interface IDialogService
@@ -21,6 +26,9 @@ public interface IDialogService
 
     /// <summary>설정 창을 모달로 연다.</summary>
     void ShowSettings();
+
+    /// <summary>프로필의 세션 유지 방식(항상 / 시간표)을 설정한다. 취소하면 null.</summary>
+    KeepAliveSettingsResult? ShowKeepAliveSettings(Profile profile);
 
     /// <summary>계정별 세션 훑어보기 + 다른 계정으로 이어하기(resume) 창을 모달로 연다.</summary>
     void ShowSessionBrowser();

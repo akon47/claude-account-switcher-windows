@@ -10,7 +10,7 @@
   "ColSession": "剩餘工作階段",
   "ColStatus": "狀態",
   "ColKeepAlive": "保持工作階段",
-  "TipKeepAlive": "5 小時工作階段重設後，自動傳送一則訊息以開始新的工作階段。",
+  "TipKeepAlive": "5 小時視窗重設後，自動傳送一則簡短訊息以開始新視窗。點選旁邊的標籤可選擇方式（總是 / 時間表）。",
   "SessionResetsHm": "{0}小時{1}分",
   "SessionResetsM": "{0}分鐘",
   "SessionResetsTip": "{0}後工作階段重設（{1}）",
@@ -142,5 +142,20 @@
   "TimeJustNow": "剛剛",
   "TimeMinutesAgo": "{0} 分鐘前",
   "TimeHoursAgo": "{0} 小時前",
-  "TimeDaysAgo": "{0} 天前"
+  "TimeDaysAgo": "{0} 天前",
+
+  "KeepAliveAlways": "總是",
+  "TipKeepAliveSettings": "設定工作階段保持方式（總是 / 時間表）…",
+  "KaTipAlways": "總是：5 小時視窗一重設就立即開始新視窗（全天候）。\n點選可切換為時間表。",
+  "KaTipSchedule": "時間表：視窗開始 {0} → 重設 {1}\n下一個視窗開始時間：{2}",
+  "KaDlgTitle": "工作階段保持 — {0}",
+  "KaModeAlways": "重設後立即開始新視窗（全天候）",
+  "KaModeAlwaysDesc": "5 小時視窗一結束就立即開始下一個視窗。視窗開始時間每天都會漂移。",
+  "KaModeSchedule": "依時間表（對齊到你想要的重設時間）",
+  "KaModeScheduleDesc": "在首次重設時間的 5 小時前開始第一個視窗，然後連續保持所選數量的 5 小時視窗。最後一個視窗結束後，直到隔天第一個視窗開始前都不會啟動，因此時間表每天保持一致。例：首次重設 11:00 → 06:00 開始，11:00 · 16:00 · 21:00 · 02:00 重設。",
+  "KaFirstReset": "首次重設時間",
+  "KaWindowsPerDay": "每天視窗數",
+  "KaPreviewFmt": "視窗開始 {0} → 重設 {1}",
+  "KaNote": "僅在電腦開機且本應用程式在系統匣中執行時生效。在時間表內，只要沒有作用中的視窗就會立即開始；若期間你自己使用了 Claude 且視窗已存在，時間會相應延後。",
+  "SessReplaceAsk": "'{0}' 帳戶已有此工作階段的另一個副本，且兩個副本已各自發展。\n\n所選工作階段：最後使用 {1}\n'{0}' 中的副本：最後使用 {2}\n\n是否以所選工作階段取代？\n（是：取代 — 現有副本將被備份 · 否：繼續現有副本）"
 }

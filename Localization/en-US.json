@@ -11,7 +11,7 @@
   "ColSession": "Session left",
   "ColStatus": "Status",
   "ColKeepAlive": "Keep alive",
-  "TipKeepAlive": "When the 5-hour session resets, automatically send a short message to start a new session.",
+  "TipKeepAlive": "When the 5-hour window resets, automatically send a short message to start a new one. Click the label next to it to choose the mode (always / schedule).",
   "SessionResetsHm": "{0}h {1}m",
   "SessionResetsM": "{0}m",
   "SessionResetsTip": "Session resets in {0} (at {1})",
@@ -157,5 +157,20 @@
   "TimeJustNow": "just now",
   "TimeMinutesAgo": "{0} min ago",
   "TimeHoursAgo": "{0} hr ago",
-  "TimeDaysAgo": "{0} days ago"
+  "TimeDaysAgo": "{0} days ago",
+
+  "KeepAliveAlways": "Always",
+  "TipKeepAliveSettings": "Configure keep-alive mode (always / schedule)…",
+  "KaTipAlways": "Always: starts a new window the moment the 5-hour window resets (around the clock).\nClick to switch to a schedule.",
+  "KaTipSchedule": "Schedule: window starts {0} → resets {1}\nNext window starts: {2}",
+  "KaDlgTitle": "Keep alive — {0}",
+  "KaModeAlways": "Start a new window as soon as it resets (around the clock)",
+  "KaModeAlwaysDesc": "The next window starts the moment the 5-hour window ends. The time a window starts drifts from day to day.",
+  "KaModeSchedule": "Follow a schedule (align to the reset time you want)",
+  "KaModeScheduleDesc": "Starts the first window 5 hours before your first reset time, then keeps the chosen number of 5-hour windows back to back. After the last window ends, nothing starts until the next day's first window, so the schedule stays the same every day. E.g. first reset 11:00 → starts at 06:00, resets at 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "First reset at",
+  "KaWindowsPerDay": "Windows per day",
+  "KaPreviewFmt": "Window starts {0} → resets {1}",
+  "KaNote": "Works only while the PC is on and this app is running in the tray. Inside the schedule a window starts as soon as none is active, so if you used Claude in between and a window already exists, the timing shifts by that much.",
+  "SessReplaceAsk": "The '{0}' account already has another copy of this session, and the two copies have diverged.\n\nSelected session: last used {1}\nCopy in '{0}': last used {2}\n\nReplace it with the selected session?\n(Yes: replace — the existing copy is backed up · No: resume the existing copy)"
 }

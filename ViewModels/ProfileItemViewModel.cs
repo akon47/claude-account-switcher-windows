@@ -63,6 +63,12 @@ public sealed partial class ProfileItemViewModel : ObservableObject
     /// <summary>로그인된 계정만 자동 유지 가능(로그인 필요 상태면 체크박스 비활성).</summary>
     public bool CanKeepAlive => StatusKind != AccountStatus.NeedLogin;
 
+    /// <summary>세션 유지 방식 요약("항상" 또는 "11:00 ×4" = 첫 리셋 시각 × 하루 창 수). 라벨 버튼에 표시, 누르면 설정.</summary>
+    public string KeepAliveSummary { get; init; } = "";
+
+    /// <summary>세션 유지 방식 상세 툴팁(시간표면 창 시작·리셋 시각과 다음 시작 예정).</summary>
+    public string? KeepAliveTip { get; init; }
+
     // ---------------- 세션 한도 ----------------
     /// <summary>세션(5시간) 남은 사용량 표시 텍스트(예: "73%"). 비동기 조회가 끝나면 갱신된다.</summary>
     [ObservableProperty]

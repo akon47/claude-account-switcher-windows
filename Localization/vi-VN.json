@@ -10,7 +10,7 @@
   "ColSession": "Phiên còn lại",
   "ColStatus": "Trạng thái",
   "ColKeepAlive": "Giữ phiên",
-  "TipKeepAlive": "Khi phiên 5 giờ đặt lại, tự động gửi một tin nhắn ngắn để bắt đầu phiên mới.",
+  "TipKeepAlive": "Khi cửa sổ 5 giờ được đặt lại, tự động gửi một tin nhắn ngắn để bắt đầu cửa sổ mới. Nhấp vào nhãn bên cạnh để chọn chế độ (luôn luôn / lịch).",
   "SessionResetsHm": "{0} giờ {1} phút",
   "SessionResetsM": "{0} phút",
   "SessionResetsTip": "Phiên đặt lại sau {0} (lúc {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "vừa xong",
   "TimeMinutesAgo": "{0} phút trước",
   "TimeHoursAgo": "{0} giờ trước",
-  "TimeDaysAgo": "{0} ngày trước"
+  "TimeDaysAgo": "{0} ngày trước",
+
+  "KeepAliveAlways": "Luôn luôn",
+  "TipKeepAliveSettings": "Cấu hình chế độ duy trì phiên (luôn luôn / lịch)…",
+  "KaTipAlways": "Luôn luôn: bắt đầu cửa sổ mới ngay khi cửa sổ 5 giờ được đặt lại (suốt ngày đêm).\nNhấp để chuyển sang lịch.",
+  "KaTipSchedule": "Lịch: cửa sổ bắt đầu {0} → đặt lại {1}\nCửa sổ tiếp theo bắt đầu: {2}",
+  "KaDlgTitle": "Duy trì phiên — {0}",
+  "KaModeAlways": "Bắt đầu cửa sổ mới ngay khi đặt lại (suốt ngày đêm)",
+  "KaModeAlwaysDesc": "Cửa sổ tiếp theo bắt đầu ngay lúc cửa sổ 5 giờ kết thúc. Giờ bắt đầu cửa sổ sẽ trôi dần theo từng ngày.",
+  "KaModeSchedule": "Theo lịch (căn theo giờ đặt lại bạn muốn)",
+  "KaModeScheduleDesc": "Bắt đầu cửa sổ đầu tiên 5 giờ trước giờ đặt lại đầu tiên của bạn, rồi duy trì liên tiếp số cửa sổ 5 giờ đã chọn. Sau cửa sổ cuối, không bắt đầu gì cho đến cửa sổ đầu tiên của ngày hôm sau, nên lịch giữ nguyên mỗi ngày. VD: đặt lại đầu tiên 11:00 → bắt đầu 06:00, đặt lại lúc 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Đặt lại đầu tiên lúc",
+  "KaWindowsPerDay": "Số cửa sổ mỗi ngày",
+  "KaPreviewFmt": "Cửa sổ bắt đầu {0} → đặt lại {1}",
+  "KaNote": "Chỉ hoạt động khi PC đang bật và ứng dụng này đang chạy trong khay hệ thống. Trong lịch, cửa sổ bắt đầu ngay khi không có cửa sổ nào hoạt động; nếu bạn đã tự dùng Claude trong lúc đó và cửa sổ đã tồn tại, thời gian sẽ lệch đi tương ứng.",
+  "SessReplaceAsk": "Tài khoản '{0}' đã có một bản sao khác của phiên này, và hai bản sao đã phân nhánh.\n\nPhiên đã chọn: dùng lần cuối {1}\nBản sao trong '{0}': dùng lần cuối {2}\n\nThay thế bằng phiên đã chọn?\n(Có: thay thế — bản sao hiện có được sao lưu · Không: tiếp tục bản sao hiện có)"
 }

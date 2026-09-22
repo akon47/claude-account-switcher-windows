@@ -53,12 +53,13 @@ public partial class MainViewModel : ObservableObject
             // 마지막 조회값이 있으면 즉시 보여주고, 없으면 로딩/미표시 상태로 시작
             string usage = !hasCreds ? "—" : (p.SessionRemaining ?? "…");
             var (resetIn, resetTip) = hasCreds ? FormatReset(p.SessionResetsAt) : ("", (string?)null);
+            var (kaSummary, kaTip) = DescribeKeepAlive(p);
             Profiles.Add(new ProfileItemViewModel
             {
                 Profile = p, IsActive = isActive, StatusKind = kind, Status = status,
                 SessionRemaining = usage, SessionPercent = hasCreds ? p.SessionPercent : null, EditName = p.Name,
                 SessionResetsIn = resetIn, SessionResetsTip = resetTip,
-                KeepAlive = p.KeepSessionAlive,
+                KeepAlive = p.KeepSessionAlive, KeepAliveSummary = kaSummary, KeepAliveTip = kaTip,
             });
         }
         if (selectedId is not null)
@@ -158,6 +159,41 @@ public partial class MainViewModel : ObservableObject
         if (item is null) return;
         item.Profile.KeepSessionAlive = item.KeepAlive;
         _store.Save();
+    }
+
+    /// <summary>
+    /// 세션 유지 방식(항상 / 시간표) 설정 다이얼로그. 확인하면 저장하고 토글도 켠다
+    /// (방식을 정했다는 건 쓰겠다는 뜻이므로 체크까지 따로 하게 하지 않는다). 감시자는 다음 틱에 새 값을 본다.
+    /// </summary>
+    [RelayCommand]
+    private void KeepAliveSettings(ProfileItemViewModel? item)
+    {
+        if (item is null) return;
+        var p = item.Profile;
+        var result = _dialogs.ShowKeepAliveSettings(p);
+        if (result is null) return; // 취소
+
+        p.KeepAliveSchedule = result.Schedule;
+        p.KeepSessionAlive = true;
+        _store.Save();
+        ReloadFromStore();
+    }
+
+    /// <summary>
+    /// 세션 유지 방식 요약("항상" / "11:00 ×4")과 툴팁. 시간표면 창 시작·리셋 시각과 다음 창 시작 예정을 담아
+    /// 사용자가 "지금 무엇이 언제 일어나는지"를 목록에서 바로 알 수 있게 한다.
+    /// </summary>
+    private static (string Summary, string Tip) DescribeKeepAlive(Profile p)
+    {
+        if (p.KeepAliveSchedule is not { } s) return (L["KeepAliveAlways"], L["KaTipAlways"]);
+
+        var n = s.Normalized();
+        string summary = $"{KeepAliveScheduler.FormatTime(n.FirstResetAt)} ×{n.WindowsPerDay}";
+        string tip = L.Tr("KaTipSchedule",
+            KeepAliveScheduler.FormatTime(KeepAliveScheduler.FirstStartOf(n)),
+            KeepAliveScheduler.FormatResetTimes(n),
+            KeepAliveScheduler.NextSlotStart(n, DateTime.Now).ToString("g"));
+        return (summary, tip);
     }
 
     /// <summary>드래그로 행 순서를 바꾼다(삽입선 위치 기준). ListView 드래그 동작에서 호출.</summary>

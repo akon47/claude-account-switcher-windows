@@ -213,7 +213,10 @@ public partial class SessionBrowserViewModel : ObservableObject
 
         try
         {
-            string id = _sessions.ImportInto(entry, dest.Profile, target.Value.ProjectFolder);
+            // 대상에 같은 세션의 사본이 이미 있고 양쪽이 갈라졌을 때만 물어본다(한쪽만 진행됐으면 자동으로 최신 쪽).
+            string id = _sessions.ImportInto(entry, dest.Profile, target.Value.ProjectFolder,
+                c => _dialogs.Confirm(L["SessResumeTitle"],
+                    L.Tr("SessReplaceAsk", dest.Profile.Name, c.SourceModified.ToString("g"), c.DestModified.ToString("g"))));
             Launcher.LaunchInProfile(dest.Profile, target.Value.Cwd, _store.Data.Shell, skip.Value, _store.Data.StatusLine, resumeSessionId: id, runAsAdmin: _store.Data.RunAsAdmin);
             dest.Profile.LastUsed = DateTime.Now;
             _store.Save();

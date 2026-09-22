@@ -27,6 +27,12 @@ public class Profile
     /// </summary>
     public bool KeepSessionAlive { get; set; }
 
+    /// <summary>
+    /// 세션 자동 유지의 시간표(원하는 첫 리셋 시각 + 하루 창 개수). null 이면 "항상" 모드
+    /// (창이 리셋되는 즉시 24시간 내내 재시작). <see cref="KeepSessionAlive"/> 가 켜져 있을 때만 의미가 있다.
+    /// </summary>
+    public KeepAliveSchedule? KeepAliveSchedule { get; set; }
+
     /// <summary>이 프로필 전용 격리 설정 폴더. 동시 실행 시 CLAUDE_CONFIG_DIR로 사용.</summary>
     [JsonIgnore]
     public string ConfigDir => Path.Combine(AppPaths.ProfilesDir, Id);

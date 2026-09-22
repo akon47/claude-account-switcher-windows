@@ -10,7 +10,7 @@
   "ColSession": "Kalan oturum",
   "ColStatus": "Durum",
   "ColKeepAlive": "Sürdür",
-  "TipKeepAlive": "5 saatlik oturum sıfırlandığında, yeni bir oturum başlatmak için otomatik olarak kısa bir mesaj gönderir.",
+  "TipKeepAlive": "5 saatlik pencere sıfırlandığında yeni bir pencere başlatmak için otomatik olarak kısa bir mesaj gönderir. Modu seçmek için (her zaman / zamanlama) yanındaki etikete tıklayın.",
   "SessionResetsHm": "{0} sa {1} dk",
   "SessionResetsM": "{0} dk",
   "SessionResetsTip": "Oturum {0} sonra sıfırlanır ({1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "az önce",
   "TimeMinutesAgo": "{0} dk önce",
   "TimeHoursAgo": "{0} sa önce",
-  "TimeDaysAgo": "{0} gün önce"
+  "TimeDaysAgo": "{0} gün önce",
+
+  "KeepAliveAlways": "Her zaman",
+  "TipKeepAliveSettings": "Oturumu canlı tutma modunu ayarla (her zaman / zamanlama)…",
+  "KaTipAlways": "Her zaman: 5 saatlik pencere sıfırlanır sıfırlanmaz yeni bir pencere başlatır (günün her saati).\nZamanlamaya geçmek için tıklayın.",
+  "KaTipSchedule": "Zamanlama: pencere {0} başlar → {1} sıfırlanır\nSonraki pencere başlangıcı: {2}",
+  "KaDlgTitle": "Oturumu canlı tut — {0}",
+  "KaModeAlways": "Sıfırlanır sıfırlanmaz yeni pencere başlat (günün her saati)",
+  "KaModeAlwaysDesc": "5 saatlik pencere biter bitmez sonraki pencere başlar. Pencerenin başlangıç saati günden güne kayar.",
+  "KaModeSchedule": "Zamanlamaya göre (istediğiniz sıfırlanma saatine hizalı)",
+  "KaModeScheduleDesc": "İlk pencereyi ilk sıfırlanma saatinizden 5 saat önce başlatır, ardından seçilen sayıda 5 saatlik pencereyi art arda sürdürür. Son pencere bittikten sonra ertesi günün ilk penceresine kadar hiçbir şey başlamaz; böylece zamanlama her gün aynı kalır. Örn. ilk sıfırlanma 11:00 → 06:00'da başlar, 11:00 · 16:00 · 21:00 · 02:00'de sıfırlanır.",
+  "KaFirstReset": "İlk sıfırlanma saati",
+  "KaWindowsPerDay": "Günlük pencere sayısı",
+  "KaPreviewFmt": "Pencere {0} başlar → {1} sıfırlanır",
+  "KaNote": "Yalnızca bilgisayar açıkken ve bu uygulama tepside çalışırken işler. Zamanlama içinde etkin pencere yoksa hemen başlatılır; bu arada Claude'u kendiniz kullandıysanız ve zaten bir pencere varsa zaman o kadar kayar.",
+  "SessReplaceAsk": "'{0}' hesabında bu oturumun başka bir kopyası var ve iki kopya farklı yönde ilerlemiş.\n\nSeçilen oturum: son kullanım {1}\n'{0}' içindeki kopya: son kullanım {2}\n\nSeçilen oturumla değiştirilsin mi?\n(Evet: değiştir — mevcut kopya yedeklenir · Hayır: mevcut kopyayla devam et)"
 }

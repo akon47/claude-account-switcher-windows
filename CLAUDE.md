@@ -37,7 +37,7 @@
   첫 실행 시 윈도우 UI 언어로 자동 선택.
 - **자동 업데이트**: `Services/UpdateService.cs` 가 GitHub `releases/latest` 태그를 현재 어셈블리 버전과
   비교 → 새 버전이면 `*Setup.exe` 자산을 받아 인스톨러 실행(시작 시 1회 + 트레이 "업데이트 확인" 메뉴).
-- **버전**: csproj `<Version>`(현재 0.3.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
+- **버전**: csproj `<Version>`(현재 0.11.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
 
 ## 아키텍처 (파일 맵)
 
@@ -51,9 +51,11 @@ Views/InputDialog          이름 입력 다이얼로그(테마)
 Views/MessageDialog        정보/오류/확인 다이얼로그(테마)
 Views/SkipPermissionsDialog --dangerously-skip-permissions 부여 여부 + "다시 묻지 않음"
 Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd)·관리자 권한으로 실행 + 스킵권한 기억값 재설정
+Views/KeepAliveDialog      세션 유지 방식 다이얼로그: 항상(리셋 즉시) / 시간표(첫 리셋 시각 + 하루 창 개수, 미리보기).
+                          목록 "세션 유지" 칸의 라벨 버튼("항상" / "11:00 ×4")을 누르면 열림. 확인 시 토글도 켜짐
 Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/이름/마지막사용/미리보기), 대상 계정 골라 이어하기(resume).
                           다중선택 후 "내보내기"로 번들(.claudesession) 저장 / "파일에서 가져오기"로 다른 PC 번들 열어 이어하기
-ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / Settings / ProfileItem
+ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / KeepAliveDialog / Settings / ProfileItem
 Services/IDialogService    테마 다이얼로그 추상화(ShowInput/Confirm/ShowInfo/ShowError/AskSkipPermissions/ShowSettings)
 Services/DialogService     IDialogService 구현(ProfileStore 주입). 활성 창을 owner로 잡음.
 Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 실행(셸·스킵권한·관리자권한 선택).
@@ -65,8 +67,12 @@ Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직. Cre
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
 Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
                           세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
-                          ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기/이름 파싱. ImportInto: enc 로 복사(있으면 보존).
-                          서브에이전트(sidechain) 트랜스크립트는 제외(agent-*.jsonl 파일명 + isSidechain). 미리보기는
+                          ListForProfile: 프로필 폴더(+활성이면 ~/.claude) 훑어 cwd/미리보기/이름 파싱(양쪽에 있으면 더 최근 것).
+                          ImportInto: enc 로 복사. **대상에 이미 있으면 두 사본을 prefix 비교**해 — 같음→그대로, 소스가 더 진행
+                          (대상이 소스의 앞부분)→소스로 교체(기존 사본은 backups\sessions\ 백업), 대상이 더 진행→대상 유지,
+                          갈라짐→SessionConflictResolver(VM 이 확인 다이얼로그)로 결정. 계정을 오가며 이어해도 최신 상태로 열리게.
+                          서브에이전트(sidechain) 트랜스크립트는 제외(agent-*.jsonl 파일명 + isSidechain). 세션 자동 유지가 보낸
+                          headless 한마디(sdk 진입점 + Launcher.KeepAlivePrompt)도 대화가 아니므로 목록에서 숨김. 미리보기는
                           summary 우선, 없으면 첫 '실제' 사용자 메시지(isMeta·<태그> 합성 메시지는 건너뜀 → 영어 보일러플레이트 방지).
                           세션 이름은 트랜스크립트의 `ai-title`(대화 진행 중 갱신 → 파일 꼬리에서 마지막 값 = 현재 이름; ReadLastAiTitle).
                           서브에이전트는 신구조 모두 복사: (신) 세션 사이드카 폴더 `<enc>\<id>\`(subagents 등) 통째 + (구) 평면 agent-*.jsonl(내부 sessionId==부모).
@@ -77,14 +83,20 @@ Services/SessionBundle.cs  세션 내보내기/가져오기(단일 파일 `.clau
                           Read 는 담긴 작업 폴더를 SessionEntry.BundleWorkdirPath 로 노출 → 가져올 때 사용자가 고른 위치에 RestoreWorkdir.
                           Export/Read/RestoreWorkdir 모두 IProgress+CancellationToken(진행률 다이얼로그, 큰 폴더 대비)
 Services/ProjectFolderEncoder.cs  cwd → projects\<enc> 폴더명 인코딩(영숫자 아닌 문자 → '-', 문자당 1개). 다른 PC resume 시 새 폴더 기준 재인코딩용
-Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시(App 시작 시 가동). KeepSessionAlive 켜진 프로필을
-                          60초 주기로 점검해 5시간 창 resets_at 이 지나면 Launcher.FireKeepAlive 로 `claude -p "hi"`
-                          (headless) 발동 → 새 창 즉시 시작. 5분 쿨다운으로 중복 발동 방지
+Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시(App 시작 시 가동, 시작 직후 1회 + 60초 주기).
+                          KeepSessionAlive 켜진 프로필을 점검해 5시간 창이 없으면(resets_at null/지남) Launcher.FireKeepAlive 로
+                          `claude -p "hi"`(headless) 발동 → 새 창 즉시 시작. 5분 쿨다운으로 중복 발동 방지.
+                          시간표(Profile.KeepAliveSchedule)가 있으면 KeepAliveScheduler.CurrentSlot 이 null 인 공백 구간에선
+                          조회조차 안 함. 활성 프로필이라도 HomeBelongsTo 가 아니면 격리본으로 발동(남의 계정에 발동 금지)
+Services/KeepAliveScheduler.cs  시간표 슬롯 계산(로컬 시각). 하루 슬롯 = (첫 리셋 − 5h) 부터 5시간 간격 N개(N≤4, 25h 겹침 방지).
+                          어제/오늘/내일 슬롯을 함께 봐 자정 넘김·전날 시작을 처리. CurrentSlot / NextSlotStart / 표시 포맷
+Models/KeepAliveSchedule.cs  시간표 설정(FirstResetAt: TimeSpan, WindowsPerDay 1~4). Normalized() 로 손편집 값 방어
 Services/StatusLineProvisioner.cs  동시 실행 시 프로필 settings.json 에 claude statusLine 설치(👤 이메일·플랜·이름·세션%). powershell -File <ps1>, ps1 은 prefix 바이트 + stdin five_hour 세션%
 Services/PlanFormatter.cs   구독→플랜 라벨(Pro/Max 5x) 공유 포맷(목록 뱃지 + statusLine)
 Services/AppPaths/ClaudeConfig/CredentialsReader/AutoStart/ExplorerMenu  경로/설정/자동실행/탐색기메뉴
 Localization/              LocalizationManager(런타임 스캔) + LocExtension + <culture>.json 14개(_culture/_name 메타)
-Models/Profile.cs          프로필 모델(계산 속성). SessionRemaining/SessionPercent(메모리 캐시) 포함
+Models/Profile.cs          프로필 모델(계산 속성). SessionRemaining/SessionPercent(메모리 캐시) 포함.
+                          KeepSessionAlive(토글) + KeepAliveSchedule(null=항상 모드, 값 있으면 시간표 모드)
 Models/AppData.cs          profiles.json 영속 데이터(Profiles, ActiveProfileId, LastWorkingDir, Shell, RunAsAdmin, SkipPermissions, Language, StatusLine)
 Models/ShellKind.cs        PowerShell | Cmd
 ViewModels/ProfileItemVM   행 표시. PlanKind/PlanLabel(뱃지), StatusKind(표시등), SessionLevel(색 구간) 계산
@@ -132,6 +144,10 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   `claude --resume <id>`를 원본 cwd에서 새 창으로 실행. 사본이므로 원본은 소스 계정에 보존(포크).
   **원본 cwd 가 이 PC 에 없으면 폴더를 물어(ProjectFolderEncoder 로 재인코딩) 그 폴더에서 이어하기**(예전엔 중단).
   `Launcher.LaunchInProfile(..., resumeSessionId)` 로 실행.
+  **되돌아오기(0.11.0)**: 예전엔 대상에 같은 세션 파일이 있으면 무조건 보존해서 "1→2 로 이어하고 2에서 더 진행한 뒤
+  2→1 로 되돌아오면 1의 옛 상태로 열리는" 문제가 있었다. 이제 두 사본을 prefix 비교해 소스가 더 진행됐으면 자동 교체
+  (기존 사본은 `backups\sessions\` 에 백업, 30개 보관), 대상이 더 진행됐으면 유지, 갈라졌으면 확인 다이얼로그
+  (SessReplaceAsk)로 묻는다. 교체 시 사이드카/서브에이전트도 더 새로운 파일로 갱신.
 - **세션 내보내기/가져오기(다른 PC 이식)**: 세션 브라우저에서 다중선택(Ctrl/Shift) 후 "내보내기" → 단일 번들
   `*.claudesession`(zip: 본문+사이드카/서브에이전트+manifest) 저장(선택 없으면 목록 전체). 다른 PC 에서 "파일에서
   가져오기"로 그 번들을 열면 안의 세션들(이름/미리보기)이 목록에 뜨고, 로컬 계정을 골라 이어하기 가능. 원본 폴더가
@@ -145,6 +161,13 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   판정: **유효한 usage 응답**인데 5시간 창 resets_at 가 **null(=100%, 활성 창 없음)이거나 지났으면 발동**
   (예전엔 null 을 놓쳐 100%+리셋없음에 고착되던 구멍이 있었음). usage 가 null(무료/조회실패)이거나 미래면 미발동.
   주간(seven_day) 한도 소진 시엔 어차피 못 쓰므로 미발동.
+  **시간표 모드(0.11.0)**: "항상"(24시간 내내 리셋 즉시 재시작 → 창 시각이 매일 밀려 언제 리셋되는지 예측 불가)의
+  불편을 풀기 위해 프로필별 `KeepAliveSchedule`(첫 리셋 시각 + 하루 창 개수 1~4)을 뒀다. 첫 창은 첫 리셋 5시간 전에
+  시작하고 5시간 간격으로 N개를 연속 유지, 마지막 창이 끝나면 다음 날 첫 창까지 **공백 구간**(조회도 안 함)을 둬
+  매일 같은 시간표로 재정렬한다(24h 가 5 의 배수가 아니라 공백 없이는 매일 밀림). 슬롯 안에서 창이 없으면 즉시
+  시작하므로 PC 가 늦게 켜지거나 사용자가 직접 써서 창이 생겼으면 그만큼 밀린다(의도한 단순 규칙, 다이얼로그에 명시).
+  목록 "세션 유지" 칸: 체크박스(on/off) + 라벨 버튼("항상" / "11:00 ×4", 툴팁에 창 시작·리셋 시각·다음 시작 예정)
+  → KeepAliveDialog. 확인하면 KeepSessionAlive 도 켠다.
 - **세션 사용량 표시(UsageService)**: oauth/usage 의 `five_hour`(5시간) + `seven_day`(주간) 파싱. 평소엔 5시간
   잔여%+리셋 카운트다운 표시. **주간 소진 시(seven_day 잔여 0) 0%로 표시하고 카운트다운을 주간 리셋까지로 전환**
   (SessionUsage.DisplayPercent/DisplayResetsAt). 주간 소진이어도 keep-alive 5시간 판정엔 원본 five_hour resets_at 사용.
@@ -202,6 +225,12 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   를 쓸 수 없다(설정해 두면 Start 에서 예외). 그래서 격리 폴더는 **셸 명령 안에서** 건다
   (`cmd: set "CLAUDE_CONFIG_DIR=…" & …` / `pwsh: $env:CLAUDE_CONFIG_DIR='…'; …`). 일반 실행도 같은 방식으로
   통일했으니 한쪽만 되돌리지 말 것(경로에 공백·`&`·작은따옴표가 들어가도 이 인용 방식으로 안전).
+- **세션 유지 한마디는 트랜스크립트를 남긴다**: `claude -p "hi"` 는 cwd(UserHome)의 `projects\C--Users-<me>\` 에
+  작은 세션 파일(entrypoint sdk-cli, 첫 메시지 "hi")을 매번 만든다. 세션 브라우저는 이를 숨긴다(SessionStore.IsSdkEntry +
+  Launcher.KeepAlivePrompt 비교). 프롬프트 문자열을 바꾸면 옛 기록이 다시 보이므로 바꾸지 말 것.
+- **빈 프로필 폴더 정리**: 시작 시 `ProfileStore.PruneOrphanDirs` 가 profiles.json 에 없고 `.credentials.json`/`.claude.json`/
+  `projects` 가 전부 없는 폴더(plugins/ 만 남은 껍데기)만 지운다. 데이터가 있는 폴더는 절대 건드리지 않는다.
+- **`--show` 인자**: 트레이 토스트 대신 관리 창을 바로 연다(바로가기/UI 자동화용). `--autostart` 는 토스트 억제.
 - 설치 후엔 자동실행/탐색기메뉴 토글을 껐다 켜서 레지스트리가 설치된 exe 경로를 가리키게.
 - 커밋 작성자는 이 repo 한정 `Kim, Hwan <akon47@naver.com>` (로컬 git config).
 - 외부 프로젝트명/브랜드는 코드·주석·식별자·경로 어디에도 넣지 말 것(사용자 요청).

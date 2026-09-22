@@ -10,7 +10,7 @@
   "ColSession": "Session verbleibend",
   "ColStatus": "Status",
   "ColKeepAlive": "Aktiv halten",
-  "TipKeepAlive": "Wenn die 5-Stunden-Sitzung zurückgesetzt wird, wird automatisch eine kurze Nachricht gesendet, um eine neue Sitzung zu starten.",
+  "TipKeepAlive": "Wenn das 5-Stunden-Fenster zurückgesetzt wird, automatisch eine kurze Nachricht senden, um ein neues zu starten. Klicken Sie auf die Beschriftung daneben, um den Modus zu wählen (immer / Zeitplan).",
   "SessionResetsHm": "{0} Std. {1} Min.",
   "SessionResetsM": "{0} Min.",
   "SessionResetsTip": "Sitzung wird in {0} zurückgesetzt (um {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "gerade eben",
   "TimeMinutesAgo": "vor {0} Min.",
   "TimeHoursAgo": "vor {0} Std.",
-  "TimeDaysAgo": "vor {0} Tagen"
+  "TimeDaysAgo": "vor {0} Tagen",
+
+  "KeepAliveAlways": "Immer",
+  "TipKeepAliveSettings": "Keep-alive-Modus einstellen (immer / Zeitplan)…",
+  "KaTipAlways": "Immer: startet ein neues Fenster, sobald das 5-Stunden-Fenster zurückgesetzt wird (rund um die Uhr).\nKlicken, um auf einen Zeitplan umzustellen.",
+  "KaTipSchedule": "Zeitplan: Fenster startet {0} → Reset {1}\nNächster Fensterstart: {2}",
+  "KaDlgTitle": "Sitzung aufrechterhalten — {0}",
+  "KaModeAlways": "Neues Fenster sofort nach dem Reset starten (rund um die Uhr)",
+  "KaModeAlwaysDesc": "Das nächste Fenster startet, sobald das 5-Stunden-Fenster endet. Die Startzeit verschiebt sich von Tag zu Tag.",
+  "KaModeSchedule": "Nach Zeitplan (an die gewünschte Reset-Zeit ausrichten)",
+  "KaModeScheduleDesc": "Startet das erste Fenster 5 Stunden vor Ihrer ersten Reset-Zeit und hält dann die gewählte Anzahl 5-Stunden-Fenster direkt hintereinander. Nach dem letzten Fenster startet bis zum ersten Fenster des nächsten Tages nichts, sodass der Zeitplan jeden Tag gleich bleibt. Z. B. erster Reset 11:00 → Start 06:00, Resets um 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Erster Reset um",
+  "KaWindowsPerDay": "Fenster pro Tag",
+  "KaPreviewFmt": "Fenster startet {0} → Reset {1}",
+  "KaNote": "Funktioniert nur, solange der PC eingeschaltet ist und diese App im Tray läuft. Innerhalb des Zeitplans startet ein Fenster, sobald keines aktiv ist – haben Sie Claude zwischendurch selbst benutzt und ein Fenster existiert bereits, verschiebt sich der Zeitpunkt entsprechend.",
+  "SessReplaceAsk": "Das Konto '{0}' hat bereits eine andere Kopie dieser Sitzung, und beide Kopien haben sich auseinanderentwickelt.\n\nAusgewählte Sitzung: zuletzt verwendet {1}\nKopie in '{0}': zuletzt verwendet {2}\n\nDurch die ausgewählte Sitzung ersetzen?\n(Ja: ersetzen – die vorhandene Kopie wird gesichert · Nein: vorhandene Kopie fortsetzen)"
 }

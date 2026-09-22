@@ -10,7 +10,7 @@
   "ColSession": "Sessão restante",
   "ColStatus": "Status",
   "ColKeepAlive": "Manter ativo",
-  "TipKeepAlive": "Quando a sessão de 5 horas é reiniciada, envia automaticamente uma mensagem curta para iniciar uma nova sessão.",
+  "TipKeepAlive": "Quando a janela de 5 horas for redefinida, envia automaticamente uma mensagem curta para iniciar uma nova. Clique no rótulo ao lado para escolher o modo (sempre / agenda).",
   "SessionResetsHm": "{0} h {1} min",
   "SessionResetsM": "{0} min",
   "SessionResetsTip": "A sessão reinicia em {0} (às {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "agora mesmo",
   "TimeMinutesAgo": "há {0} min",
   "TimeHoursAgo": "há {0} h",
-  "TimeDaysAgo": "há {0} dias"
+  "TimeDaysAgo": "há {0} dias",
+
+  "KeepAliveAlways": "Sempre",
+  "TipKeepAliveSettings": "Configurar o modo de manter sessão (sempre / agenda)…",
+  "KaTipAlways": "Sempre: inicia uma nova janela assim que a janela de 5 horas é redefinida (24 horas por dia).\nClique para mudar para uma agenda.",
+  "KaTipSchedule": "Agenda: a janela começa às {0} → redefine às {1}\nPróximo início de janela: {2}",
+  "KaDlgTitle": "Manter sessão — {0}",
+  "KaModeAlways": "Iniciar uma nova janela assim que for redefinida (24 horas por dia)",
+  "KaModeAlwaysDesc": "A próxima janela começa no instante em que a janela de 5 horas termina. O horário de início muda de um dia para o outro.",
+  "KaModeSchedule": "Seguir uma agenda (alinhada ao horário de redefinição desejado)",
+  "KaModeScheduleDesc": "Inicia a primeira janela 5 horas antes do seu primeiro horário de redefinição e mantém em sequência o número escolhido de janelas de 5 horas. Depois da última janela, nada inicia até a primeira janela do dia seguinte, então a agenda se repete igual todos os dias. Ex.: primeira redefinição 11:00 → começa às 06:00, redefine às 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Primeira redefinição às",
+  "KaWindowsPerDay": "Janelas por dia",
+  "KaPreviewFmt": "A janela começa às {0} → redefine às {1}",
+  "KaNote": "Funciona apenas com o PC ligado e este app em execução na bandeja. Dentro da agenda, uma janela começa assim que não houver nenhuma ativa; se você usou o Claude nesse meio-tempo e já existe uma janela, o horário desloca-se nessa medida.",
+  "SessReplaceAsk": "A conta '{0}' já tem outra cópia desta sessão, e as duas cópias divergiram.\n\nSessão selecionada: último uso {1}\nCópia em '{0}': último uso {2}\n\nSubstituir pela sessão selecionada?\n(Sim: substituir — a cópia existente é salva em backup · Não: retomar a cópia existente)"
 }

@@ -39,6 +39,7 @@ public partial class App : Application
         if (TryHandleCliLaunch(e.Args)) { Shutdown(); return; }
 
         _store.Load();
+        _store.PruneOrphanDirs();   // 목록에 없고 데이터도 없는 빈 프로필 폴더 정리
         ReconcileStartupSettings(); // 저장된 설정대로 자동실행/탐색기 레지스트리 복원(업데이트 후 초기화 방지)
         InitLanguage();
 
@@ -73,7 +74,9 @@ public partial class App : Application
         _tray.ForceCreate();
 
         // 수동 실행(자동 실행 인자 없음)이면 트레이에 들어갔음을 토스트로 알린다(첫 사용자 "안 켜졌나?" 혼란 방지).
-        if (!e.Args.Contains("--autostart")) ShowRunningInTrayToast();
+        // --show 로 띄우면 토스트 대신 관리 창을 곧바로 연다(바로가기/스크립트에서 창을 열고 싶을 때).
+        if (e.Args.Contains("--show")) ShowWindow();
+        else if (!e.Args.Contains("--autostart")) ShowRunningInTrayToast();
 
         // 세션 자동 유지 감시 시작(KeepSessionAlive 켜진 프로필의 5시간 창을 리셋 즉시 재시작).
         _services.GetRequiredService<SessionKeepAliveService>().Start();

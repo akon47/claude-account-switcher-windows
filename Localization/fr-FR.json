@@ -10,7 +10,7 @@
   "ColSession": "Session restante",
   "ColStatus": "Statut",
   "ColKeepAlive": "Garder active",
-  "TipKeepAlive": "Lorsque la session de 5 heures est réinitialisée, envoie automatiquement un court message pour démarrer une nouvelle session.",
+  "TipKeepAlive": "Quand la fenêtre de 5 heures se réinitialise, envoie automatiquement un court message pour en démarrer une nouvelle. Cliquez sur l'étiquette à côté pour choisir le mode (toujours / horaire).",
   "SessionResetsHm": "{0} h {1} min",
   "SessionResetsM": "{0} min",
   "SessionResetsTip": "Réinitialisation de la session dans {0} (à {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "à l'instant",
   "TimeMinutesAgo": "il y a {0} min",
   "TimeHoursAgo": "il y a {0} h",
-  "TimeDaysAgo": "il y a {0} jours"
+  "TimeDaysAgo": "il y a {0} jours",
+
+  "KeepAliveAlways": "Toujours",
+  "TipKeepAliveSettings": "Configurer le mode de maintien de session (toujours / horaire)…",
+  "KaTipAlways": "Toujours : démarre une nouvelle fenêtre dès que la fenêtre de 5 heures se réinitialise (24 h/24).\nCliquez pour passer à un horaire.",
+  "KaTipSchedule": "Horaire : la fenêtre démarre à {0} → réinitialisation à {1}\nProchain démarrage de fenêtre : {2}",
+  "KaDlgTitle": "Maintien de session — {0}",
+  "KaModeAlways": "Démarrer une nouvelle fenêtre dès la réinitialisation (24 h/24)",
+  "KaModeAlwaysDesc": "La fenêtre suivante démarre à l'instant où la fenêtre de 5 heures se termine. L'heure de début se décale de jour en jour.",
+  "KaModeSchedule": "Suivre un horaire (aligné sur l'heure de réinitialisation souhaitée)",
+  "KaModeScheduleDesc": "Démarre la première fenêtre 5 heures avant votre première heure de réinitialisation, puis enchaîne le nombre choisi de fenêtres de 5 heures. Après la dernière fenêtre, rien ne démarre avant la première fenêtre du lendemain, l'horaire reste donc identique chaque jour. Ex. : première réinitialisation à 11:00 → démarrage à 06:00, réinitialisations à 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Première réinitialisation à",
+  "KaWindowsPerDay": "Fenêtres par jour",
+  "KaPreviewFmt": "La fenêtre démarre à {0} → réinitialisation à {1}",
+  "KaNote": "Ne fonctionne que si le PC est allumé et que cette application tourne dans la barre d'état. Dans l'horaire, une fenêtre démarre dès qu'aucune n'est active ; si vous avez utilisé Claude entre-temps et qu'une fenêtre existe déjà, l'horaire se décale d'autant.",
+  "SessReplaceAsk": "Le compte '{0}' possède déjà une autre copie de cette session, et les deux copies ont divergé.\n\nSession sélectionnée : dernière utilisation {1}\nCopie dans '{0}' : dernière utilisation {2}\n\nRemplacer par la session sélectionnée ?\n(Oui : remplacer — la copie existante est sauvegardée · Non : reprendre la copie existante)"
 }

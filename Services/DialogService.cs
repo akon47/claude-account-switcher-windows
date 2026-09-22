@@ -1,5 +1,6 @@
 using System.Windows;
 using ClaudeAccountSwitcher.Localization;
+using ClaudeAccountSwitcher.Models;
 using ClaudeAccountSwitcher.ViewModels;
 using ClaudeAccountSwitcher.Views;
 
@@ -46,6 +47,15 @@ public sealed class DialogService : IDialogService
         var dlg = new SettingsWindow { DataContext = new SettingsViewModel(_store) };
         SetOwner(dlg);
         dlg.ShowDialog();
+    }
+
+    public KeepAliveSettingsResult? ShowKeepAliveSettings(Profile profile)
+    {
+        var vm = new KeepAliveDialogViewModel { ProfileName = profile.Name };
+        vm.LoadFrom(profile.KeepAliveSchedule);
+        var dlg = new KeepAliveDialog { DataContext = vm };
+        SetOwner(dlg);
+        return dlg.ShowDialog() == true ? new KeepAliveSettingsResult(vm.Result) : null;
     }
 
     public void ShowSessionBrowser()

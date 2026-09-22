@@ -4,6 +4,15 @@ using ClaudeAccountSwitcher.Models;
 
 namespace ClaudeAccountSwitcher.Services;
 
+/// <summary>대상 계정에 같은 세션의 '다르게 진행된' 사본이 있을 때 호출부에 넘기는 정보.</summary>
+public sealed record SessionConflict(DateTime SourceModified, DateTime DestModified, long SourceBytes, long DestBytes);
+
+/// <summary>
+/// 세션 충돌(두 사본이 서로 다른 방향으로 진행됨)을 어떻게 풀지 결정한다.
+/// true = 선택한(소스) 세션으로 교체(기존 사본은 백업), false = 대상의 기존 사본을 그대로 이어간다.
+/// </summary>
+public delegate bool SessionConflictResolver(SessionConflict conflict);
+
 /// <summary>
 /// 프로필별 대화 세션(claude 트랜스크립트)을 열거하고, 한 계정의 세션을 다른 계정으로
 /// 복사해 <c>claude --resume</c> 로 이어하게 한다.
@@ -13,20 +22,38 @@ namespace ClaudeAccountSwitcher.Services;
 public sealed class SessionStore
 {
     private const string ProjectsFolder = "projects";
+    private const string SessionBackupsFolder = "sessions";
     private const int MaxScanLines = 120; // cwd/미리보기는 앞부분에 있음. 앞선 슬래시 명령·메타 메시지를 건너뛸 여유.
+    private const int MaxSessionBackups = 30;
+
+    /// <summary>두 트랜스크립트 사본의 관계.</summary>
+    private enum TranscriptRelation
+    {
+        /// <summary>내용이 같다.</summary>
+        Identical,
+
+        /// <summary>대상 사본 이후로 소스에서만 대화가 이어졌다(대상이 소스의 앞부분).</summary>
+        SourceExtendsDest,
+
+        /// <summary>소스 이후로 대상에서만 대화가 이어졌다(소스가 대상의 앞부분).</summary>
+        DestExtendsSource,
+
+        /// <summary>갈라진 뒤 양쪽 모두 진행됐다(어느 쪽도 다른 쪽의 앞부분이 아님).</summary>
+        Diverged,
+    }
 
     /// <summary>
     /// 프로필의 세션 목록. 활성 프로필이면 실제 라이브 저장소(~/.claude)도 함께 훑는다
     /// (활성 계정은 전환 시 ~/.claude 를 쓰고, 동시 실행 때만 프로필 폴더에 쌓기 때문).
-    /// 최근 수정 순으로 정렬.
+    /// 같은 세션이 두 곳에 있으면 더 최근 것을 택한다. 최근 수정 순으로 정렬.
+    /// 세션 자동 유지가 보낸 headless 한마디(sdk 진입점 + KeepAlivePrompt)는 대화가 아니므로 숨긴다.
     /// </summary>
     public IReadOnlyList<SessionEntry> ListForProfile(Profile p, bool isActive)
     {
         var dirs = new List<string> { p.ConfigDir };
         if (isActive) dirs.Add(AppPaths.ClaudeHome);
 
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // 중복 세션 id 제거
-        var result = new List<SessionEntry>();
+        var byId = new Dictionary<string, SessionEntry>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var configDir in dirs)
         {
@@ -46,59 +73,161 @@ public sealed class SessionStore
                     if (Path.GetFileName(file).StartsWith("agent-", StringComparison.OrdinalIgnoreCase)) continue;
 
                     string id = Path.GetFileNameWithoutExtension(file);
-                    if (!seen.Add(id)) continue;
+                    var modified = File.GetLastWriteTime(file);
 
-                    var (cwd, preview, isSidechain, firstTitle) = ScanHead(file);
-                    if (isSidechain) continue; // agent- 규칙을 벗어난 sidechain 까지 방어
+                    // 같은 세션이 프로필 폴더와 ~/.claude 양쪽에 있으면 더 최근에 진행된 쪽을 보여준다.
+                    if (byId.TryGetValue(id, out var existing) && existing.LastModified >= modified) continue;
+
+                    var head = ScanHead(file);
+                    if (head.IsSidechain) continue; // agent- 규칙을 벗어난 sidechain 까지 방어
+                    if (head.IsKeepAlive) continue; // 세션 자동 유지의 headless 한마디 → 대화 아님
 
                     // 세션 이름(ai-title)은 대화가 진행되며 갱신되므로 파일 끝쪽의 마지막 값이 현재 이름.
-                    // 앞부분(firstTitle)은 꼬리를 못 읽었을 때의 폴백.
-                    string? name = ReadLastAiTitle(file) ?? firstTitle;
+                    // 앞부분(FirstTitle)은 꼬리를 못 읽었을 때의 폴백.
+                    string? name = ReadLastAiTitle(file) ?? head.FirstTitle;
 
-                    result.Add(new SessionEntry
+                    byId[id] = new SessionEntry
                     {
                         SessionId = id,
                         ProjectFolder = Path.GetFileName(Path.GetDirectoryName(file)!),
-                        Cwd = cwd ?? "",
+                        Cwd = head.Cwd ?? "",
                         FilePath = file,
                         ProfileId = p.Id,
                         ProfileName = p.Name,
                         SourceEmail = string.IsNullOrEmpty(p.Email) ? null : p.Email,
-                        LastModified = File.GetLastWriteTime(file),
-                        Preview = preview,
+                        LastModified = modified,
+                        Preview = head.Preview,
                         Name = Clean(name),
-                    });
+                    };
                 }
                 catch { /* 한 파일이 깨져도 나머지는 계속 */ }
             }
         }
 
+        var result = byId.Values.ToList();
         result.Sort((a, b) => b.LastModified.CompareTo(a.LastModified));
         return result;
     }
 
     /// <summary>
-    /// 세션 파일을 대상 프로필의 격리 설정 폴더로 복사한다(projects\&lt;enc&gt; 경로).
-    /// 이미 있으면 덮어쓰지 않는다(대상에서 이미 이어가던 대화를 보존). 실행할 세션 id 를 반환.
+    /// 세션 파일을 대상 프로필의 격리 설정 폴더로 복사한다(projects\&lt;enc&gt; 경로). 실행할 세션 id 를 반환.
+    /// <para>
+    /// 대상에 같은 세션이 이미 있으면 두 사본을 비교해 정한다(계정을 오가며 이어한 뒤 되돌아오는 경우):
+    /// - 같으면 그대로.
+    /// - 대상 사본 이후로 소스에서만 대화가 이어졌으면(대상이 소스의 앞부분) 조용히 소스로 교체
+    ///   — "1번→2번으로 이어하고 2번에서 더 진행한 뒤 다시 1번으로" 가 최신 상태로 열리게.
+    /// - 대상이 이미 더 진행됐으면(소스가 대상의 앞부분) 대상 사본을 그대로 이어간다.
+    /// - 갈라졌으면 <paramref name="onConflict"/> 에 묻는다(없으면 더 최근에 수정된 쪽).
+    /// 교체할 때 기존 사본은 backups\sessions\ 에 백업한다.
+    /// </para>
     /// <paramref name="overrideProjectFolder"/> 를 주면 소스 폴더명 대신 그걸 대상 enc 폴더로 쓴다
     /// (다른 PC 로 옮겨 작업 폴더가 바뀌었을 때 cwd 로 다시 인코딩한 폴더명 전달).
     /// </summary>
-    public string ImportInto(SessionEntry s, Profile dest, string? overrideProjectFolder = null)
+    public string ImportInto(SessionEntry s, Profile dest, string? overrideProjectFolder = null, SessionConflictResolver? onConflict = null)
     {
         string projectFolder = string.IsNullOrEmpty(overrideProjectFolder) ? s.ProjectFolder : overrideProjectFolder;
         string destProjects = Path.Combine(dest.ConfigDir, ProjectsFolder, projectFolder);
         Directory.CreateDirectory(destProjects);
         string destFile = Path.Combine(destProjects, s.SessionId + ".jsonl");
 
-        // 이미 대상에 있는 세션(자기 자신으로 이어하기 포함)이면 그대로 이어간다.
-        if (!File.Exists(destFile) &&
-            !string.Equals(Path.GetFullPath(s.FilePath), Path.GetFullPath(destFile), StringComparison.OrdinalIgnoreCase))
+        bool samePath = string.Equals(Path.GetFullPath(s.FilePath), Path.GetFullPath(destFile), StringComparison.OrdinalIgnoreCase);
+        bool replaced = false;
+
+        if (samePath)
+        {
+            // 자기 자신으로 이어하기 — 손댈 것 없음.
+        }
+        else if (!File.Exists(destFile))
         {
             File.Copy(s.FilePath, destFile);
         }
+        else
+        {
+            bool replace = CompareTranscripts(s.FilePath, destFile) switch
+            {
+                TranscriptRelation.Identical => false,
+                TranscriptRelation.SourceExtendsDest => true,
+                TranscriptRelation.DestExtendsSource => false,
+                _ => onConflict?.Invoke(new SessionConflict(
+                        File.GetLastWriteTime(s.FilePath), File.GetLastWriteTime(destFile),
+                        new FileInfo(s.FilePath).Length, new FileInfo(destFile).Length))
+                     ?? File.GetLastWriteTimeUtc(s.FilePath) > File.GetLastWriteTimeUtc(destFile),
+            };
 
-        CopyLinkedSubAgents(s, destProjects);
+            if (replace)
+            {
+                BackupTranscript(destFile, s.SessionId);
+                File.Copy(s.FilePath, destFile, overwrite: true);
+                replaced = true;
+            }
+        }
+
+        CopyLinkedSubAgents(s, destProjects, refresh: replaced);
         return s.SessionId;
+    }
+
+    /// <summary>
+    /// 두 트랜스크립트의 관계를 판정한다. 트랜스크립트는 추가 전용(append-only)에 가깝기 때문에
+    /// 한쪽이 다른 쪽의 앞부분(prefix)이면 그 뒤로 한쪽에서만 대화가 이어진 것이다.
+    /// </summary>
+    private static TranscriptRelation CompareTranscripts(string source, string dest)
+    {
+        long ls = new FileInfo(source).Length;
+        long ld = new FileInfo(dest).Length;
+        if (!PrefixEquals(source, dest, Math.Min(ls, ld))) return TranscriptRelation.Diverged;
+        if (ls == ld) return TranscriptRelation.Identical;
+        return ls > ld ? TranscriptRelation.SourceExtendsDest : TranscriptRelation.DestExtendsSource;
+    }
+
+    /// <summary>두 파일의 앞 <paramref name="length"/> 바이트가 같은지(청크 비교).</summary>
+    private static bool PrefixEquals(string a, string b, long length)
+    {
+        if (length <= 0) return true;
+        const int chunk = 64 * 1024;
+        var ba = new byte[chunk];
+        var bb = new byte[chunk];
+        using var fa = new FileStream(a, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var fb = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        long remaining = length;
+        while (remaining > 0)
+        {
+            int want = (int)Math.Min(chunk, remaining);
+            int ra = ReadFully(fa, ba, want);
+            int rb = ReadFully(fb, bb, want);
+            if (ra != rb || ra == 0) return false;
+            if (!ba.AsSpan(0, ra).SequenceEqual(bb.AsSpan(0, rb))) return false;
+            remaining -= ra;
+        }
+        return true;
+    }
+
+    private static int ReadFully(Stream s, byte[] buffer, int count)
+    {
+        int total = 0;
+        while (total < count)
+        {
+            int n = s.Read(buffer, total, count - total);
+            if (n <= 0) break;
+            total += n;
+        }
+        return total;
+    }
+
+    /// <summary>교체 전 대상 사본을 backups\sessions\ 에 보관한다(오래된 것부터 정리). projects 밖이라 claude 는 보지 못한다.</summary>
+    private static void BackupTranscript(string file, string sessionId)
+    {
+        try
+        {
+            string dir = Path.Combine(AppPaths.BackupsDir, SessionBackupsFolder);
+            Directory.CreateDirectory(dir);
+            File.Copy(file, Path.Combine(dir, $"{sessionId}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"), overwrite: true);
+
+            var stale = new DirectoryInfo(dir).GetFiles("*.jsonl")
+                .OrderByDescending(f => f.CreationTimeUtc)
+                .Skip(MaxSessionBackups);
+            foreach (var f in stale) f.Delete();
+        }
+        catch { /* best effort — 백업 실패가 이어하기를 막지는 않는다 */ }
     }
 
     /// <summary>
@@ -107,8 +236,9 @@ public sealed class SessionStore
     /// (신) 세션별 사이드카 폴더 <c>&lt;enc&gt;\&lt;id&gt;\</c>(subagents\agent-*.jsonl 등)를 통째로 복사.
     /// (구) <c>&lt;enc&gt;</c> 에 평평하게 놓인 agent-*.jsonl 중 내부 sessionId 가 이 세션인 것.
     /// (이어하기 자체엔 없어도 되지만, 대상 계정에서 서브에이전트 상세까지 온전히 재현되도록 가져온다.)
+    /// <paramref name="refresh"/> 면 본문을 교체한 경우라, 대상에 이미 있어도 소스가 더 새로우면 덮어쓴다.
     /// </summary>
-    private static void CopyLinkedSubAgents(SessionEntry s, string destProjects)
+    private static void CopyLinkedSubAgents(SessionEntry s, string destProjects, bool refresh)
     {
         try
         {
@@ -117,14 +247,14 @@ public sealed class SessionStore
 
             string sidecar = Path.Combine(srcDir, s.SessionId);
             if (Directory.Exists(sidecar))
-                CopyDirectory(sidecar, Path.Combine(destProjects, s.SessionId));
+                CopyDirectory(sidecar, Path.Combine(destProjects, s.SessionId), overwriteOlder: refresh);
 
             foreach (var agentFile in LinkedSubAgentFiles(srcDir, s.SessionId))
             {
                 try
                 {
                     string dest = Path.Combine(destProjects, Path.GetFileName(agentFile));
-                    if (!File.Exists(dest)) File.Copy(agentFile, dest);
+                    CopyFile(agentFile, dest, overwriteOlder: refresh);
                 }
                 catch { /* 개별 서브에이전트 복사 실패는 무시(이어하기엔 필수 아님) */ }
             }
@@ -151,16 +281,26 @@ public sealed class SessionStore
         }
     }
 
-    /// <summary>디렉터리 트리를 재귀 복사한다(대상에 이미 있는 파일은 보존).</summary>
-    internal static void CopyDirectory(string src, string dest)
+    /// <summary>
+    /// 디렉터리 트리를 재귀 복사한다. 기본은 대상에 이미 있는 파일 보존;
+    /// <paramref name="overwriteOlder"/> 면 소스가 더 새로운 파일은 덮어쓴다.
+    /// </summary>
+    internal static void CopyDirectory(string src, string dest, bool overwriteOlder = false)
     {
         foreach (var file in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
         {
             string rel = Path.GetRelativePath(src, file);
             string target = Path.Combine(dest, rel);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            if (!File.Exists(target)) File.Copy(file, target);
+            CopyFile(file, target, overwriteOlder);
         }
+    }
+
+    private static void CopyFile(string src, string dest, bool overwriteOlder)
+    {
+        if (!File.Exists(dest)) { File.Copy(src, dest); return; }
+        if (overwriteOlder && File.GetLastWriteTimeUtc(src) > File.GetLastWriteTimeUtc(dest))
+            File.Copy(src, dest, overwrite: true);
     }
 
     /// <summary>트랜스크립트 앞부분에서 sessionId 필드를 읽는다(없으면 null).</summary>
@@ -187,17 +327,21 @@ public sealed class SessionStore
         return null;
     }
 
+    /// <summary>파일 앞부분을 훑어 얻은 메타.</summary>
+    private sealed record HeadInfo(string? Cwd, string? Preview, bool IsSidechain, string? FirstTitle, bool IsKeepAlive);
+
     /// <summary>
-    /// 파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부, 앞쪽 세션이름)을 뽑는다.
+    /// 파일 앞부분만 훑어 (cwd, 미리보기, sidechain 여부, 앞쪽 세션이름, 세션유지 한마디 여부)를 뽑는다.
     /// 미리보기는 summary 우선, 없으면 첫 사용자 메시지. 세션이름은 처음 만난 ai-title(폴백용).
     /// </summary>
-    private static (string? Cwd, string? Preview, bool IsSidechain, string? FirstTitle) ScanHead(string file)
+    private static HeadInfo ScanHead(string file)
     {
         string? cwd = null;
         string? summary = null;
         string? firstUser = null;
         string? firstTitle = null;
         bool isSidechain = false;
+        bool isKeepAlive = false;
 
         using var reader = new StreamReader(file);
         for (int i = 0; i < MaxScanLines; i++)
@@ -245,7 +389,13 @@ public sealed class SessionStore
                 var txt = ExtractText(content);
                 // 슬래시 명령 래퍼(<command-name>…)·시스템 리마인더(<system-reminder>)·명령 출력
                 // (<local-command-stdout>) 등 <태그>로 시작하는 합성 메시지는 미리보기로 부적합 → 건너뛴다.
-                if (!IsSynthetic(txt)) firstUser = txt;
+                if (!IsSynthetic(txt))
+                {
+                    firstUser = txt;
+                    // 세션 자동 유지가 headless(`claude -p`)로 보낸 한마디: sdk 진입점 + 고정 프롬프트.
+                    isKeepAlive = IsSdkEntry(root) &&
+                        string.Equals(txt!.Trim(), Launcher.KeepAlivePrompt, StringComparison.OrdinalIgnoreCase);
+                }
             }
 
             // cwd·미리보기(요약)·세션이름을 확보했으면 조기 종료.
@@ -253,8 +403,15 @@ public sealed class SessionStore
         }
 
         string? preview = Clean(summary ?? firstUser);
-        return (cwd, preview, isSidechain, firstTitle);
+        return new HeadInfo(cwd, preview, isSidechain, firstTitle, isKeepAlive);
     }
+
+    /// <summary>사용자 메시지가 대화형 REPL 이 아니라 sdk/headless(`claude -p`)로 들어왔는지.</summary>
+    private static bool IsSdkEntry(JsonElement root) =>
+        (root.TryGetProperty("entrypoint", out var ep) && ep.ValueKind == JsonValueKind.String &&
+         ep.GetString()!.StartsWith("sdk", StringComparison.OrdinalIgnoreCase)) ||
+        (root.TryGetProperty("promptSource", out var ps) && ps.ValueKind == JsonValueKind.String &&
+         ps.GetString() == "sdk");
 
     /// <summary>
     /// 파일 끝쪽 일부만 읽어 마지막 <c>ai-title</c>(현재 세션 이름)를 찾는다. 파일 크기와 무관하게

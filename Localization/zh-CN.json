@@ -10,7 +10,7 @@
   "ColSession": "会话剩余",
   "ColStatus": "状态",
   "ColKeepAlive": "保持会话",
-  "TipKeepAlive": "5 小时会话重置后，自动发送一条消息以开始新会话。",
+  "TipKeepAlive": "5 小时窗口重置后，自动发送一条简短消息以开始新窗口。点击旁边的标签可选择方式（始终 / 时间表）。",
   "SessionResetsHm": "{0}小时{1}分",
   "SessionResetsM": "{0}分钟",
   "SessionResetsTip": "{0}后会话重置（{1}）",
@@ -142,5 +142,20 @@
   "TimeJustNow": "刚刚",
   "TimeMinutesAgo": "{0} 分钟前",
   "TimeHoursAgo": "{0} 小时前",
-  "TimeDaysAgo": "{0} 天前"
+  "TimeDaysAgo": "{0} 天前",
+
+  "KeepAliveAlways": "始终",
+  "TipKeepAliveSettings": "设置会话保持方式（始终 / 时间表）…",
+  "KaTipAlways": "始终：5 小时窗口一重置就立即开始新窗口（全天候）。\n点击可切换为时间表。",
+  "KaTipSchedule": "时间表：窗口开始 {0} → 重置 {1}\n下一个窗口开始时间：{2}",
+  "KaDlgTitle": "会话保持 — {0}",
+  "KaModeAlways": "重置后立即开始新窗口（全天候）",
+  "KaModeAlwaysDesc": "5 小时窗口一结束就立即开始下一个窗口。窗口开始时间每天都会漂移。",
+  "KaModeSchedule": "按时间表（对齐到你想要的重置时间）",
+  "KaModeScheduleDesc": "在首次重置时间的 5 小时前开始第一个窗口，然后连续保持所选数量的 5 小时窗口。最后一个窗口结束后，直到次日第一个窗口开始前都不会启动，因此时间表每天保持一致。例：首次重置 11:00 → 06:00 开始，11:00 · 16:00 · 21:00 · 02:00 重置。",
+  "KaFirstReset": "首次重置时间",
+  "KaWindowsPerDay": "每天窗口数",
+  "KaPreviewFmt": "窗口开始 {0} → 重置 {1}",
+  "KaNote": "仅在电脑开机且本应用在托盘中运行时生效。在时间表内，只要没有活动窗口就会立即开始；如果期间你自己使用了 Claude 且窗口已存在，时间会相应推迟。",
+  "SessReplaceAsk": "'{0}' 账户已有此会话的另一个副本，且两个副本已各自发展。\n\n所选会话：最后使用 {1}\n'{0}' 中的副本：最后使用 {2}\n\n是否用所选会话替换？\n（是：替换 — 现有副本将被备份 · 否：继续现有副本）"
 }

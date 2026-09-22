@@ -35,6 +35,29 @@ public class ProfileStore
         File.WriteAllText(AppPaths.DataFile, JsonSerializer.Serialize(Data, JsonOpts));
     }
 
+    /// <summary>
+    /// profiles.json 에 없는 프로필 폴더 중 사용자 데이터가 전혀 없는 빈 껍데기(자격증명도 세션도 없음 —
+    /// 로그인 전에 창을 닫고 삭제했거나 삭제가 일부 실패해 남은 plugins/ 만 든 폴더)만 지운다.
+    /// 자격증명이나 projects 가 있는 폴더는 profiles.json 이 깨졌을 가능성에 대비해 절대 건드리지 않는다.
+    /// </summary>
+    public void PruneOrphanDirs()
+    {
+        try
+        {
+            if (!Directory.Exists(AppPaths.ProfilesDir)) return;
+            var known = new HashSet<string>(Data.Profiles.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
+            foreach (var dir in Directory.GetDirectories(AppPaths.ProfilesDir))
+            {
+                if (known.Contains(Path.GetFileName(dir))) continue;
+                if (File.Exists(Path.Combine(dir, ".credentials.json"))) continue;
+                if (File.Exists(Path.Combine(dir, ".claude.json"))) continue;
+                if (Directory.Exists(Path.Combine(dir, "projects"))) continue;
+                try { Directory.Delete(dir, recursive: true); } catch { /* 잠김 등 — 다음 시작 때 다시 */ }
+            }
+        }
+        catch { /* best effort */ }
+    }
+
     public Profile? Active =>
         Data.ActiveProfileId is null ? null : Data.Profiles.FirstOrDefault(p => p.Id == Data.ActiveProfileId);
 

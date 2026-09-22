@@ -48,8 +48,14 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
   weekly reset (since a full 5-hour window can't be used while the weekly cap is exhausted).
 - **Keep session alive** (per-account toggle) — the moment an account's 5-hour window resets, the app
   sends a tiny headless message so a fresh window starts right away. Runs while the tray app is resident.
+  Two modes per account: **Always** (restart around the clock) or a **Schedule** — pick the reset time
+  you want (e.g. *first reset 11:00*) and how many back-to-back windows per day; the app starts the first
+  window 5 hours earlier (06:00) and keeps the resets at 11:00 · 16:00 · 21:00 · 02:00, then pauses until
+  the next day so the timetable stays the same every day. The list shows the mode and the next planned start.
 - **Resume sessions across accounts** — browse any account's past Claude Code conversations and
-  continue one under a *different* account (opens a copy, so the original stays put).
+  continue one under a *different* account (opens a copy, so the original stays put). Going back and
+  forth is safe: when you resume a session that the target account already has an older copy of, the
+  newer transcript wins (the old copy is backed up); if both copies diverged you're asked which to keep.
 - **Account status line** — when running an account concurrently, claude shows a bottom status line
   with the account email · plan · name · live session %.
 - **Re-login without losing the profile** — when a plan or subscription changes (or a token expires),

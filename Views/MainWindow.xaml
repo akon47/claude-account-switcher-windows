@@ -9,7 +9,7 @@
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     mc:Ignorable="d"
     Title="{loc:Loc WinMainTitle}"
-    Width="900"
+    Width="960"
     Height="500"
     MinWidth="600"
     MinHeight="380"
@@ -282,22 +282,36 @@
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>
-                        <!-- Keep alive: 세션 자동 유지 토글 -->
+                        <!-- Keep alive: 세션 자동 유지 토글 + 방식 라벨(항상 / 첫 리셋 시각 ×창 수; 누르면 설정 다이얼로그) -->
                         <GridViewColumn
                             Header="{loc:Loc ColKeepAlive}"
-                            Width="86"
+                            Width="134"
                             >
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <CheckBox
-                                        HorizontalAlignment="Center"
+                                    <StackPanel
+                                        Orientation="Horizontal"
                                         VerticalAlignment="Center"
-                                        IsChecked="{Binding KeepAlive, Mode=TwoWay}"
-                                        IsEnabled="{Binding CanKeepAlive}"
-                                        ToolTip="{loc:Loc TipKeepAlive}"
-                                        Command="{Binding DataContext.ToggleKeepAliveCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
-                                        CommandParameter="{Binding}"
-                                        />
+                                        >
+                                        <CheckBox
+                                            VerticalAlignment="Center"
+                                            IsChecked="{Binding KeepAlive, Mode=TwoWay}"
+                                            IsEnabled="{Binding CanKeepAlive}"
+                                            ToolTip="{loc:Loc TipKeepAlive}"
+                                            Command="{Binding DataContext.ToggleKeepAliveCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                            CommandParameter="{Binding}"
+                                            />
+                                        <Button
+                                            Style="{DynamicResource LinkButtonStyle}"
+                                            Margin="6 0 0 0"
+                                            VerticalAlignment="Center"
+                                            Content="{Binding KeepAliveSummary}"
+                                            ToolTip="{Binding KeepAliveTip}"
+                                            IsEnabled="{Binding CanKeepAlive}"
+                                            Command="{Binding DataContext.KeepAliveSettingsCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                            CommandParameter="{Binding}"
+                                            />
+                                    </StackPanel>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
                         </GridViewColumn>

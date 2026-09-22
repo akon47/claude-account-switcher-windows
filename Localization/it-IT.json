@@ -10,7 +10,7 @@
   "ColSession": "Sessione rimanente",
   "ColStatus": "Stato",
   "ColKeepAlive": "Mantieni",
-  "TipKeepAlive": "Quando la sessione di 5 ore si reimposta, invia automaticamente un breve messaggio per avviare una nuova sessione.",
+  "TipKeepAlive": "Quando la finestra di 5 ore si azzera, invia automaticamente un breve messaggio per avviarne una nuova. Fai clic sull'etichetta accanto per scegliere la modalità (sempre / orario).",
   "SessionResetsHm": "{0} h {1} min",
   "SessionResetsM": "{0} min",
   "SessionResetsTip": "La sessione si reimposta tra {0} (alle {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "proprio ora",
   "TimeMinutesAgo": "{0} min fa",
   "TimeHoursAgo": "{0} h fa",
-  "TimeDaysAgo": "{0} giorni fa"
+  "TimeDaysAgo": "{0} giorni fa",
+
+  "KeepAliveAlways": "Sempre",
+  "TipKeepAliveSettings": "Configura la modalità di mantenimento sessione (sempre / orario)…",
+  "KaTipAlways": "Sempre: avvia una nuova finestra non appena quella di 5 ore si azzera (24 ore su 24).\nFai clic per passare a un orario.",
+  "KaTipSchedule": "Orario: la finestra inizia alle {0} → si azzera alle {1}\nProssimo avvio finestra: {2}",
+  "KaDlgTitle": "Mantieni sessione — {0}",
+  "KaModeAlways": "Avvia una nuova finestra appena si azzera (24 ore su 24)",
+  "KaModeAlwaysDesc": "La finestra successiva inizia nel momento in cui termina quella di 5 ore. L'ora di inizio slitta di giorno in giorno.",
+  "KaModeSchedule": "Segui un orario (allineato all'ora di azzeramento desiderata)",
+  "KaModeScheduleDesc": "Avvia la prima finestra 5 ore prima della tua prima ora di azzeramento, poi mantiene di seguito il numero scelto di finestre da 5 ore. Dopo l'ultima finestra non parte nulla fino alla prima finestra del giorno dopo, così l'orario resta uguale ogni giorno. Es.: primo azzeramento 11:00 → inizio 06:00, azzeramenti alle 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Primo azzeramento alle",
+  "KaWindowsPerDay": "Finestre al giorno",
+  "KaPreviewFmt": "La finestra inizia alle {0} → si azzera alle {1}",
+  "KaNote": "Funziona solo con il PC acceso e questa app in esecuzione nella barra di sistema. Dentro l'orario una finestra parte appena non ce n'è una attiva; se nel frattempo hai usato Claude e una finestra esiste già, l'orario slitta di conseguenza.",
+  "SessReplaceAsk": "L'account '{0}' ha già un'altra copia di questa sessione e le due copie sono divergenti.\n\nSessione selezionata: ultimo uso {1}\nCopia in '{0}': ultimo uso {2}\n\nSostituirla con la sessione selezionata?\n(Sì: sostituisci — la copia esistente viene salvata come backup · No: riprendi la copia esistente)"
 }

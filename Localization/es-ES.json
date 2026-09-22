@@ -10,7 +10,7 @@
   "ColSession": "Sesión restante",
   "ColStatus": "Estado",
   "ColKeepAlive": "Mantener",
-  "TipKeepAlive": "Cuando la sesión de 5 horas se reinicia, envía automáticamente un mensaje breve para iniciar una nueva sesión.",
+  "TipKeepAlive": "Cuando la ventana de 5 horas se reinicie, envía automáticamente un mensaje corto para iniciar una nueva. Haz clic en la etiqueta de al lado para elegir el modo (siempre / horario).",
   "SessionResetsHm": "{0} h {1} min",
   "SessionResetsM": "{0} min",
   "SessionResetsTip": "La sesión se reinicia en {0} (a las {1})",
@@ -142,5 +142,20 @@
   "TimeJustNow": "ahora mismo",
   "TimeMinutesAgo": "hace {0} min",
   "TimeHoursAgo": "hace {0} h",
-  "TimeDaysAgo": "hace {0} días"
+  "TimeDaysAgo": "hace {0} días",
+
+  "KeepAliveAlways": "Siempre",
+  "TipKeepAliveSettings": "Configurar el modo de mantener sesión (siempre / horario)…",
+  "KaTipAlways": "Siempre: inicia una ventana nueva en cuanto se reinicia la ventana de 5 horas (las 24 horas).\nHaz clic para cambiar a un horario.",
+  "KaTipSchedule": "Horario: la ventana empieza a las {0} → se reinicia a las {1}\nPróximo inicio de ventana: {2}",
+  "KaDlgTitle": "Mantener sesión — {0}",
+  "KaModeAlways": "Iniciar una ventana nueva en cuanto se reinicie (las 24 horas)",
+  "KaModeAlwaysDesc": "La siguiente ventana empieza en el momento en que termina la de 5 horas. La hora de inicio se desplaza cada día.",
+  "KaModeSchedule": "Seguir un horario (alineado a la hora de reinicio que quieras)",
+  "KaModeScheduleDesc": "Inicia la primera ventana 5 horas antes de tu primera hora de reinicio y luego mantiene seguidas el número de ventanas de 5 horas que elijas. Tras la última ventana no se inicia nada hasta la primera ventana del día siguiente, así el horario se repite igual cada día. P. ej., primer reinicio 11:00 → empieza a las 06:00 y se reinicia a las 11:00 · 16:00 · 21:00 · 02:00.",
+  "KaFirstReset": "Primer reinicio a las",
+  "KaWindowsPerDay": "Ventanas por día",
+  "KaPreviewFmt": "La ventana empieza a las {0} → se reinicia a las {1}",
+  "KaNote": "Solo funciona mientras el PC está encendido y esta app se ejecuta en la bandeja. Dentro del horario, una ventana empieza en cuanto no hay ninguna activa; si usaste Claude entre medias y ya existe una ventana, el horario se desplaza ese tiempo.",
+  "SessReplaceAsk": "La cuenta '{0}' ya tiene otra copia de esta sesión y las dos copias han divergido.\n\nSesión seleccionada: último uso {1}\nCopia en '{0}': último uso {2}\n\n¿Reemplazarla por la sesión seleccionada?\n(Sí: reemplazar — la copia existente se respalda · No: continuar la copia existente)"
 }
