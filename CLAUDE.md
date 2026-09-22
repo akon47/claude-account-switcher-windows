@@ -238,6 +238,10 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **릴리스 모델**: `main`에 **일반 커밋**을 선형으로 쌓는다(squash/force-push 안 함 — CONTRIBUTING.md 기준).
   배포 시 `<Version>`을 올린 커밋을 푸시하고 `vX.Y.Z` 태그를 밀면 `release` 워크플로가 자기완결 인스톨러를
   빌드해 GitHub Release로 올린다(공개되면 `winget` 워크플로가 PR 생성). 브랜치는 `main` 유지(master로 안 바꿈).
+- **release 워크플로의 NSIS 설치는 choco 종료 코드를 믿지 말 것**: choco 는 피드가 503 을 돌려 패키지를 못 찾아도
+  exit 0("installed 0/0")을 낸다 → v0.11.0 첫 릴리스 런이 "makensis.exe 를 찾지 못했습니다"로 실패했다. 지금은
+  `Find-Makensis`(실제 파일 존재)로 판정하고 3회 후에도 없으면 SourceForge portable 폴백으로 간다. 릴리스가
+  이 단계에서 죽으면(릴리스 객체가 아직 없을 때) 태그를 지우고 다시 밀면 새 워크플로 파일로 재실행된다.
 - **winget 자동 제출은 패키지가 winget-pkgs에 이미 존재해야 성공**(winget-releaser는 업데이트만 처리).
   최초 등록(0.5.0) 심사 중에 낸 릴리스(0.6.0~0.7.3)는 winget 잡이 실패했음(continue-on-error라 런은 초록으로 보임).
   이런 경우 버전을 새로 올릴 필요 없이 해당 release 런의 **winget 잡만 재실행**하면 그 태그 버전으로 제출된다.

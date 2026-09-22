@@ -23,24 +23,40 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          # choco community 피드가 간헐적으로 실패한다("Value cannot be null. Parameter name: packageStream").
-          # 3회 재시도 후에도 실패하면 SourceForge 에서 NSIS portable 을 직접 받아 PATH 에 추가한다.
-          $ok = $false
-          for ($i = 1; $i -le 3; $i++) {
-            choco install nsis -y --no-progress
-            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
-            Write-Host "::warning::'choco install nsis' 시도 $i 실패. 15초 후 재시도..."
-            Start-Sleep -Seconds 15
+          function Find-Makensis {
+            $c = Get-Command makensis.exe -ErrorAction SilentlyContinue
+            if ($c) { return $c.Source }
+            foreach ($p in @("${env:ProgramFiles(x86)}NSISmakensis.exe", "$env:ProgramFilesNSISmakensis.exe")) {
+              if (Test-Path $p) { return $p }
+            }
+            return $null
           }
-          if (-not $ok) {
+          # choco community 피드가 간헐적으로 실패한다(503, "Value cannot be null. Parameter name: packageStream").
+          # 게다가 패키지를 못 찾아도 exit code 0 을 돌려주므로("installed 0/0", v0.11.0 릴리스에서 실제 발생)
+          # 종료 코드가 아니라 makensis.exe 가 실제로 생겼는지로 판정한다. 3회 후에도 없으면
+          # SourceForge 에서 NSIS portable 을 직접 받아 PATH 에 추가한다.
+          $found = Find-Makensis
+          for ($i = 1; $i -le 3 -and -not $found; $i++) {
+            choco install nsis -y --no-progress
+            $found = Find-Makensis
+            if (-not $found) {
+              Write-Host "::warning::'choco install nsis' 시도 $i 후에도 makensis.exe 없음."
+              if ($i -lt 3) { Start-Sleep -Seconds 15 }
+            }
+          }
+          if (-not $found) {
             $ver = '3.10'
             $zip = Join-Path $env:RUNNER_TEMP 'nsis.zip'
             $dst = Join-Path $env:RUNNER_TEMP 'nsis'
             Write-Host "choco 실패 → SourceForge 에서 NSIS $ver portable 직접 설치"
             Invoke-WebRequest -UseBasicParsing -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/$ver/nsis-$ver.zip" -OutFile $zip
             Expand-Archive -Path $zip -DestinationPath $dst -Force
-            "$dst\nsis-$ver" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+            $dir = Join-Path $dst "nsis-$ver"
+            $found = Join-Path $dir 'makensis.exe'
+            if (-not (Test-Path $found)) { throw "NSIS portable 압축 해제 후에도 makensis.exe 없음: $dir" }
+            $dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
           }
+          Write-Host "makensis = $found"
 
       - name: Build self-contained installer
         shell: pwsh
