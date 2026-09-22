@@ -253,9 +253,13 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   komac 이 upstream 최신 커밋을 가리키는 브랜치를 포크에 만들 때 **워크플로 파일 변경이 포크로 들어오므로
   `workflow` 스코프가 필요**한 것(winget-releaser README 명시: classic PAT 에 `public_repo` + `workflow`,
   fine-grained 미지원). 7월엔 포크가 최신이라 통과했고 8월부터 밀려서 실패.
-  해결: `WINGET_TOKEN` 을 **`public_repo` + `workflow`** 스코프의 classic PAT 로 재발급해 시크릿 갱신 → release 런의
-  winget 잡만 재실행. (`workflow` 없이 쓰려면 실패할 때마다 GitHub 웹에서 포크 "Sync fork" 를 눌러야 한다.
-  `gh repo sync` 도 gh 토큰에 `workflow` 가 없으면 같은 이유로 거부된다.) 릴리스 자체(인스톨러·자동 업데이트)는 무관.
+  근본 해결은 `WINGET_TOKEN` 을 **`public_repo` + `workflow`** 스코프의 classic PAT 로 재발급하는 것.
+  **현재 운영 방식(사용자 결정, 2026-09-22)**: 토큰은 `public_repo` 만 유지한다. 대신 릴리스 후 winget 잡이
+  `CreateRef` 로 실패하면 **사용자가 GitHub 웹 https://github.com/akon47/winget-pkgs 에서 "Sync fork → Update branch"**
+  를 누른 뒤 그 release 런의 winget 잡만 재실행한다(`gh run rerun <id> --failed`). 0.11.0 은 이 절차로
+  winget-pkgs PR #438723 이 열렸다. `gh repo sync` 는 gh 토큰(`repo, read:org, gist`)에 `workflow` 가 없어 같은 이유로
+  거부되므로 Claude 가 대신 동기화할 수 없다(사용자가 `gh auth refresh -s workflow` 를 해 주면 가능).
+  릴리스 자체(인스톨러·자동 업데이트)는 이 문제와 무관하게 항상 정상이다.
 - **winget 매니페스트 아키텍처(중요)**: NSIS 스텁은 x86 PE 라 komac(winget-releaser)이 파일 분석만으로는
   아키텍처를 x86 으로 오검지 → 게시된 x64 매니페스트와 불일치로 winget-pkgs 검증이 거부("Missing x64 installer",
   0.7.3 PR 에서 실제 발생 → fork 브랜치에서 x86→x64 수동 수정으로 해결). komac 은 **URL 에 x64 가 있으면 그 값을
