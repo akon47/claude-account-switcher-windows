@@ -9,15 +9,96 @@
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     mc:Ignorable="d"
     Title="{loc:Loc WinMainTitle}"
-    Width="960"
-    Height="500"
-    MinWidth="600"
-    MinHeight="380"
+    Icon="pack://application:,,,/Resources/app.ico"
+    Width="1000"
+    Height="520"
+    MinWidth="640"
+    MinHeight="400"
     ResizeMode="CanResize"
     WindowStartupLocation="CenterScreen"
     Style="{DynamicResource ThemedWindowStyle}"
     b:WindowActivatedCommandBehavior.Command="{Binding ReloadCommand}"
+    b:WindowPlacementBehavior.Placement="{Binding WindowPlacement}"
+    b:WindowPlacementBehavior.SaveCommand="{Binding SavePlacementCommand}"
     >
+    <ctrl:ThemedWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- "최근 세션 이어하기" 항목 스타일: 행 메뉴 서브메뉴와 🕘 드롭다운이 공유. 자리표시자(불러오는 중/없음)는 비활성. -->
+        <Style x:Key="SessionMenuItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+            <Setter Property="Header" Value="{Binding Header}" />
+            <Setter Property="InputGestureText" Value="{Binding Gesture}" />
+            <Setter Property="ToolTip" Value="{Binding Tip}" />
+            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+            <Setter Property="Command" Value="{Binding Command}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Browse">
+                    <Setter Property="Foreground" Value="{DynamicResource AzureMistBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 행 우클릭 메뉴. DataContext 는 행(ProfileItemViewModel); 명령은 Owner(MainViewModel)에 위임한다. -->
+        <ContextMenu x:Key="RowMenu">
+            <MenuItem
+                Header="{loc:Loc CtxSwitch}"
+                FontWeight="SemiBold"
+                Command="{Binding Owner.SwitchCommand}"
+                CommandParameter="{Binding}"
+                />
+            <MenuItem
+                Header="{loc:Loc CtxLaunch}"
+                Command="{Binding Owner.LaunchCommand}"
+                CommandParameter="{Binding}"
+                />
+            <MenuItem
+                Header="{loc:Loc CtxRecentSessions}"
+                IsEnabled="{Binding HasCredentials}"
+                ItemsSource="{Binding RecentSessions}"
+                ItemContainerStyle="{StaticResource SessionMenuItemStyle}"
+                b:MenuBehaviors.SubmenuOpenedCommand="{Binding LoadRecentSessionsCommand}"
+                />
+            <Separator />
+            <MenuItem
+                Header="{loc:Loc CtxRelogin}"
+                Command="{Binding Owner.ReloginCommand}"
+                CommandParameter="{Binding}"
+                />
+            <MenuItem
+                Header="{loc:Loc CtxKeepAlive}"
+                IsEnabled="{Binding CanKeepAlive}"
+                Command="{Binding Owner.KeepAliveSettingsCommand}"
+                CommandParameter="{Binding}"
+                />
+            <Separator />
+            <MenuItem
+                Header="{loc:Loc CtxCopyEmail}"
+                Command="{Binding Owner.CopyEmailCommand}"
+                CommandParameter="{Binding}"
+                />
+            <MenuItem
+                Header="{loc:Loc CtxOpenFolder}"
+                Command="{Binding Owner.OpenProfileFolderCommand}"
+                CommandParameter="{Binding}"
+                />
+            <Separator />
+            <MenuItem
+                Header="{loc:Loc CtxDelete}"
+                Command="{Binding Owner.DeleteProfileCommand}"
+                CommandParameter="{Binding}"
+                />
+        </ContextMenu>
+    </ctrl:ThemedWindow.Resources>
+
+    <ctrl:ThemedWindow.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}" />
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding AddNewCommand}" />
+        <KeyBinding Key="N" Modifiers="Ctrl+Shift" Command="{Binding CaptureCommand}" />
+        <KeyBinding Key="L" Modifiers="Ctrl" Command="{Binding LaunchCommand}" />
+        <KeyBinding Key="H" Modifiers="Ctrl" Command="{Binding SessionsCommand}" />
+        <KeyBinding Key="OemComma" Modifiers="Ctrl" Command="{Binding SettingsCommand}" />
+    </ctrl:ThemedWindow.InputBindings>
+
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -63,6 +144,7 @@
                     Style="{DynamicResource IconButtonStyle}"
                     Content="&#xE81C;"
                     ToolTip="{loc:Loc TipSessions}"
+                    AutomationProperties.Name="{loc:Loc TipSessions}"
                     Margin="0 0 4 0"
                     Command="{Binding SessionsCommand}"
                     />
@@ -70,12 +152,14 @@
                     Style="{DynamicResource IconButtonStyle}"
                     Content="&#xE72C;"
                     ToolTip="{loc:Loc TipRefresh}"
+                    AutomationProperties.Name="{loc:Loc TipRefresh}"
                     Command="{Binding RefreshCommand}"
                     />
                 <Button
                     Style="{DynamicResource IconButtonStyle}"
                     Content="&#xE713;"
                     ToolTip="{loc:Loc TipSettings}"
+                    AutomationProperties.Name="{loc:Loc TipSettings}"
                     Margin="4 0 0 0"
                     Command="{Binding SettingsCommand}"
                     />
@@ -87,257 +171,430 @@
             Background="{DynamicResource ControlBackgroundBrush}"
             BorderBrush="{DynamicResource CharcoalAshBrush}"
             BorderThickness="1"
+            CornerRadius="6"
+            SnapsToDevicePixels="True"
             >
-            <ListView
-                BorderThickness="0"
-                Background="Transparent"
-                ItemsSource="{Binding Profiles}"
-                SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                b:ListViewDragReorderBehavior.Command="{Binding ReorderCommand}"
-                >
-                <!-- 행 더블클릭 = 전환(이름 칸은 EditableTextBlock 이 더블클릭을 가로채 편집). -->
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
-                        <Setter Property="b:DoubleClickCommandBehavior.Command"
-                                Value="{Binding DataContext.SwitchCommand, RelativeSource={RelativeSource AncestorType=ListView}}" />
-                    </Style>
-                </ListView.ItemContainerStyle>
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn
-                            Header="{loc:Loc ColName}"
-                            Width="150"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <ctrl:EditableTextBlock
-                                        Text="{Binding EditName, Mode=TwoWay}"
-                                        AcceptCommand="{Binding DataContext.RenameProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
-                                        AcceptCommandParameter="{Binding}"
-                                        />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn
-                            Header="{loc:Loc ColAccount}"
-                            Width="200"
-                            DisplayMemberBinding="{Binding Email}"
-                            />
-                        <!-- Plan: 구독 종류별 색 뱃지 -->
-                        <GridViewColumn
-                            Header="{loc:Loc ColPlan}"
-                            Width="104"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border
-                                        CornerRadius="9"
-                                        Padding="9 2"
-                                        HorizontalAlignment="Left"
-                                        VerticalAlignment="Center"
-                                        SnapsToDevicePixels="True"
-                                        >
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="Transparent" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Pro">
-                                                        <Setter Property="Background" Value="{DynamicResource AzureBrushOpacity20}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Max">
-                                                        <Setter Property="Background" Value="{DynamicResource VioletBrushOpacity20}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Team">
-                                                        <Setter Property="Background" Value="{DynamicResource EmeraldBrushOpacity20}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Enterprise">
-                                                        <Setter Property="Background" Value="{DynamicResource AmberBrushOpacity20}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Free">
-                                                        <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PlanKind}" Value="Other">
-                                                        <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock
-                                            Text="{Binding PlanLabel}"
-                                            FontSize="11"
-                                            FontWeight="SemiBold"
+            <Grid>
+                <ListView
+                    BorderThickness="0"
+                    Background="Transparent"
+                    ItemsSource="{Binding Profiles}"
+                    SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                    b:ListViewDragReorderBehavior.Command="{Binding ReorderCommand}"
+                    b:ListViewRenameOnF2Behavior.IsEnabled="True"
+                    >
+                    <ListView.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding SwitchCommand}" />
+                        <KeyBinding Key="Delete" Command="{Binding DeleteProfileCommand}" />
+                    </ListView.InputBindings>
+                    <!-- 행 더블클릭 = 전환(이름 칸은 EditableTextBlock 이 더블클릭을 가로채 편집). 우클릭 = 행 메뉴. -->
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource {x:Type ListViewItem}}">
+                            <Setter Property="b:DoubleClickCommandBehavior.Command"
+                                    Value="{Binding DataContext.SwitchCommand, RelativeSource={RelativeSource AncestorType=ListView}}" />
+                            <Setter Property="ContextMenu" Value="{StaticResource RowMenu}" />
+                            <Setter Property="ToolTip" Value="{Binding RowTip}" />
+                            <Setter Property="ToolTipService.InitialShowDelay" Value="900" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn
+                                Header="{loc:Loc ColName}"
+                                Width="150"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ctrl:EditableTextBlock
+                                            Text="{Binding EditName, Mode=TwoWay}"
+                                            AcceptCommand="{Binding DataContext.RenameProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                            AcceptCommandParameter="{Binding}"
+                                            />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn
+                                Header="{loc:Loc ColAccount}"
+                                Width="200"
+                                DisplayMemberBinding="{Binding Email}"
+                                />
+                            <!-- Plan: 구독 종류별 색 뱃지 (Pro=Azure, Max=Violet, Ultra=Gold, Team=Emerald, Enterprise=Amber) -->
+                            <GridViewColumn
+                                Header="{loc:Loc ColPlan}"
+                                Width="96"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            CornerRadius="9"
+                                            Padding="9 2"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            SnapsToDevicePixels="True"
                                             >
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="Transparent" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding PlanKind}" Value="Pro">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AzureMistBrush}" />
+                                                            <Setter Property="Background" Value="{DynamicResource AzureBrushOpacity20}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding PlanKind}" Value="Max">
-                                                            <Setter Property="Foreground" Value="{DynamicResource VioletBrush}" />
+                                                            <Setter Property="Background" Value="{DynamicResource VioletBrushOpacity20}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Ultra">
+                                                            <Setter Property="Background" Value="{DynamicResource GoldBrushOpacity20}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding PlanKind}" Value="Team">
-                                                            <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                            <Setter Property="Background" Value="{DynamicResource EmeraldBrushOpacity20}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding PlanKind}" Value="Enterprise">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                            <Setter Property="Background" Value="{DynamicResource AmberBrushOpacity20}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Free">
+                                                            <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PlanKind}" Value="Other">
+                                                            <Setter Property="Background" Value="{DynamicResource DimGrayBrushOpacity30}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Border>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <!-- Session: 남은 한도(녹색→주황→버밀리온) + 리셋까지 남은 시간(↻ 카운트다운) -->
-                        <GridViewColumn
-                            Header="{loc:Loc ColSession}"
-                            Width="140"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"
-                                        >
-                                        <TextBlock
-                                            Text="{Binding SessionRemaining}"
-                                            FontWeight="SemiBold"
+                                            </Border.Style>
+                                            <TextBlock
+                                                Text="{Binding PlanLabel}"
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
+                                                >
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PlanKind}" Value="Pro">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AzureMistBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding PlanKind}" Value="Max">
+                                                                <Setter Property="Foreground" Value="{DynamicResource VioletBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding PlanKind}" Value="Ultra">
+                                                                <Setter Property="Foreground" Value="{DynamicResource GoldBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding PlanKind}" Value="Team">
+                                                                <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding PlanKind}" Value="Enterprise">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <!-- Usage: 남은 한도(녹색→주황→버밀리온) + 리셋 카운트다운(↻) + 모델별 한도 경고(⚠). 툴팁에 세션/주간/모델별 상세. -->
+                            <GridViewColumn
+                                Header="{loc:Loc ColSession}"
+                                Width="170"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center"
+                                            Background="Transparent"
+                                            ToolTip="{Binding UsageTip}"
+                                            >
+                                            <TextBlock
+                                                Text="{Binding SessionRemaining}"
+                                                FontWeight="SemiBold"
+                                                VerticalAlignment="Center"
+                                                >
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SessionLevel}" Value="High">
+                                                                <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SessionLevel}" Value="Medium">
+                                                                <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SessionLevel}" Value="Low">
+                                                                <Setter Property="Foreground" Value="{DynamicResource VermilionBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <!-- 리셋까지 남은 시간. 값이 없으면 빈 문자열 → 표시 안 함. -->
+                                            <TextBlock
+                                                Text="{Binding SessionResetsIn}"
+                                                ToolTip="{Binding SessionResetsTip}"
+                                                Margin="8 0 0 0"
+                                                FontSize="11"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource SageMistBrush}"
+                                                />
+                                            <!-- 모델별 주간 한도가 경고 단계면 ⚠ (상세는 셀 툴팁). -->
+                                            <TextBlock
+                                                Text="&#xE7BA;"
+                                                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                FontSize="12"
+                                                Margin="8 0 0 0"
+                                                VerticalAlignment="Center"
+                                                Foreground="{DynamicResource AmberBrush}"
+                                                Visibility="{Binding HasUsageWarning, Converter={StaticResource BoolToVisibility}}"
+                                                />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <!-- Status: 상태 표시등(활성=녹색 원) + 텍스트 -->
+                            <GridViewColumn
+                                Header="{loc:Loc ColStatus}"
+                                Width="120"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Ellipse
+                                                Width="9"
+                                                Height="9"
+                                                VerticalAlignment="Center"
+                                                Margin="0 0 7 0"
+                                                >
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{DynamicResource SageMistBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding StatusKind}" Value="Active">
+                                                                <Setter Property="Fill" Value="{DynamicResource EmeraldBrush}" />
+                                                                <Setter Property="Effect">
+                                                                    <Setter.Value>
+                                                                        <DropShadowEffect Color="#4CAF50" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatusKind}" Value="SignedIn">
+                                                                <Setter Property="Fill" Value="{DynamicResource AzureMistBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding StatusKind}" Value="NeedLogin">
+                                                                <Setter Property="Fill" Value="{DynamicResource VermilionBrush}" />
+                                                            </DataTrigger>
+                                                            <!-- 토큰 만료: 자격증명은 있지만 못 쓴다 → 다시 로그인 필요(주황) -->
+                                                            <DataTrigger Binding="{Binding StatusKind}" Value="Expired">
+                                                                <Setter Property="Fill" Value="{DynamicResource AmberBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <!-- Keep alive: 세션 자동 유지 토글 + 방식 라벨(항상 / 첫 리셋 시각 ×창 수; 누르면 설정 다이얼로그) -->
+                            <GridViewColumn
+                                Header="{loc:Loc ColKeepAlive}"
+                                Width="134"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel
+                                            Orientation="Horizontal"
                                             VerticalAlignment="Center"
                                             >
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="High">
-                                                            <Setter Property="Foreground" Value="{DynamicResource EmeraldBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="Medium">
-                                                            <Setter Property="Foreground" Value="{DynamicResource AmberBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding SessionLevel}" Value="Low">
-                                                            <Setter Property="Foreground" Value="{DynamicResource VermilionBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <!-- 리셋까지 남은 시간. 값이 없으면 빈 문자열 → 표시 안 함. 툴팁에 정확한 초기화 시각. -->
-                                        <TextBlock
-                                            Text="{Binding SessionResetsIn}"
-                                            ToolTip="{Binding SessionResetsTip}"
-                                            Margin="8 0 0 0"
-                                            FontSize="11"
-                                            VerticalAlignment="Center"
-                                            Foreground="{DynamicResource SageMistBrush}"
-                                            />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <!-- Status: 상태 표시등(활성=녹색 원) + 텍스트 -->
-                        <GridViewColumn
-                            Header="{loc:Loc ColStatus}"
-                            Width="110"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Ellipse
-                                            Width="9"
-                                            Height="9"
-                                            VerticalAlignment="Center"
-                                            Margin="0 0 7 0"
-                                            >
-                                            <Ellipse.Style>
-                                                <Style TargetType="Ellipse">
-                                                    <Setter Property="Fill" Value="{DynamicResource SageMistBrush}" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding StatusKind}" Value="Active">
-                                                            <Setter Property="Fill" Value="{DynamicResource EmeraldBrush}" />
-                                                            <Setter Property="Effect">
-                                                                <Setter.Value>
-                                                                    <DropShadowEffect Color="#4CAF50" BlurRadius="8" ShadowDepth="0" Opacity="0.9" />
-                                                                </Setter.Value>
-                                                            </Setter>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding StatusKind}" Value="SignedIn">
-                                                            <Setter Property="Fill" Value="{DynamicResource AzureMistBrush}" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding StatusKind}" Value="NeedLogin">
-                                                            <Setter Property="Fill" Value="{DynamicResource VermilionBrush}" />
-                                                        </DataTrigger>
-                                                        <!-- 토큰 만료: 자격증명은 있지만 못 쓴다 → 다시 로그인 필요(주황) -->
-                                                        <DataTrigger Binding="{Binding StatusKind}" Value="Expired">
-                                                            <Setter Property="Fill" Value="{DynamicResource AmberBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Ellipse.Style>
-                                        </Ellipse>
-                                        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <!-- Keep alive: 세션 자동 유지 토글 + 방식 라벨(항상 / 첫 리셋 시각 ×창 수; 누르면 설정 다이얼로그) -->
-                        <GridViewColumn
-                            Header="{loc:Loc ColKeepAlive}"
-                            Width="134"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"
-                                        >
-                                        <CheckBox
-                                            VerticalAlignment="Center"
-                                            IsChecked="{Binding KeepAlive, Mode=TwoWay}"
-                                            IsEnabled="{Binding CanKeepAlive}"
-                                            ToolTip="{loc:Loc TipKeepAlive}"
-                                            Command="{Binding DataContext.ToggleKeepAliveCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
-                                            CommandParameter="{Binding}"
-                                            />
-                                        <Button
-                                            Style="{DynamicResource LinkButtonStyle}"
-                                            Margin="6 0 0 0"
-                                            VerticalAlignment="Center"
-                                            Content="{Binding KeepAliveSummary}"
-                                            ToolTip="{Binding KeepAliveTip}"
-                                            IsEnabled="{Binding CanKeepAlive}"
-                                            Command="{Binding DataContext.KeepAliveSettingsCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
-                                            CommandParameter="{Binding}"
-                                            />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn
-                            Header=""
-                            Width="44"
-                            >
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button
-                                        Style="{DynamicResource DeleteRowButtonStyle}"
-                                        Content="&#xE711;"
-                                        ToolTip="{loc:Loc TipDelete}"
-                                        HorizontalAlignment="Center"
-                                        Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
-                                        CommandParameter="{Binding}"
-                                        />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+                                            <CheckBox
+                                                VerticalAlignment="Center"
+                                                IsChecked="{Binding KeepAlive, Mode=TwoWay}"
+                                                IsEnabled="{Binding CanKeepAlive}"
+                                                Command="{Binding DataContext.ToggleKeepAliveCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                                CommandParameter="{Binding}"
+                                                >
+                                                <CheckBox.Style>
+                                                    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                                        <Setter Property="ToolTip" Value="{loc:Loc TipKeepAlive}" />
+                                                        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSessionWindow}" Value="False">
+                                                                <Setter Property="ToolTip" Value="{loc:Loc TipKeepAliveNoSession}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </CheckBox.Style>
+                                            </CheckBox>
+                                            <Button
+                                                Style="{DynamicResource LinkButtonStyle}"
+                                                Margin="6 0 0 0"
+                                                VerticalAlignment="Center"
+                                                Content="{Binding KeepAliveSummary}"
+                                                ToolTip="{Binding KeepAliveTipEffective}"
+                                                ToolTipService.ShowOnDisabled="True"
+                                                IsEnabled="{Binding CanKeepAlive}"
+                                                Command="{Binding DataContext.KeepAliveSettingsCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                                CommandParameter="{Binding}"
+                                                />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <!-- Row actions: 🕘 최근 세션 드롭다운 + ✕ 삭제 -->
+                            <GridViewColumn
+                                Header=""
+                                Width="64"
+                                >
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button
+                                                Style="{DynamicResource RowIconButtonStyle}"
+                                                Content="&#xE81C;"
+                                                ToolTip="{loc:Loc TipRecentSessions}"
+                                                AutomationProperties.Name="{loc:Loc TipRecentSessions}"
+                                                IsEnabled="{Binding HasCredentials}"
+                                                b:MenuBehaviors.IsDropDown="True"
+                                                >
+                                                <Button.ContextMenu>
+                                                    <ContextMenu
+                                                        ItemsSource="{Binding RecentSessions}"
+                                                        ItemContainerStyle="{StaticResource SessionMenuItemStyle}"
+                                                        b:MenuBehaviors.OpenedCommand="{Binding LoadRecentSessionsCommand}"
+                                                        />
+                                                </Button.ContextMenu>
+                                            </Button>
+                                            <Button
+                                                Style="{DynamicResource DeleteRowButtonStyle}"
+                                                Content="&#xE711;"
+                                                ToolTip="{loc:Loc TipDelete}"
+                                                AutomationProperties.Name="{loc:Loc TipDelete}"
+                                                Margin="4 0 0 0"
+                                                Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType={x:Type ListView}}}"
+                                                CommandParameter="{Binding}"
+                                                />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <!-- 사용량 조회 중: 목록 위 얇은 진행 표시줄 -->
+                <ProgressBar
+                    Height="2"
+                    VerticalAlignment="Top"
+                    Margin="1 0"
+                    IsIndeterminate="True"
+                    Background="Transparent"
+                    Visibility="{Binding IsRefreshing, Converter={StaticResource BoolToVisibility}}"
+                    />
+
+                <!-- 빈 상태: 계정이 하나도 없을 때 안내 + 바로 시작할 수 있는 두 버튼 -->
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="420"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"
+                    >
+                    <TextBlock
+                        Text="&#xE77B;"
+                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                        FontSize="40"
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource DimGrayBrush}"
+                        />
+                    <TextBlock
+                        Text="{loc:Loc EmptyTitle}"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        HorizontalAlignment="Center"
+                        Margin="0 12 0 4"
+                        Foreground="{DynamicResource WhiteBrush}"
+                        />
+                    <TextBlock
+                        Text="{loc:Loc EmptyBody}"
+                        TextWrapping="Wrap"
+                        TextAlignment="Center"
+                        Foreground="{DynamicResource SageMistBrush}"
+                        />
+                    <StackPanel
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0 18 0 0"
+                        >
+                        <Button
+                            Content="{loc:Loc BtnCapture}"
+                            Margin="0 0 8 0"
+                            Command="{Binding CaptureCommand}"
+                            Style="{DynamicResource AccentButtonStyle}"
+                            />
+                        <Button
+                            Content="{loc:Loc BtnAdd}"
+                            Command="{Binding AddNewCommand}"
+                            />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 토스트: 전환/복사/삭제 등 완료 안내. 아래쪽 중앙에 떠서 살짝 올라오며 나타나고 사라진다. -->
+                <Border
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Padding="14 8"
+                    CornerRadius="6"
+                    IsHitTestVisible="False"
+                    Background="{DynamicResource CharcoalGrayBrush}"
+                    BorderBrush="{DynamicResource DimGrayBrush}"
+                    BorderThickness="1"
+                    Effect="{DynamicResource DefaultDropShadowEffect}"
+                    SnapsToDevicePixels="True"
+                    >
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Opacity" Value="0" />
+                            <Setter Property="Margin" Value="0 0 0 6" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsToastVisible}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                                <ThicknessAnimation Storyboard.TargetProperty="Margin" To="0 0 0 14" Duration="0:0:0.2" EasingFunction="{StaticResource Motion_EaseOut}" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.3" />
+                                                <ThicknessAnimation Storyboard.TargetProperty="Margin" To="0 0 0 6" Duration="0:0:0.3" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse
+                            Width="8"
+                            Height="8"
+                            Margin="0 0 10 0"
+                            VerticalAlignment="Center"
+                            Fill="{DynamicResource EmeraldBrush}"
+                            />
+                        <TextBlock
+                            Text="{Binding Toast}"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource WhiteBrush}"
+                            />
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Border>
 
-        <!-- Primary actions (right-aligned; wraps cleanly with no overlapping left button) -->
+        <!-- Primary actions (right-aligned; wraps cleanly) -->
         <WrapPanel
             Grid.Row="2"
             Margin="0 12 0 0"
@@ -345,33 +602,36 @@
             >
             <Button
                 Content="{loc:Loc BtnCapture}"
+                ToolTip="{loc:Loc TipCaptureBtn}"
                 Margin="6 0"
-                Padding="12 6"
                 Command="{Binding CaptureCommand}"
                 />
             <Button
                 Content="{loc:Loc BtnAdd}"
+                ToolTip="{loc:Loc TipAddBtn}"
                 Margin="6 0"
-                Padding="12 6"
                 Command="{Binding AddNewCommand}"
                 />
             <Button
                 Content="{loc:Loc BtnRelogin}"
+                ToolTip="{loc:Loc TipReloginBtn}"
+                ToolTipService.ShowOnDisabled="True"
                 Margin="6 0"
-                Padding="12 6"
                 Command="{Binding ReloginCommand}"
                 />
             <Button
                 Content="{loc:Loc BtnSwitch}"
+                ToolTip="{loc:Loc TipSwitchBtn}"
+                ToolTipService.ShowOnDisabled="True"
                 Margin="6 0"
-                Padding="12 6"
                 Command="{Binding SwitchCommand}"
                 Style="{DynamicResource AccentButtonStyle}"
                 />
             <Button
                 Content="{loc:Loc BtnLaunch}"
+                ToolTip="{loc:Loc TipLaunchBtn}"
+                ToolTipService.ShowOnDisabled="True"
                 Margin="6 0"
-                Padding="12 6"
                 Command="{Binding LaunchCommand}"
                 />
         </WrapPanel>

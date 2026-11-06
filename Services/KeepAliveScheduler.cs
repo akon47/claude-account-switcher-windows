@@ -42,15 +42,8 @@ public static class KeepAliveScheduler
     /// <summary>지금 이후 가장 가까운 슬롯 시작 시각(다음 창 시작 예정).</summary>
     public static DateTime NextSlotStart(KeepAliveSchedule s, DateTime now)
     {
-        DateTime? best = null;
-        for (int d = -1; d <= 2; d++)
-        {
-            foreach (var start in SlotStartsFor(s, now.Date.AddDays(d)))
-            {
-                if (start > now && (best is null || start < best)) best = start;
-            }
-        }
-        return best ?? now;
+        var upcoming = Enumerable.Range(-1, 4).SelectMany(d => SlotStartsFor(s, now.Date.AddDays(d))).Where(start => start > now).ToList();
+        return upcoming.Count == 0 ? now : upcoming.Min();
     }
 
     /// <summary>하루의 리셋 시각 목록(표시용: 11:00 · 16:00 · 21:00 · 02:00).</summary>

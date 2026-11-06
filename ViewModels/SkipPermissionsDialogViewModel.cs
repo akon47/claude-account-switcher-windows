@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace ClaudeAccountSwitcher.ViewModels;
 
 /// <summary>claude 실행 시 --dangerously-skip-permissions 부여 여부를 묻는 다이얼로그 VM.</summary>
-public partial class SkipPermissionsDialogViewModel : ObservableObject
+public sealed partial class SkipPermissionsDialogViewModel : ObservableObject
 {
     public string ProfileName { get; init; } = "";
 

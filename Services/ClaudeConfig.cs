@@ -4,17 +4,18 @@ using System.Text.Json.Nodes;
 
 namespace ClaudeAccountSwitcher.Services;
 
-public record OAuthAccountInfo(string Raw, string? Email, string? DisplayName, string? OrganizationName);
+/// <summary>oauthAccount 에서 뽑은 계정 식별 정보. Raw 는 전환 시 ~/.claude.json 에 그대로 써넣을 원본 JSON.</summary>
+public sealed record OAuthAccountInfo(string Raw, string? Email, string? DisplayName, string? OrganizationName, string? PlanDisplayName);
 
 /// <summary>
-/// Claude Code의 계정 정보(oauthAccount)를 다룬다.
+/// Claude Code 의 계정 정보(oauthAccount)를 다룬다.
 /// - 기본 전역 설정은 ~/.claude.json
-/// - CLAUDE_CONFIG_DIR을 쓰면 그 폴더 안의 .claude.json
-/// oauthAccount 에는 emailAddress / displayName / organizationName 등 계정 식별 정보가 들어있다.
+/// - CLAUDE_CONFIG_DIR 을 쓰면 그 폴더 안의 .claude.json
+/// oauthAccount 에는 emailAddress / displayName / organizationName / planDisplayName 등 계정 식별 정보가 들어있다.
 /// </summary>
 public static class ClaudeConfig
 {
-    /// <summary>plain `claude`가 사용하는 전역 설정 파일(~/.claude.json).</summary>
+    /// <summary>plain `claude` 가 사용하는 전역 설정 파일(~/.claude.json).</summary>
     public static string HomeConfigPath => Path.Combine(AppPaths.UserHome, ".claude.json");
 
     /// <summary>.claude.json(루트에 oauthAccount 키) 에서 계정 정보 추출.</summary>
@@ -24,9 +25,8 @@ public static class ClaudeConfig
         {
             if (!File.Exists(claudeJsonPath)) return null;
             using var doc = JsonDocument.Parse(File.ReadAllText(claudeJsonPath));
-            if (!doc.RootElement.TryGetProperty("oauthAccount", out var oa) || oa.ValueKind != JsonValueKind.Object)
-                return null;
-            return Extract(oa);
+            return doc.RootElement.TryGetProperty("oauthAccount", out var oa) && oa.ValueKind == JsonValueKind.Object
+                ? Extract(oa) : null;
         }
         catch { return null; }
     }
@@ -38,20 +38,20 @@ public static class ClaudeConfig
         {
             if (!File.Exists(path)) return null;
             using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            if (doc.RootElement.ValueKind != JsonValueKind.Object) return null;
-            return Extract(doc.RootElement);
+            return doc.RootElement.ValueKind == JsonValueKind.Object ? Extract(doc.RootElement) : null;
         }
         catch { return null; }
     }
 
-    private static OAuthAccountInfo Extract(JsonElement oa)
-    {
-        string raw = oa.GetRawText();
-        string? email = oa.TryGetProperty("emailAddress", out var e) ? e.GetString() : null;
-        string? name = oa.TryGetProperty("displayName", out var d) ? d.GetString() : null;
-        string? org = oa.TryGetProperty("organizationName", out var o) ? o.GetString() : null;
-        return new OAuthAccountInfo(raw, email, name, org);
-    }
+    private static OAuthAccountInfo Extract(JsonElement oa) => new(
+        oa.GetRawText(),
+        Str(oa, "emailAddress"),
+        Str(oa, "displayName"),
+        Str(oa, "organizationName"),
+        Str(oa, "planDisplayName"));
+
+    private static string? Str(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     /// <summary>
     /// 주어진 .claude.json 에서 oauthAccount 키만 제거한다(제거 전 백업). 나머지 상태(온보딩·폴더 신뢰 등)는 보존.
@@ -67,39 +67,35 @@ public static class ClaudeConfig
             string text = File.ReadAllText(claudeJsonPath);
             if (JsonNode.Parse(text) is not JsonObject root || !root.ContainsKey("oauthAccount")) return;
 
-            try
-            {
-                Directory.CreateDirectory(AppPaths.BackupsDir);
-                File.Copy(claudeJsonPath, Path.Combine(AppPaths.BackupsDir, $"claude.json-relogin-{DateTime.Now:yyyyMMdd-HHmmss}.bak"), overwrite: true);
-            }
-            catch { /* best effort */ }
-
+            Backup(claudeJsonPath, "claude.json-relogin");
             root.Remove("oauthAccount");
             SavePreservingStyle(claudeJsonPath, root, text);
         }
         catch { /* best effort — 실패해도 로그인 실행 자체는 진행한다 */ }
     }
 
-    /// <summary>~/.claude.json 의 oauthAccount 를 주어진 JSON 객체로 교체한다 (교체 전 백업).</summary>
+    /// <summary>~/.claude.json 의 oauthAccount 를 주어진 JSON 객체로 교체한다(교체 전 백업).</summary>
     public static void PatchHomeOAuthAccount(string rawOAuthAccountJson)
     {
         string path = HomeConfigPath;
         if (!File.Exists(path)) return;
 
         string text = File.ReadAllText(path);
+        Backup(path, "claude.json");
 
+        if (JsonNode.Parse(text)?.AsObject() is not { } root) return;
+        root["oauthAccount"] = JsonNode.Parse(rawOAuthAccountJson);
+        SavePreservingStyle(path, root, text);
+    }
+
+    private static void Backup(string path, string prefix)
+    {
         try
         {
             Directory.CreateDirectory(AppPaths.BackupsDir);
-            File.Copy(path, Path.Combine(AppPaths.BackupsDir, $"claude.json-{DateTime.Now:yyyyMMdd-HHmmss}.bak"), overwrite: true);
+            File.Copy(path, Path.Combine(AppPaths.BackupsDir, $"{prefix}-{DateTime.Now:yyyyMMdd-HHmmss}.bak"), overwrite: true);
         }
         catch { /* best effort */ }
-
-        var root = JsonNode.Parse(text)?.AsObject();
-        if (root is null) return;
-        root["oauthAccount"] = JsonNode.Parse(rawOAuthAccountJson);
-
-        SavePreservingStyle(path, root, text);
     }
 
     /// <summary>원본이 들여쓰기 형식이면 최대한 유지해서 저장한다.</summary>

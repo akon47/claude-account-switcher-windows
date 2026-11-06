@@ -5,15 +5,18 @@ using ClaudeAccountSwitcher.Services;
 namespace ClaudeAccountSwitcher.Models;
 
 /// <summary>
-/// 하나의 Claude 계정 = 하나의 프로필.
-/// 각 프로필은 자기만의 격리된 설정 폴더(CLAUDE_CONFIG_DIR)를 가진다.
+/// 하나의 Claude 계정 = 하나의 프로필. 각 프로필은 자기만의 격리된 설정 폴더(CLAUDE_CONFIG_DIR)를 가진다.
 /// </summary>
-public class Profile
+public sealed class Profile
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     public string? SubscriptionType { get; set; }
     public string? RateLimitTier { get; set; }
+
+    /// <summary>서버가 준 플랜 표시 이름(oauthAccount.planDisplayName, 예: "Ultra"). 없으면 등급으로 추정한다.</summary>
+    public string? PlanDisplayName { get; set; }
+
     public DateTime? LastUsed { get; set; }
 
     // 계정 식별 정보 (oauthAccount 에서 가져온다)
@@ -33,7 +36,7 @@ public class Profile
     /// </summary>
     public KeepAliveSchedule? KeepAliveSchedule { get; set; }
 
-    /// <summary>이 프로필 전용 격리 설정 폴더. 동시 실행 시 CLAUDE_CONFIG_DIR로 사용.</summary>
+    /// <summary>이 프로필 전용 격리 설정 폴더. 동시 실행 시 CLAUDE_CONFIG_DIR 로 사용.</summary>
     [JsonIgnore]
     public string ConfigDir => Path.Combine(AppPaths.ProfilesDir, Id);
 
@@ -41,7 +44,7 @@ public class Profile
     [JsonIgnore]
     public string CredentialsPath => Path.Combine(ConfigDir, ".credentials.json");
 
-    /// <summary>격리 로그인 시 claude가 만드는 설정 파일(여기 oauthAccount 가 들어있음).</summary>
+    /// <summary>격리 로그인 시 claude 가 만드는 설정 파일(여기 oauthAccount 가 들어있음).</summary>
     [JsonIgnore]
     public string ClaudeJsonPath => Path.Combine(ConfigDir, ".claude.json");
 
@@ -49,17 +52,13 @@ public class Profile
     [JsonIgnore]
     public string OAuthAccountPath => Path.Combine(ConfigDir, "oauthAccount.json");
 
-    /// <summary>세션(5시간) 남은 사용량 표시 텍스트. 네트워크 조회 결과의 메모리 캐시(영속 안 함).</summary>
+    /// <summary>표시용 플랜 라벨("Pro" / "Max" / "Ultra" …).</summary>
     [JsonIgnore]
-    public string? SessionRemaining { get; set; }
+    public string PlanLabel => PlanFormatter.Format(SubscriptionType, RateLimitTier, PlanDisplayName);
 
-    /// <summary>세션 남은 비율(0~100). 색 구간 표시용 메모리 캐시(영속 안 함).</summary>
+    /// <summary>마지막 사용량 조회 결과. 네트워크 조회 결과의 메모리 캐시(영속 안 함). null = 미조회/실패.</summary>
     [JsonIgnore]
-    public double? SessionPercent { get; set; }
-
-    /// <summary>세션(5시간) 창이 리셋되는 절대 시각. 남은 시간 표시용 메모리 캐시(영속 안 함).</summary>
-    [JsonIgnore]
-    public DateTimeOffset? SessionResetsAt { get; set; }
+    public SessionUsage? LastUsage { get; set; }
 
     /// <summary>
     /// 저장된 자격증명이 더 이상 유효하지 않음(토큰 갱신 거부 = 다시 로그인 필요).

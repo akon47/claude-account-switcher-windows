@@ -11,7 +11,7 @@ namespace ClaudeAccountSwitcher.Controls;
 /// </summary>
 [TemplatePart(Name = PartTextBlock, Type = typeof(TextBlock))]
 [TemplatePart(Name = PartTextBox, Type = typeof(TextBox))]
-public class EditableTextBlock : Control
+public sealed class EditableTextBlock : Control
 {
     private const string PartTextBlock = "PART_TextBlock";
     private const string PartTextBox = "PART_TextBox";
@@ -89,7 +89,8 @@ public class EditableTextBlock : Control
         }
     }
 
-    private void BeginEdit()
+    /// <summary>편집 모드로 들어간다(더블클릭 또는 F2). 이미 편집 중이면 무시.</summary>
+    public void BeginEdit()
     {
         if (IsEditing) return;
         _originalText = Text;

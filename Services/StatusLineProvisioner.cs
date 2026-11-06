@@ -3,22 +3,23 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using ClaudeAccountSwitcher.Localization;
 using ClaudeAccountSwitcher.Models;
 
 namespace ClaudeAccountSwitcher.Services;
 
 /// <summary>
 /// 프로필 폴더(CLAUDE_CONFIG_DIR)에 Claude Code statusLine 을 설치한다.
-/// 그 계정으로 띄운 터미널의 claude 하단에 "👤 이메일 · 플랜 · 이름" 한 줄이 항상 보이게 한다.
+/// 그 계정으로 띄운 터미널의 claude 하단에 "👤 이메일 · 플랜 · 이름 · 잔량%" 한 줄이 항상 보이게 한다.
 ///
 /// 설계 요지(견고성):
 /// - statusLine 명령은 Windows 에서 Git Bash 또는 PowerShell 로 실행될 수 있다(불확정).
-///   둘 다 'powershell' 을 선두 토큰으로 실행하므로 `powershell -File &lt;ps1&gt;` 로 통일한다.
-/// - 인코딩 함정을 원천 차단하려고, ps1 은 고정 앞부분(👤 이메일·플랜·이름)을 UTF-8 '바이트 배열'로 박아
-///   표준출력에 쓴다(이모지/한글이 셸 코드페이지·Console 인코딩에 영향받지 않음). 스크립트는 순수 ASCII.
-/// - 세션 잔량(5시간 창)은 claude 가 stdin 으로 주는 JSON 의 rate_limits.five_hour.used_percentage 를 ps1 이
-///   읽어 "· 잔량%" 꼬리로 매 호출마다 붙인다(메시지마다 갱신 → 실시간, 우리 쪽 네트워크 호출 없음).
-///   Claude.ai(Pro/Max) + 세션 첫 응답 이후에만 들어오므로 없으면 생략한다.
+///   둘 다 'powershell' 을 선두 토큰으로 실행하므로 <c>powershell -File &lt;ps1&gt;</c> 로 통일한다.
+/// - 인코딩 함정을 원천 차단하려고, ps1 은 고정 앞부분(👤 이메일·플랜·이름)과 "주간" 라벨을 UTF-8 '바이트 배열'로
+///   박아 표준출력에 쓴다(이모지/한글이 셸 코드페이지·Console 인코딩에 영향받지 않음). 스크립트는 순수 ASCII.
+/// - 잔량은 claude 가 stdin 으로 주는 JSON 의 <c>rate_limits.five_hour.used_percentage</c> 를 ps1 이 읽어
+///   "· 잔량%" 꼬리로 매 호출마다 붙인다(메시지마다 갱신 → 실시간, 우리 쪽 네트워크 호출 없음).
+///   5시간 창이 없는 플랜(인증된 Ultra)은 <c>seven_day</c> 를 대신 읽어 "· 주간 85%" 로 보여준다.
 ///   고정 앞부분은 설치 시점에 굳으므로 이름 변경/재로그인은 다음 실행에 반영된다.
 /// - 사용자 보존: settings.json/settings.local.json 에 사용자 statusLine 이 있으면 손대지 않는다.
 ///   설정 우선순위가 더 높은 settings.local.json 에 사용자 것이 있으면 우리 것은 가려지므로 아예 빠진다.
@@ -29,8 +30,10 @@ public static class StatusLineProvisioner
     private const string ScriptName = "cas-statusline.ps1";
 
     // settings.json 은 사실상 JSONC 로 다뤄지는 경우가 많다 — 주석/후행 콤마를 허용해 파싱 실패로 영구 무동작이 되지 않게.
-    private static readonly JsonDocumentOptions ParseOpts =
-        new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+    private static readonly JsonDocumentOptions ParseOpts = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
+
+    private static readonly JsonSerializerOptions IndentedRelaxed = new() { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    private static readonly JsonSerializerOptions CompactRelaxed = new() { WriteIndented = false, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     public static void Ensure(Profile p, bool enabled)
     {
@@ -44,35 +47,29 @@ public static class StatusLineProvisioner
             if (HasForeignStatusLine(Path.Combine(p.ConfigDir, "settings.local.json"))) return;
 
             string settingsPath = Path.Combine(p.ConfigDir, "settings.json");
-            JsonObject root = new();
+            JsonObject root = [];
             bool indented = true;
 
             if (File.Exists(settingsPath))
             {
                 string text = File.ReadAllText(settingsPath);
-                JsonObject? parsed = TryParseObject(text);
-                if (parsed is null) return; // 파싱 불가 → 사용자 파일 보존(절대 덮어쓰지 않음)
+                if (TryParseObject(text) is not { } parsed) return; // 파싱 불가 → 사용자 파일 보존(절대 덮어쓰지 않음)
                 root = parsed;
                 indented = text.Contains('\n');
 
                 // 어떤 형태든(오브젝트/문자열…) 우리 것이 아니면 사용자 것 → 보존.
-                if (root["statusLine"] is JsonNode sl && !IsOurs(sl)) return;
+                if (root["statusLine"] is { } sl && !IsOurs(sl)) return;
             }
 
             string ps1 = Path.Combine(p.ConfigDir, ScriptName);
-            WriteScript(ps1, BuildPrefix(p));
+            WriteScript(ps1, BuildPrefix(p), LocalizationManager.Instance["SessionWeeklyLabel"]);
 
             root["statusLine"] = new JsonObject
             {
                 ["type"] = "command",
-                ["command"] = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""
-                              + ps1.Replace('\\', '/') + "\"",
+                ["command"] = "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"" + ps1.Replace('\\', '/') + "\"",
             };
-            File.WriteAllText(settingsPath, root.ToJsonString(new JsonSerializerOptions
-            {
-                WriteIndented = indented,
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // 명령의 따옴표·경로를 읽기 쉬운 형태로
-            }));
+            File.WriteAllText(settingsPath, root.ToJsonString(indented ? IndentedRelaxed : CompactRelaxed));
         }
         catch { /* best effort — 상태줄 설치 실패해도 실행은 정상 동작 */ }
     }
@@ -86,22 +83,11 @@ public static class StatusLineProvisioner
             if (File.Exists(settingsPath))
             {
                 string text = File.ReadAllText(settingsPath);
-                JsonObject? root = TryParseObject(text);
-                if (root is not null && root["statusLine"] is JsonNode sl && IsOurs(sl))
+                if (TryParseObject(text) is { } root && root["statusLine"] is { } sl && IsOurs(sl))
                 {
                     root.Remove("statusLine");
-                    if (root.Count == 0)
-                    {
-                        File.Delete(settingsPath);
-                    }
-                    else
-                    {
-                        File.WriteAllText(settingsPath, root.ToJsonString(new JsonSerializerOptions
-                        {
-                            WriteIndented = text.Contains('\n'),
-                            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                        }));
-                    }
+                    if (root.Count == 0) File.Delete(settingsPath);
+                    else File.WriteAllText(settingsPath, root.ToJsonString(text.Contains('\n') ? IndentedRelaxed : CompactRelaxed));
                 }
             }
 
@@ -115,16 +101,13 @@ public static class StatusLineProvisioner
     private static bool HasForeignStatusLine(string path)
     {
         if (!File.Exists(path)) return false;
-        try { return TryParseObject(File.ReadAllText(path))?["statusLine"] is JsonNode sl && !IsOurs(sl); }
+        try { return TryParseObject(File.ReadAllText(path))?["statusLine"] is { } sl && !IsOurs(sl); }
         catch { return false; }
     }
 
     /// <summary>statusLine 노드가 우리가 설치한 것(cas-statusline.ps1 참조)인지.</summary>
-    private static bool IsOurs(JsonNode? statusLine)
-    {
-        string? cmd = (statusLine as JsonObject)?["command"] is JsonValue v && v.TryGetValue(out string? c) ? c : null;
-        return cmd is not null && cmd.Contains(ScriptName);
-    }
+    private static bool IsOurs(JsonNode? statusLine) =>
+        (statusLine as JsonObject)?["command"] is JsonValue v && v.TryGetValue(out string? cmd) && cmd.Contains(ScriptName);
 
     private static JsonObject? TryParseObject(string text)
     {
@@ -132,13 +115,12 @@ public static class StatusLineProvisioner
         catch { return null; }
     }
 
-    /// <summary>고정 앞부분 "👤 이메일 · 플랜 · 이름"(세션 잔량은 ps1 이 동적으로 덧붙인다). 이메일 없으면 가진 것만.</summary>
+    /// <summary>고정 앞부분 "👤 이메일 · 플랜 · 이름"(잔량은 ps1 이 동적으로 덧붙인다). 이메일 없으면 가진 것만.</summary>
     private static string BuildPrefix(Profile p)
     {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(p.Email)) parts.Add(p.Email!);
-        string plan = PlanFormatter.Format(p.SubscriptionType, p.RateLimitTier);
-        if (plan != "—") parts.Add(plan);
+        List<string> parts = [];
+        if (!string.IsNullOrWhiteSpace(p.Email)) parts.Add(p.Email);
+        if (p.PlanLabel is var plan && plan != "—") parts.Add(plan);
         if (!string.IsNullOrWhiteSpace(p.Name)) parts.Add(p.Name);
         if (parts.Count == 0) parts.Add("Claude");
 
@@ -147,29 +129,40 @@ public static class StatusLineProvisioner
     }
 
     /// <summary>
-    /// statusLine 스크립트를 만든다. 고정 앞부분은 UTF-8 바이트 배열로 박고,
-    /// claude 가 stdin 으로 주는 JSON 의 rate_limits.five_hour.used_percentage 를 읽어
-    /// "· 잔량%" 꼬리를 매 호출마다 덧붙인다(없으면 생략). 0(=사용 0%)을 부재로 오인하지 않게 $null 비교.
+    /// statusLine 스크립트를 만든다. 고정 앞부분과 "주간" 라벨은 UTF-8 바이트 배열로 박고,
+    /// claude 가 stdin 으로 주는 JSON 의 rate_limits 에서 five_hour(없으면 seven_day).used_percentage 를 읽어
+    /// "· 잔량%" / "· 주간 잔량%" 꼬리를 매 호출마다 덧붙인다(없으면 생략). 0(=사용 0%)을 부재로 오인하지 않게 $null 비교.
     /// 스크립트는 순수 ASCII(바이트 배열 + 코드포인트)라 파일 인코딩/BOM·셸 코드페이지에 의존하지 않는다.
     /// </summary>
-    private static void WriteScript(string path, string prefix)
+    private static void WriteScript(string path, string prefix, string weeklyLabel)
     {
-        string bytes = string.Join(",", Encoding.UTF8.GetBytes(prefix)); // 0~255 십진수
-        string script =
-            "$ErrorActionPreference='SilentlyContinue'\r\n" +
-            "$p=[byte[]](" + bytes + ")\r\n" +
-            "$s=''\r\n" +
-            "try {\r\n" +
-            "  $in=[Console]::In.ReadToEnd()\r\n" +
-            "  if ($in) {\r\n" +
-            "    $u=($in | ConvertFrom-Json).rate_limits.five_hour.used_percentage\r\n" +
-            "    if ($u -ne $null) { $s=' '+[char]0x00B7+' '+[math]::Round([math]::Max(0,100-[double]$u))+'%' }\r\n" +
-            "  }\r\n" +
-            "} catch { }\r\n" +
-            "$o=[System.Console]::OpenStandardOutput()\r\n" +
-            "$o.Write($p,0,$p.Length)\r\n" +
-            "if ($s) { $sb=[System.Text.Encoding]::UTF8.GetBytes($s); $o.Write($sb,0,$sb.Length) }\r\n" +
-            "$o.Flush()\r\n";
-        File.WriteAllText(path, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        string prefixBytes = string.Join(",", Encoding.UTF8.GetBytes(prefix));
+        string weeklyBytes = string.Join(",", Encoding.UTF8.GetBytes(weeklyLabel.Trim() + " "));
+        string script = $$"""
+            $ErrorActionPreference='SilentlyContinue'
+            $p=[byte[]]({{prefixBytes}})
+            $w=[byte[]]({{weeklyBytes}})
+            $s=''
+            $weekly=$false
+            try {
+              $in=[Console]::In.ReadToEnd()
+              if ($in) {
+                $rl=($in | ConvertFrom-Json).rate_limits
+                $u=$rl.five_hour.used_percentage
+                if ($u -eq $null) { $u=$rl.seven_day.used_percentage; $weekly=$true }
+                if ($u -ne $null) { $s=[math]::Round([math]::Max(0,100-[double]$u)).ToString()+'%' }
+              }
+            } catch { }
+            $o=[System.Console]::OpenStandardOutput()
+            $o.Write($p,0,$p.Length)
+            if ($s) {
+              $sep=[System.Text.Encoding]::UTF8.GetBytes(' '+[char]0x00B7+' '); $o.Write($sep,0,$sep.Length)
+              if ($weekly) { $o.Write($w,0,$w.Length) }
+              $sb=[System.Text.Encoding]::UTF8.GetBytes($s); $o.Write($sb,0,$sb.Length)
+            }
+            $o.Flush()
+
+            """;
+        File.WriteAllText(path, script.Replace("\n", "\r\n"), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 }

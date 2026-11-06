@@ -11,6 +11,9 @@ powershell Installer\build-installer.ps1                 # build installer
 Stop a running `Claude-Account-Switcher.exe` before rebuilding (the exe is locked):
 `Get-Process Claude-Account-Switcher | Stop-Process -Force`.
 
+To eyeball UI changes without a human, render a window to PNG:
+`Claude-Account-Switcher.exe --screenshot out.png [--page main|settings|sessions]`.
+
 ## Code style
 
 - Formatting, naming, and analyzer severities are defined in **`.editorconfig`** — Visual Studio,
@@ -32,7 +35,10 @@ This is an MVVM app (`Microsoft.Extensions.DependencyInjection` + `CommunityTool
   `DependencyProperty` that subscribes to the event and invokes a bound `ICommand`), not a `*.xaml.cs`
   handler.
 - Keyboard shortcuts → native `InputBindings`/`KeyBinding` bound to commands.
-- Value conversions → converter markup-extensions (`{conv:XxxConverter}`).
+- Modern C# (`LangVersion latest`): primary constructors for DI, collection expressions (`[]`),
+  target-typed `new()`, pattern matching, `sealed` by default, `[GeneratedRegex]`, raw string literals.
+- Value conversions → prefer `DataTrigger` styles or the built-in `BooleanToVisibilityConverter`
+  (declared per view). There is no custom converter library — add one only when a real need appears.
 
 See the WPF resource note in `CLAUDE.md`: in Views reference theme resources with `DynamicResource`;
 each `Theme/Controls/*.xaml` merges its own dependency brushes (StaticResource closure caveat).

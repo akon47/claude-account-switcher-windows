@@ -3,9 +3,10 @@ using System.Text.Json;
 
 namespace ClaudeAccountSwitcher.Services;
 
-public record CredentialsMeta(string? SubscriptionType, string? RateLimitTier, DateTimeOffset? ExpiresAt);
+/// <summary>.credentials.json 의 표시용 메타데이터.</summary>
+public sealed record CredentialsMeta(string? SubscriptionType, string? RateLimitTier);
 
-/// <summary>.credentials.json 에서 표시용 메타데이터만 읽는다. (토큰 값은 다루지 않음)</summary>
+/// <summary>.credentials.json 에서 표시용 메타데이터만 읽는다(토큰 값은 다루지 않음).</summary>
 public static class CredentialsReader
 {
     public static CredentialsMeta? Read(string path)
@@ -14,21 +15,13 @@ public static class CredentialsReader
         {
             if (!File.Exists(path)) return null;
             using var doc = JsonDocument.Parse(File.ReadAllText(path));
-            if (!doc.RootElement.TryGetProperty("claudeAiOauth", out var o))
+            if (!doc.RootElement.TryGetProperty("claudeAiOauth", out var o) || o.ValueKind != JsonValueKind.Object)
                 return null;
 
-            string? sub = o.TryGetProperty("subscriptionType", out var s) ? s.GetString() : null;
-            string? tier = o.TryGetProperty("rateLimitTier", out var t) ? t.GetString() : null;
-
-            DateTimeOffset? exp = null;
-            if (o.TryGetProperty("expiresAt", out var e) && e.ValueKind == JsonValueKind.Number)
-                exp = DateTimeOffset.FromUnixTimeMilliseconds(e.GetInt64());
-
-            return new CredentialsMeta(sub, tier, exp);
+            return new CredentialsMeta(
+                o.TryGetProperty("subscriptionType", out var s) ? s.GetString() : null,
+                o.TryGetProperty("rateLimitTier", out var t) ? t.GetString() : null);
         }
-        catch
-        {
-            return null;
-        }
+        catch { return null; }
     }
 }

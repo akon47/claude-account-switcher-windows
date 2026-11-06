@@ -10,10 +10,7 @@ public sealed class SessionItemViewModel
     public required SessionEntry Entry { get; init; }
 
     /// <summary>프로젝트 이름(작업 폴더의 마지막 구성요소). cwd 가 비면 인코딩된 폴더명으로 대체.</summary>
-    public string Project =>
-        string.IsNullOrEmpty(Entry.Cwd)
-            ? Entry.ProjectFolder
-            : Path.GetFileName(Entry.Cwd.TrimEnd('\\', '/')) is { Length: > 0 } n ? n : Entry.Cwd;
+    public string Project => ProjectNameOf(Entry);
 
     /// <summary>전체 작업 폴더 경로(툴팁).</summary>
     public string Cwd => Entry.Cwd;
@@ -29,17 +26,24 @@ public sealed class SessionItemViewModel
     public string ProfileName => Entry.ProfileName;
 
     /// <summary>상대 시각(방금/N분 전/N시간 전/N일 전) — 최근 대화 파악용.</summary>
-    public string When
+    public string When => RelativeTime(Entry.LastModified);
+
+    public static string ProjectNameOf(SessionEntry e) =>
+        string.IsNullOrEmpty(e.Cwd)
+            ? e.ProjectFolder
+            : Path.GetFileName(e.Cwd.TrimEnd('\\', '/')) is { Length: > 0 } n ? n : e.Cwd;
+
+    public static string RelativeTime(DateTime at)
     {
-        get
+        var span = DateTime.Now - at;
+        var L = LocalizationManager.Instance;
+        return span switch
         {
-            var span = DateTime.Now - Entry.LastModified;
-            var L = LocalizationManager.Instance;
-            if (span.TotalMinutes < 1) return L["TimeJustNow"];
-            if (span.TotalHours < 1) return L.Tr("TimeMinutesAgo", (int)span.TotalMinutes);
-            if (span.TotalDays < 1) return L.Tr("TimeHoursAgo", (int)span.TotalHours);
-            if (span.TotalDays < 30) return L.Tr("TimeDaysAgo", (int)span.TotalDays);
-            return Entry.LastModified.ToString("yyyy-MM-dd");
-        }
+            { TotalMinutes: < 1 } => L["TimeJustNow"],
+            { TotalHours: < 1 } => L.Tr("TimeMinutesAgo", (int)span.TotalMinutes),
+            { TotalDays: < 1 } => L.Tr("TimeHoursAgo", (int)span.TotalHours),
+            { TotalDays: < 30 } => L.Tr("TimeDaysAgo", (int)span.TotalDays),
+            _ => at.ToString("yyyy-MM-dd"),
+        };
     }
 }

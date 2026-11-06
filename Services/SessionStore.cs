@@ -43,70 +43,83 @@ public sealed class SessionStore
     }
 
     /// <summary>
-    /// 프로필의 세션 목록. 활성 프로필이면 실제 라이브 저장소(~/.claude)도 함께 훑는다
+    /// 프로필의 세션 목록(최근 수정 순). 활성 프로필이면 실제 라이브 저장소(~/.claude)도 함께 훑는다
     /// (활성 계정은 전환 시 ~/.claude 를 쓰고, 동시 실행 때만 프로필 폴더에 쌓기 때문).
-    /// 같은 세션이 두 곳에 있으면 더 최근 것을 택한다. 최근 수정 순으로 정렬.
+    /// 같은 세션이 두 곳에 있으면 더 최근 것을 택한다.
     /// 세션 자동 유지가 보낸 headless 한마디(sdk 진입점 + KeepAlivePrompt)는 대화가 아니므로 숨긴다.
     /// </summary>
-    public IReadOnlyList<SessionEntry> ListForProfile(Profile p, bool isActive)
+    public IReadOnlyList<SessionEntry> ListForProfile(Profile p, bool isActive) => ListForProfile(p, isActive, int.MaxValue);
+
+    /// <summary>
+    /// 최근 세션 <paramref name="max"/>개만 빠르게. 파일을 수정 시각 순으로 정렬해 앞에서부터 필요한 만큼만
+    /// 파싱하므로 세션이 수백 개여도 메뉴를 바로 띄울 수 있다(행 우클릭 "최근 세션 이어하기").
+    /// </summary>
+    public IReadOnlyList<SessionEntry> ListRecentForProfile(Profile p, bool isActive, int max) => ListForProfile(p, isActive, max);
+
+    private IReadOnlyList<SessionEntry> ListForProfile(Profile p, bool isActive, int max)
     {
-        var dirs = new List<string> { p.ConfigDir };
+        List<string> dirs = [p.ConfigDir];
         if (isActive) dirs.Add(AppPaths.ClaudeHome);
 
-        var byId = new Dictionary<string, SessionEntry>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var configDir in dirs)
+        // 두 저장소의 후보 파일을 최근 수정 순으로 한 줄로 세운다. 같은 id 는 가장 최근 것만 남는다.
+        List<(string File, DateTime Modified)> candidates = [];
+        foreach (string configDir in dirs)
         {
             string projects = Path.Combine(configDir, ProjectsFolder);
             if (!Directory.Exists(projects)) continue;
-
-            string[] files;
-            try { files = Directory.GetFiles(projects, "*.jsonl", SearchOption.AllDirectories); }
-            catch { continue; }
-
-            foreach (var file in files)
+            try
             {
-                try
-                {
+                candidates.AddRange(Directory.EnumerateFiles(projects, "*.jsonl", SearchOption.AllDirectories)
                     // 서브에이전트(sidechain) 트랜스크립트는 이어하기 대상이 아니다(대량으로 생기고 영어
                     // 에이전트 프롬프트가 첫 메시지) → 제외. Claude Code 는 이를 agent-*.jsonl 로 만든다(빠른 필터).
-                    if (Path.GetFileName(file).StartsWith("agent-", StringComparison.OrdinalIgnoreCase)) continue;
-
-                    string id = Path.GetFileNameWithoutExtension(file);
-                    var modified = File.GetLastWriteTime(file);
-
-                    // 같은 세션이 프로필 폴더와 ~/.claude 양쪽에 있으면 더 최근에 진행된 쪽을 보여준다.
-                    if (byId.TryGetValue(id, out var existing) && existing.LastModified >= modified) continue;
-
-                    var head = ScanHead(file);
-                    if (head.IsSidechain) continue; // agent- 규칙을 벗어난 sidechain 까지 방어
-                    if (head.IsKeepAlive) continue; // 세션 자동 유지의 headless 한마디 → 대화 아님
-
-                    // 세션 이름(ai-title)은 대화가 진행되며 갱신되므로 파일 끝쪽의 마지막 값이 현재 이름.
-                    // 앞부분(FirstTitle)은 꼬리를 못 읽었을 때의 폴백.
-                    string? name = ReadLastAiTitle(file) ?? head.FirstTitle;
-
-                    byId[id] = new SessionEntry
-                    {
-                        SessionId = id,
-                        ProjectFolder = Path.GetFileName(Path.GetDirectoryName(file)!),
-                        Cwd = head.Cwd ?? "",
-                        FilePath = file,
-                        ProfileId = p.Id,
-                        ProfileName = p.Name,
-                        SourceEmail = string.IsNullOrEmpty(p.Email) ? null : p.Email,
-                        LastModified = modified,
-                        Preview = head.Preview,
-                        Name = Clean(name),
-                    };
-                }
-                catch { /* 한 파일이 깨져도 나머지는 계속 */ }
+                    .Where(f => !Path.GetFileName(f).StartsWith("agent-", StringComparison.OrdinalIgnoreCase))
+                    .Select(f => (f, File.GetLastWriteTime(f))));
             }
+            catch { /* 폴더 접근 실패 — 다른 저장소는 계속 */ }
         }
+        candidates.Sort((a, b) => b.Modified.CompareTo(a.Modified));
 
-        var result = byId.Values.ToList();
-        result.Sort((a, b) => b.LastModified.CompareTo(a.LastModified));
+        List<SessionEntry> result = [];
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var (file, modified) in candidates)
+        {
+            if (result.Count >= max) break;
+            string id = Path.GetFileNameWithoutExtension(file);
+            if (!seen.Add(id)) continue; // 프로필 폴더와 ~/.claude 양쪽에 있으면 더 최근 쪽(앞선 것)만
+
+            try
+            {
+                if (BuildEntry(p, file, id, modified) is { } entry) result.Add(entry);
+            }
+            catch { /* 한 파일이 깨져도 나머지는 계속 */ }
+        }
         return result;
+    }
+
+    /// <summary>트랜스크립트 한 파일을 목록 항목으로. 대화가 아닌 파일(sidechain·세션유지 한마디)이면 null.</summary>
+    private static SessionEntry? BuildEntry(Profile p, string file, string id, DateTime modified)
+    {
+        var head = ScanHead(file);
+        if (head.IsSidechain) return null; // agent- 규칙을 벗어난 sidechain 까지 방어
+        if (head.IsKeepAlive) return null; // 세션 자동 유지의 headless 한마디 → 대화 아님
+
+        // 세션 이름(ai-title)은 대화가 진행되며 갱신되므로 파일 끝쪽의 마지막 값이 현재 이름.
+        // 앞부분(FirstTitle)은 꼬리를 못 읽었을 때의 폴백.
+        string? name = ReadLastAiTitle(file) ?? head.FirstTitle;
+
+        return new SessionEntry
+        {
+            SessionId = id,
+            ProjectFolder = Path.GetFileName(Path.GetDirectoryName(file)!),
+            Cwd = head.Cwd ?? "",
+            FilePath = file,
+            ProfileId = p.Id,
+            ProfileName = p.Name,
+            SourceEmail = string.IsNullOrEmpty(p.Email) ? null : p.Email,
+            LastModified = modified,
+            Preview = head.Preview,
+            Name = Clean(name),
+        };
     }
 
     /// <summary>
@@ -184,33 +197,21 @@ public sealed class SessionStore
     {
         if (length <= 0) return true;
         const int chunk = 64 * 1024;
-        var ba = new byte[chunk];
-        var bb = new byte[chunk];
-        using var fa = new FileStream(a, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        using var fb = new FileStream(b, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        byte[] ba = new byte[chunk];
+        byte[] bb = new byte[chunk];
+        using FileStream fa = new(a, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using FileStream fb = new(b, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         long remaining = length;
         while (remaining > 0)
         {
             int want = (int)Math.Min(chunk, remaining);
-            int ra = ReadFully(fa, ba, want);
-            int rb = ReadFully(fb, bb, want);
+            int ra = fa.ReadAtLeast(ba.AsSpan(0, want), want, throwOnEndOfStream: false);
+            int rb = fb.ReadAtLeast(bb.AsSpan(0, want), want, throwOnEndOfStream: false);
             if (ra != rb || ra == 0) return false;
             if (!ba.AsSpan(0, ra).SequenceEqual(bb.AsSpan(0, rb))) return false;
             remaining -= ra;
         }
         return true;
-    }
-
-    private static int ReadFully(Stream s, byte[] buffer, int count)
-    {
-        int total = 0;
-        while (total < count)
-        {
-            int n = s.Read(buffer, total, count - total);
-            if (n <= 0) break;
-            total += n;
-        }
-        return total;
     }
 
     /// <summary>교체 전 대상 사본을 backups\sessions\ 에 보관한다(오래된 것부터 정리). projects 밖이라 claude 는 보지 못한다.</summary>
@@ -222,10 +223,12 @@ public sealed class SessionStore
             Directory.CreateDirectory(dir);
             File.Copy(file, Path.Combine(dir, $"{sessionId}-{DateTime.Now:yyyyMMdd-HHmmss}.jsonl"), overwrite: true);
 
-            var stale = new DirectoryInfo(dir).GetFiles("*.jsonl")
-                .OrderByDescending(f => f.CreationTimeUtc)
-                .Skip(MaxSessionBackups);
-            foreach (var f in stale) f.Delete();
+            foreach (var f in new DirectoryInfo(dir).GetFiles("*.jsonl")
+                         .OrderByDescending(f => f.CreationTimeUtc)
+                         .Skip(MaxSessionBackups))
+            {
+                f.Delete();
+            }
         }
         catch { /* best effort — 백업 실패가 이어하기를 막지는 않는다 */ }
     }
@@ -242,20 +245,15 @@ public sealed class SessionStore
     {
         try
         {
-            string? srcDir = Path.GetDirectoryName(s.FilePath);
-            if (srcDir is null) return;
+            if (Path.GetDirectoryName(s.FilePath) is not { } srcDir) return;
 
             string sidecar = Path.Combine(srcDir, s.SessionId);
             if (Directory.Exists(sidecar))
                 CopyDirectory(sidecar, Path.Combine(destProjects, s.SessionId), overwriteOlder: refresh);
 
-            foreach (var agentFile in LinkedSubAgentFiles(srcDir, s.SessionId))
+            foreach (string agentFile in LinkedSubAgentFiles(srcDir, s.SessionId))
             {
-                try
-                {
-                    string dest = Path.Combine(destProjects, Path.GetFileName(agentFile));
-                    CopyFile(agentFile, dest, overwriteOlder: refresh);
-                }
+                try { CopyFile(agentFile, Path.Combine(destProjects, Path.GetFileName(agentFile)), overwriteOlder: refresh); }
                 catch { /* 개별 서브에이전트 복사 실패는 무시(이어하기엔 필수 아님) */ }
             }
         }
@@ -272,7 +270,7 @@ public sealed class SessionStore
         try { files = Directory.EnumerateFiles(sessionDir, "agent-*.jsonl"); }
         catch { yield break; }
 
-        foreach (var f in files)
+        foreach (string f in files)
         {
             string? sid = null;
             try { sid = ReadSessionId(f); }
@@ -287,10 +285,9 @@ public sealed class SessionStore
     /// </summary>
     internal static void CopyDirectory(string src, string dest, bool overwriteOlder = false)
     {
-        foreach (var file in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
+        foreach (string file in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
         {
-            string rel = Path.GetRelativePath(src, file);
-            string target = Path.Combine(dest, rel);
+            string target = Path.Combine(dest, Path.GetRelativePath(src, file));
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             CopyFile(file, target, overwriteOlder);
         }
@@ -306,7 +303,7 @@ public sealed class SessionStore
     /// <summary>트랜스크립트 앞부분에서 sessionId 필드를 읽는다(없으면 null).</summary>
     private static string? ReadSessionId(string file)
     {
-        using var reader = new StreamReader(file);
+        using StreamReader reader = new(file);
         for (int i = 0; i < 5; i++)
         {
             string? line = reader.ReadLine();
@@ -315,12 +312,7 @@ public sealed class SessionStore
             try
             {
                 using var doc = JsonDocument.Parse(line);
-                if (doc.RootElement.ValueKind == JsonValueKind.Object &&
-                    doc.RootElement.TryGetProperty("sessionId", out var idEl) &&
-                    idEl.ValueKind == JsonValueKind.String)
-                {
-                    return idEl.GetString();
-                }
+                if (doc.RootElement.ValueKind == JsonValueKind.Object && Str(doc.RootElement, "sessionId") is { } id) return id;
             }
             catch { /* 다음 줄 시도 */ }
         }
@@ -343,7 +335,7 @@ public sealed class SessionStore
         bool isSidechain = false;
         bool isKeepAlive = false;
 
-        using var reader = new StreamReader(file);
+        using StreamReader reader = new(file);
         for (int i = 0; i < MaxScanLines; i++)
         {
             string? line = reader.ReadLine();
@@ -356,45 +348,28 @@ public sealed class SessionStore
 
             if (root.ValueKind != JsonValueKind.Object) continue;
 
-            if (!isSidechain && root.TryGetProperty("isSidechain", out var scEl) && scEl.ValueKind == JsonValueKind.True)
-                isSidechain = true;
+            isSidechain |= root.TryGetProperty("isSidechain", out var scEl) && scEl.ValueKind == JsonValueKind.True;
+            cwd ??= Str(root, "cwd") is { Length: > 0 } c ? c : null;
 
-            if (cwd is null && root.TryGetProperty("cwd", out var cwdEl) && cwdEl.ValueKind == JsonValueKind.String)
-            {
-                var v = cwdEl.GetString();
-                if (!string.IsNullOrWhiteSpace(v)) cwd = v;
-            }
+            string? type = Str(root, "type");
+            if (firstTitle is null && type == "ai-title") firstTitle = Str(root, "aiTitle");
+            if (summary is null && type == "summary") summary = Str(root, "summary");
 
-            if (firstTitle is null && root.TryGetProperty("type", out var tt) &&
-                tt.ValueKind == JsonValueKind.String && tt.GetString() == "ai-title" &&
-                root.TryGetProperty("aiTitle", out var titEl) && titEl.ValueKind == JsonValueKind.String)
-            {
-                firstTitle = titEl.GetString();
-            }
-
-            if (summary is null && root.TryGetProperty("type", out var typeEl) &&
-                typeEl.ValueKind == JsonValueKind.String && typeEl.GetString() == "summary" &&
-                root.TryGetProperty("summary", out var sumEl) && sumEl.ValueKind == JsonValueKind.String)
-            {
-                summary = sumEl.GetString();
-            }
-
-            if (firstUser is null && root.TryGetProperty("type", out var t2) &&
-                t2.ValueKind == JsonValueKind.String && t2.GetString() == "user" &&
+            if (firstUser is null && type == "user"
                 // 메타(caveat 등 하네스 주입) 메시지는 건너뛴다.
-                !(root.TryGetProperty("isMeta", out var metaEl) && metaEl.ValueKind == JsonValueKind.True) &&
-                root.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.Object &&
-                msg.TryGetProperty("content", out var content))
+                && !(root.TryGetProperty("isMeta", out var metaEl) && metaEl.ValueKind == JsonValueKind.True)
+                && root.TryGetProperty("message", out var msg) && msg.ValueKind == JsonValueKind.Object
+                && msg.TryGetProperty("content", out var content))
             {
-                var txt = ExtractText(content);
+                string? txt = ExtractText(content);
                 // 슬래시 명령 래퍼(<command-name>…)·시스템 리마인더(<system-reminder>)·명령 출력
                 // (<local-command-stdout>) 등 <태그>로 시작하는 합성 메시지는 미리보기로 부적합 → 건너뛴다.
                 if (!IsSynthetic(txt))
                 {
                     firstUser = txt;
                     // 세션 자동 유지가 headless(`claude -p`)로 보낸 한마디: sdk 진입점 + 고정 프롬프트.
-                    isKeepAlive = IsSdkEntry(root) &&
-                        string.Equals(txt!.Trim(), Launcher.KeepAlivePrompt, StringComparison.OrdinalIgnoreCase);
+                    isKeepAlive = IsSdkEntry(root)
+                        && string.Equals(txt!.Trim(), Launcher.KeepAlivePrompt, StringComparison.OrdinalIgnoreCase);
                 }
             }
 
@@ -402,16 +377,16 @@ public sealed class SessionStore
             if (cwd is not null && summary is not null && firstTitle is not null) break;
         }
 
-        string? preview = Clean(summary ?? firstUser);
-        return new HeadInfo(cwd, preview, isSidechain, firstTitle, isKeepAlive);
+        return new HeadInfo(cwd, Clean(summary ?? firstUser), isSidechain, firstTitle, isKeepAlive);
     }
 
     /// <summary>사용자 메시지가 대화형 REPL 이 아니라 sdk/headless(`claude -p`)로 들어왔는지.</summary>
     private static bool IsSdkEntry(JsonElement root) =>
-        (root.TryGetProperty("entrypoint", out var ep) && ep.ValueKind == JsonValueKind.String &&
-         ep.GetString()!.StartsWith("sdk", StringComparison.OrdinalIgnoreCase)) ||
-        (root.TryGetProperty("promptSource", out var ps) && ps.ValueKind == JsonValueKind.String &&
-         ps.GetString() == "sdk");
+        Str(root, "entrypoint")?.StartsWith("sdk", StringComparison.OrdinalIgnoreCase) == true
+        || Str(root, "promptSource") == "sdk";
+
+    private static string? Str(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     /// <summary>
     /// 파일 끝쪽 일부만 읽어 마지막 <c>ai-title</c>(현재 세션 이름)를 찾는다. 파일 크기와 무관하게
@@ -422,30 +397,25 @@ public sealed class SessionStore
         const int chunk = 64 * 1024;
         try
         {
-            using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using FileStream fs = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             long start = Math.Max(0, fs.Length - chunk);
             fs.Seek(start, SeekOrigin.Begin);
-            using var reader = new StreamReader(fs);
-            string text = reader.ReadToEnd();
+            using StreamReader reader = new(fs);
+            string[] lines = reader.ReadToEnd().Split('\n');
 
-            var lines = text.Split('\n');
             // 청크 중간에서 시작했으면 첫 줄은 잘렸을 수 있으니 뒤에서부터 훑되 첫(부분) 줄은 무시.
             int lower = start > 0 ? 1 : 0;
             for (int i = lines.Length - 1; i >= lower; i--)
             {
-                var line = lines[i].Trim();
+                string line = lines[i].Trim();
                 if (line.Length == 0 || line[0] != '{') continue;
                 if (!line.Contains("\"ai-title\"", StringComparison.Ordinal)) continue;
                 try
                 {
                     using var doc = JsonDocument.Parse(line);
                     var root = doc.RootElement;
-                    if (root.ValueKind == JsonValueKind.Object &&
-                        root.TryGetProperty("type", out var t) && t.GetString() == "ai-title" &&
-                        root.TryGetProperty("aiTitle", out var tit) && tit.ValueKind == JsonValueKind.String)
-                    {
-                        return tit.GetString();
-                    }
+                    if (root.ValueKind == JsonValueKind.Object && Str(root, "type") == "ai-title" && Str(root, "aiTitle") is { } title)
+                        return title;
                 }
                 catch { /* 잘린/깨진 줄 — 계속 위로 */ }
             }
@@ -458,30 +428,24 @@ public sealed class SessionStore
     private static string? ExtractText(JsonElement content)
     {
         if (content.ValueKind == JsonValueKind.String) return content.GetString();
-        if (content.ValueKind == JsonValueKind.Array)
+        if (content.ValueKind != JsonValueKind.Array) return null;
+
+        foreach (var part in content.EnumerateArray())
         {
-            foreach (var part in content.EnumerateArray())
-            {
-                if (part.ValueKind == JsonValueKind.Object &&
-                    part.TryGetProperty("type", out var pt) && pt.GetString() == "text" &&
-                    part.TryGetProperty("text", out var txt) && txt.ValueKind == JsonValueKind.String)
-                {
-                    return txt.GetString();
-                }
-            }
+            if (part.ValueKind == JsonValueKind.Object && Str(part, "type") == "text" && Str(part, "text") is { } text)
+                return text;
         }
         return null;
     }
 
     /// <summary>합성/주입 메시지(슬래시 명령 래퍼·시스템 리마인더·명령 출력 등 &lt;태그&gt;로 시작)인지.</summary>
-    private static bool IsSynthetic(string? s) =>
-        string.IsNullOrWhiteSpace(s) || s.TrimStart().StartsWith('<');
+    private static bool IsSynthetic(string? s) => string.IsNullOrWhiteSpace(s) || s.TrimStart().StartsWith('<');
 
     /// <summary>미리보기 텍스트를 한 줄로 정리하고 길이를 제한한다.</summary>
     private static string? Clean(string? s)
     {
         if (string.IsNullOrWhiteSpace(s)) return null;
-        s = string.Join(' ', s.Split(new[] { '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)).Trim();
+        s = string.Join(' ', s.Split(['\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries)).Trim();
         const int max = 140;
         return s.Length <= max ? s : s[..max] + "…";
     }

@@ -10,7 +10,7 @@ namespace ClaudeAccountSwitcher.ViewModels;
 /// 세션 자동 유지 방식 설정 다이얼로그 VM: "항상"(리셋 즉시 재시작) 또는 "시간표"(원하는 첫 리셋 시각 + 하루 창 개수).
 /// 시간표를 고르면 창 시작 시각과 하루의 리셋 시각들을 미리보기로 보여준다.
 /// </summary>
-public partial class KeepAliveDialogViewModel : ObservableObject
+public sealed partial class KeepAliveDialogViewModel : ObservableObject
 {
     private static LocalizationManager L => LocalizationManager.Instance;
 

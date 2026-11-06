@@ -10,9 +10,10 @@ namespace ClaudeAccountSwitcher.Services;
 /// 다른 PC 로 옮겨 작업 폴더가 바뀌었을 때, 새 폴더 기준으로 대상 enc 폴더명을 다시 만들어 resume 가
 /// 세션을 찾게 하려고 쓴다.
 /// </summary>
-public static class ProjectFolderEncoder
+public static partial class ProjectFolderEncoder
 {
-    private static readonly Regex NonAlphaNum = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
+    public static string Encode(string cwd) => NonAlphaNum().Replace(cwd, "-");
 
-    public static string Encode(string cwd) => NonAlphaNum.Replace(cwd ?? string.Empty, "-");
+    [GeneratedRegex("[^a-zA-Z0-9]")]
+    private static partial Regex NonAlphaNum();
 }

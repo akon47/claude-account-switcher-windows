@@ -4,35 +4,38 @@ using ClaudeAccountSwitcher.Models;
 
 namespace ClaudeAccountSwitcher.Services;
 
-/// <summary>
-/// 프로필 저장소 + 핵심 동작(캡처/전환/삭제). UI에 의존하지 않는다.
-/// </summary>
-public class ProfileStore
+/// <summary>프로필 저장소 + 핵심 동작(캡처/전환/삭제). UI 에 의존하지 않는다.</summary>
+public sealed class ProfileStore
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = true };
 
     public AppData Data { get; private set; } = new();
 
+    /// <summary>
+    /// profiles.json 을 읽는다. 깨져 있으면(쓰다 꺼짐 등) 직전 저장 때 남긴 .bak 로 폴백한다 —
+    /// 설정 파일 하나가 망가졌다고 계정 목록이 통째로 사라지지 않게.
+    /// </summary>
     public void Load()
     {
         AppPaths.EnsureDirs();
-        if (File.Exists(AppPaths.DataFile))
+        Data = TryRead(AppPaths.DataFile) ?? TryRead(AppPaths.DataFile + ".bak") ?? new();
+
+        static AppData? TryRead(string path)
         {
-            try
-            {
-                Data = JsonSerializer.Deserialize<AppData>(File.ReadAllText(AppPaths.DataFile)) ?? new();
-            }
-            catch
-            {
-                Data = new();
-            }
+            try { return File.Exists(path) ? JsonSerializer.Deserialize<AppData>(File.ReadAllText(path)) : null; }
+            catch { return null; }
         }
     }
 
+    /// <summary>임시 파일에 쓴 뒤 교체하고, 직전 내용은 .bak 로 남긴다(쓰는 도중 꺼져도 둘 중 하나는 온전하다).</summary>
     public void Save()
     {
         AppPaths.EnsureDirs();
-        File.WriteAllText(AppPaths.DataFile, JsonSerializer.Serialize(Data, JsonOpts));
+        string path = AppPaths.DataFile;
+        string tmp = path + ".tmp";
+        File.WriteAllText(tmp, JsonSerializer.Serialize(Data, JsonOpts));
+        if (File.Exists(path)) File.Replace(tmp, path, path + ".bak", ignoreMetadataErrors: true);
+        else File.Move(tmp, path);
     }
 
     /// <summary>
@@ -45,8 +48,8 @@ public class ProfileStore
         try
         {
             if (!Directory.Exists(AppPaths.ProfilesDir)) return;
-            var known = new HashSet<string>(Data.Profiles.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
-            foreach (var dir in Directory.GetDirectories(AppPaths.ProfilesDir))
+            HashSet<string> known = new(Data.Profiles.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
+            foreach (string dir in Directory.GetDirectories(AppPaths.ProfilesDir))
             {
                 if (known.Contains(Path.GetFileName(dir))) continue;
                 if (File.Exists(Path.Combine(dir, ".credentials.json"))) continue;
@@ -85,7 +88,7 @@ public class ProfileStore
     /// </summary>
     public IReadOnlyList<string> CredentialSources(Profile p)
     {
-        var sources = new List<string>(2);
+        List<string> sources = new(2);
         if (p.Id == Data.ActiveProfileId && File.Exists(AppPaths.ClaudeCredentials) && HomeBelongsTo(p))
             sources.Add(AppPaths.ClaudeCredentials);
         if (File.Exists(p.CredentialsPath)) sources.Add(p.CredentialsPath);
@@ -94,27 +97,29 @@ public class ProfileStore
 
     public void RefreshMetadata(Profile p)
     {
-        var meta = CredentialsReader.Read(p.CredentialsPath);
-        if (meta is not null)
+        if (CredentialsReader.Read(p.CredentialsPath) is { } meta)
         {
             p.SubscriptionType = meta.SubscriptionType;
             p.RateLimitTier = meta.RateLimitTier;
         }
 
         // 계정 정보: 격리 로그인 폴더의 .claude.json 우선, 없으면 저장해 둔 oauthAccount.json
-        var acct = ClaudeConfig.FromClaudeJson(p.ClaudeJsonPath)
-                ?? ClaudeConfig.FromObjectFile(p.OAuthAccountPath);
-        StoreAccount(p, acct);
+        StoreAccount(p, ClaudeConfig.FromClaudeJson(p.ClaudeJsonPath) ?? ClaudeConfig.FromObjectFile(p.OAuthAccountPath));
     }
 
-    /// <summary>계정 정보를 프로필에 반영하고 oauthAccount.json 으로 보관한다.</summary>
+    /// <summary>계정 정보를 프로필에 반영하고 oauthAccount.json 으로 보관한다(내용이 달라졌을 때만 쓴다).</summary>
     private static void StoreAccount(Profile p, OAuthAccountInfo? info)
     {
         if (info is null) return;
         p.Email = info.Email;
         p.DisplayName = info.DisplayName;
         p.OrganizationName = info.OrganizationName;
-        try { File.WriteAllText(p.OAuthAccountPath, info.Raw); }
+        p.PlanDisplayName = info.PlanDisplayName;
+        try
+        {
+            if (File.Exists(p.OAuthAccountPath) && File.ReadAllText(p.OAuthAccountPath) == info.Raw) return;
+            File.WriteAllText(p.OAuthAccountPath, info.Raw);
+        }
         catch { /* best effort */ }
     }
 
@@ -132,7 +137,7 @@ public class ProfileStore
                 "현재 로그인된 Claude 계정이 없습니다. 먼저 터미널에서 'claude'로 로그인하세요.");
         }
 
-        var p = new Profile { Name = name };
+        Profile p = new() { Name = name };
         Directory.CreateDirectory(p.ConfigDir);
         File.Copy(AppPaths.ClaudeCredentials, p.CredentialsPath, overwrite: true);
         RefreshMetadata(p);
@@ -149,7 +154,7 @@ public class ProfileStore
     /// <summary>빈 프로필을 만든다. 이후 격리 로그인으로 자격증명을 채운다.</summary>
     public Profile CreateForLogin(string name)
     {
-        var p = new Profile { Name = name };
+        Profile p = new() { Name = name };
         Directory.CreateDirectory(p.ConfigDir);
         Data.Profiles.Add(p);
         Save();
@@ -169,14 +174,7 @@ public class ProfileStore
 
         if (File.Exists(p.CredentialsPath))
         {
-            try
-            {
-                string backup = Path.Combine(AppPaths.BackupsDir, $"credentials-{p.Id}-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-                File.Copy(p.CredentialsPath, backup, overwrite: true);
-                PruneBackups(20);
-            }
-            catch { /* best effort */ }
-
+            BackupCredentials(p.CredentialsPath, $"credentials-{p.Id}");
             try { File.Delete(p.CredentialsPath); } catch { /* best effort */ }
         }
 
@@ -191,8 +189,7 @@ public class ProfileStore
         // 1) 떠나는 활성 프로필에 갱신된 토큰을 되돌려 저장.
         //    단 ~/.claude 가 정말 그 프로필 계정일 때만 — 아니면 남의(또는 낡은) 토큰으로
         //    멀쩡한 보관본을 덮어써 계정이 망가진다.
-        var active = Active;
-        if (active is not null && active.Id != target.Id && File.Exists(AppPaths.ClaudeCredentials)
+        if (Active is { } active && active.Id != target.Id && File.Exists(AppPaths.ClaudeCredentials)
             && HomeBelongsTo(active))
         {
             try
@@ -213,21 +210,11 @@ public class ProfileStore
 
         // 2) 현재 ~/.claude 자격증명 백업
         Directory.CreateDirectory(AppPaths.ClaudeHome);
-        if (File.Exists(AppPaths.ClaudeCredentials))
-        {
-            string backup = Path.Combine(AppPaths.BackupsDir, $"credentials-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-            try
-            {
-                File.Copy(AppPaths.ClaudeCredentials, backup, overwrite: true);
-                PruneBackups(20);
-            }
-            catch { /* best effort */ }
-        }
+        if (File.Exists(AppPaths.ClaudeCredentials)) BackupCredentials(AppPaths.ClaudeCredentials, "credentials");
 
         // 3) 대상 활성화: 토큰 교체 + ~/.claude.json 의 oauthAccount 교체
         File.Copy(target.CredentialsPath, AppPaths.ClaudeCredentials, overwrite: true);
-        var targetAcct = ClaudeConfig.FromObjectFile(target.OAuthAccountPath);
-        if (targetAcct is not null)
+        if (ClaudeConfig.FromObjectFile(target.OAuthAccountPath) is { } targetAcct)
             ClaudeConfig.PatchHomeOAuthAccount(targetAcct.Raw);
         target.LastUsed = DateTime.Now;
         Data.ActiveProfileId = target.Id;
@@ -246,7 +233,7 @@ public class ProfileStore
     {
         var order = idOrder.ToList();
         var ordered = Data.Profiles
-            .OrderBy(p => { int i = order.IndexOf(p.Id); return i < 0 ? int.MaxValue : i; })
+            .OrderBy(p => order.IndexOf(p.Id) is var i and >= 0 ? i : int.MaxValue)
             .ToList();
         Data.Profiles.Clear();
         Data.Profiles.AddRange(ordered);
@@ -266,15 +253,19 @@ public class ProfileStore
         Save();
     }
 
-    private static void PruneBackups(int keep)
+    /// <summary>자격증명 파일을 backups\ 에 타임스탬프 사본으로 남기고 오래된 것은 정리한다(20개 보관).</summary>
+    private static void BackupCredentials(string source, string prefix)
     {
         try
         {
-            var stale = new DirectoryInfo(AppPaths.BackupsDir)
-                .GetFiles("credentials-*.json")
-                .OrderByDescending(f => f.CreationTimeUtc)
-                .Skip(keep);
-            foreach (var f in stale) f.Delete();
+            File.Copy(source, Path.Combine(AppPaths.BackupsDir, $"{prefix}-{DateTime.Now:yyyyMMdd-HHmmss}.json"), overwrite: true);
+            foreach (var f in new DirectoryInfo(AppPaths.BackupsDir)
+                         .GetFiles("credentials-*.json")
+                         .OrderByDescending(f => f.CreationTimeUtc)
+                         .Skip(20))
+            {
+                f.Delete();
+            }
         }
         catch { /* best effort */ }
     }

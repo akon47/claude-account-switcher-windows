@@ -223,6 +223,16 @@
     </Setter>
 </Style>
 
+<!-- Inline row icon action (KEYED) - small neutral icon button (e.g. recent sessions ▾); glyph turns White on hover. -->
+<Style x:Key="RowIconButtonStyle"
+       BasedOn="{StaticResource IconButtonStyle}"
+       TargetType="{x:Type Button}">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource SageMistBrush}" />
+</Style>
+
 <!-- Inline row delete (KEYED) - small icon button; glyph turns Vermilion on hover. -->
 <Style x:Key="DeleteRowButtonStyle"
        BasedOn="{StaticResource IconButtonStyle}"

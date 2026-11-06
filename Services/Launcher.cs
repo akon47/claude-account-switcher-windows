@@ -50,14 +50,14 @@ public static class Launcher
     /// </summary>
     private static void Start(Profile p, string cwd, ShellKind shell, string command, string title, bool runAsAdmin)
     {
-        var psi = shell switch
+        ProcessStartInfo psi = shell switch
         {
-            ShellKind.Cmd => new ProcessStartInfo
+            ShellKind.Cmd => new()
             {
                 FileName = "cmd.exe",
                 Arguments = $"/K set \"CLAUDE_CONFIG_DIR={p.ConfigDir}\" & title {EscapeCmdTitle(title)} & {command}",
             },
-            _ => new ProcessStartInfo
+            _ => new()
             {
                 FileName = "powershell.exe",
                 Arguments = $"-NoExit -Command \"$env:CLAUDE_CONFIG_DIR='{PsQuote(p.ConfigDir)}'; $Host.UI.RawUI.WindowTitle='{PsQuote(title)}'; {command}\"",
@@ -66,16 +66,9 @@ public static class Launcher
 
         psi.WorkingDirectory = cwd;
 
-        if (runAsAdmin)
-        {
-            // UAC 승격은 ShellExecute 로만 가능하다(앱 자신은 일반 권한이므로 실행할 때마다 UAC 창이 뜬다).
-            psi.UseShellExecute = true;
-            psi.Verb = "runas";
-        }
-        else
-        {
-            psi.UseShellExecute = false;
-        }
+        // UAC 승격은 ShellExecute 로만 가능하다(앱 자신은 일반 권한이므로 실행할 때마다 UAC 창이 뜬다).
+        psi.UseShellExecute = runAsAdmin;
+        if (runAsAdmin) psi.Verb = "runas";
 
         try
         {
@@ -97,7 +90,7 @@ public static class Launcher
     {
         try
         {
-            var psi = new ProcessStartInfo
+            ProcessStartInfo psi = new()
             {
                 // claude 는 보통 npm 셸(.cmd) 이라 직접 실행이 안 되므로 cmd 로 감싼다.
                 FileName = "cmd.exe",

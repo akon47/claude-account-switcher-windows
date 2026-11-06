@@ -40,12 +40,20 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
 
 ## Features
 
-- System-tray resident, dark themed UI, custom window chrome.
+- System-tray resident, dark themed UI, custom window chrome (Windows 11 snap layouts and rounded
+  corners), per-monitor DPI, single instance (relaunching brings the existing window forward),
+  remembered window placement.
 - Capture the currently logged-in account, add a new account (isolated login), switch, rename, delete.
 - Launch a profile in a new terminal in a chosen folder.
-- **Session usage at a glance** — each account shows its remaining 5-hour session limit with a
-  reset countdown. When the **weekly limit** is used up it shows **0%** with the time until the
-  weekly reset (since a full 5-hour window can't be used while the weekly cap is exhausted).
+- **Usage at a glance** — each account shows its remaining 5-hour session limit with a reset
+  countdown. When the **weekly limit** is used up it shows **0%** with the time until the weekly
+  reset (since a full 5-hour window can't be used while the weekly cap is exhausted). Plans without a
+  5-hour limit (verified **Ultra**) show the weekly remainder instead, and the tooltip lists session,
+  weekly and per-model limits. Plan badges follow the new names (Pro / Max / **Ultra**).
+- **Resume a recent session in one click** — the 🕘 button on an account row (or its right-click menu,
+  or the tray menu) lists that account's latest conversations; pick one to resume it under the same
+  account. The row menu also gathers switch, launch, re-login, keep-alive, copy email, open profile
+  folder and delete, with F5 / F2 / Enter / Delete / Ctrl+N / Ctrl+L shortcuts.
 - **Keep session alive** (per-account toggle) — the moment an account's 5-hour window resets, the app
   sends a tiny headless message so a fresh window starts right away. Runs while the tray app is resident.
   Two modes per account: **Always** (restart around the clock) or a **Schedule** — pick the reset time

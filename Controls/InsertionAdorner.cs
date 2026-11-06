@@ -18,7 +18,7 @@ public sealed class InsertionAdorner : Adorner
 
     static InsertionAdorner()
     {
-        var brush = new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4)); // Azure 액센트
+        SolidColorBrush brush = new(Color.FromRgb(0x00, 0x78, 0xD4)); // Azure 액센트
         brush.Freeze();
         CapBrush = brush;
         LinePen = new Pen(brush, 2);
@@ -46,11 +46,13 @@ public sealed class InsertionAdorner : Adorner
     private static Geometry Triangle(double x, double y, double s, bool pointRight)
     {
         double dir = pointRight ? 1 : -1;
-        var fig = new PathFigure { StartPoint = new Point(x, y - s), IsClosed = true };
-        fig.Segments.Add(new LineSegment(new Point(x, y + s), isStroked: true));
-        fig.Segments.Add(new LineSegment(new Point(x + dir * s, y), isStroked: true));
-        var g = new PathGeometry();
-        g.Figures.Add(fig);
+        PathFigure fig = new()
+        {
+            StartPoint = new Point(x, y - s),
+            IsClosed = true,
+            Segments = { new LineSegment(new Point(x, y + s), isStroked: true), new LineSegment(new Point(x + (dir * s), y), isStroked: true) },
+        };
+        PathGeometry g = new() { Figures = { fig } };
         g.Freeze();
         return g;
     }

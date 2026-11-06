@@ -10,6 +10,7 @@
         <ResourceDictionary Source="pack://application:,,,/Theme/Controls/List.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Theme/Controls/EditableTextBlock.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Theme/Controls/MenuToolTip.xaml" />
+        <ResourceDictionary Source="pack://application:,,,/Theme/Controls/ProgressBar.xaml" />
         <ResourceDictionary Source="pack://application:,,,/Theme/Controls/Window.xaml" />
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

@@ -26,7 +26,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
     private readonly Dictionary<string, Dictionary<string, string>> _all =
         new(StringComparer.OrdinalIgnoreCase);
-    private (string Culture, string Display)[] _available = [];
+    private readonly (string Culture, string Display)[] _available;
     private string _culture = Fallback;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -36,7 +36,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
     private LocalizationManager()
     {
-        var found = new List<(string Culture, string Display)>();
+        List<(string Culture, string Display)> found = [];
         foreach (var (key, dict) in DiscoverLocales())
         {
             string culture = dict.TryGetValue(MetaCulture, out var c) && !string.IsNullOrWhiteSpace(c)
@@ -56,7 +56,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         _available = found.OrderBy(x => x.Display, StringComparer.CurrentCulture).ToArray();
 
         // 스캔이 실패하더라도 앱이 죽지 않도록 최소한의 폴백을 보장한다.
-        if (!_all.ContainsKey(Fallback)) _all[Fallback] = new();
+        if (!_all.ContainsKey(Fallback)) _all[Fallback] = [];
         if (_available.Length == 0) _available = [(Fallback, "English")];
     }
 

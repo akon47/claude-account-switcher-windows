@@ -10,9 +10,10 @@
     <Geometry x:Key="Win_MaximizeGlyph">F0 M0,0 L10,0 L10,10 L0,10 Z M1.5,1.5 L8.5,1.5 L8.5,8.5 L1.5,8.5 Z</Geometry>
     <Geometry x:Key="Win_RestoreGlyph">F0 M3,0 L10,0 L10,7 L3,7 Z M4,1 L9,1 L9,6 L4,6 Z M0,3 L7,3 L7,10 L0,10 Z M1,4 L6,4 L6,9 L1,9 Z</Geometry>
     <Geometry x:Key="Win_CloseGlyph">M0,1 L1,0 L10,9 L9,10 Z M9,0 L10,1 L1,10 L0,9 Z</Geometry>
+
 <!--  Caption button style for the custom dark title bar (Minimize / Maximize / Restore / Close).  -->
-<!--  Flat, transparent; hover = CharcoalAshBrush. The CLOSE button overrides hover to VermilionBrush  -->
-<!--  via its own trigger inline on the button (see ThemedWindowStyle template).  -->
+<!--  Flat, transparent; hover = CharcoalAshBrush. The CLOSE button overrides hover to VermilionBrush.  -->
+<!--  Background 는 TemplateBinding — 스냅 레이아웃 호버(ThemedWindow 가 비클라이언트에서 직접 칠함)도 이 경로로 보인다.  -->
 <Style x:Key="Win_CaptionButtonStyle" TargetType="{x:Type Button}">
     <Setter Property="Width" Value="45" />
     <Setter Property="Height" Value="32" />
@@ -22,6 +23,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
     <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
     <Setter Property="Template">
         <Setter.Value>
@@ -75,29 +77,34 @@
     </Setter>
 </Style>
 
-<!--  WindowChrome definitions: Normal (resizable) and Maximized (no resize border).  -->
+<!--  WindowChrome: GlassFrameThickness=1 이면 DWM 이 그림자·1px 테두리·둥근 모서리(Win11)를 그린다(0 이면 전부 사라짐).
+      테두리 색은 ThemedWindow 가 DWMWA_BORDER_COLOR 로 테마색에 맞춘다. Maximized 는 리사이즈 테두리를 없앤다.  -->
 <WindowChrome x:Key="Win_NormalWindowChrome"
               CaptionHeight="32"
               CornerRadius="0"
-              GlassFrameThickness="0"
+              GlassFrameThickness="1"
               ResizeBorderThickness="6"
               UseAeroCaptionButtons="False" />
 
 <WindowChrome x:Key="Win_MaximizedWindowChrome"
               CaptionHeight="32"
               CornerRadius="0"
-              GlassFrameThickness="0"
+              GlassFrameThickness="1"
               ResizeBorderThickness="0"
               UseAeroCaptionButtons="False" />
 
 <!--  Themed dark Window with custom WindowChrome title bar.  -->
-<!--  Assumes the base window class registers CommandBindings for the SystemCommands routed commands.  -->
+<!--  Assumes the base window class (ThemedWindow) registers CommandBindings for the SystemCommands routed commands
+      and exposes ContentMargin (maximized frame compensation).  -->
 <Style x:Key="ThemedWindowStyle" TargetType="{x:Type Window}">
     <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
     <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource CharcoalAshBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <!-- 리사이즈 가능 창은 DWM 이 테두리를 그리므로 0. NoResize/CanMinimize 는 DWM 이 안 그려 아래 트리거가 1px 을 준다. -->
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="UseLayoutRounding" Value="True" />
+    <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
     <Setter Property="WindowChrome.WindowChrome" Value="{StaticResource Win_NormalWindowChrome}" />
     <Setter Property="Template">
         <Setter.Value>
@@ -106,7 +113,7 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}">
-                    <Grid x:Name="Win_ContentMargin">
+                    <Grid x:Name="Win_ContentMargin" Margin="{Binding ContentMargin, RelativeSource={RelativeSource TemplatedParent}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="32" />
                             <RowDefinition Height="*" />
@@ -120,26 +127,37 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
+                                <!--  App icon (only when the window sets one)  -->
+                                <Image x:Name="Win_Icon"
+                                       Grid.Column="0"
+                                       Width="16"
+                                       Height="16"
+                                       Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       Source="{TemplateBinding Icon}" />
+
                                 <!--  Window title (left)  -->
-                                <TextBlock Grid.Column="0"
-                                           Margin="12,0"
+                                <TextBlock Grid.Column="1"
+                                           Margin="10,0,12,0"
                                            VerticalAlignment="Center"
                                            Foreground="{StaticResource WhiteBrush}"
                                            Text="{TemplateBinding Title}"
                                            TextTrimming="CharacterEllipsis" />
 
                                 <!--  Caption buttons (right)  -->
-                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <StackPanel Grid.Column="3" Orientation="Horizontal">
                                     <!--  Minimize  -->
                                     <Button x:Name="Win_MinimizeButton"
+                                            AutomationProperties.Name="Minimize"
                                             Command="{x:Static SystemCommands.MinimizeWindowCommand}"
                                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                             Style="{StaticResource Win_CaptionButtonStyle}"
-                                            ToolTip="Minimize"
                                             WindowChrome.IsHitTestVisibleInChrome="True">
                                         <Path Width="10"
                                               Height="10"
@@ -150,10 +168,10 @@
 
                                     <!--  Maximize  -->
                                     <Button x:Name="Win_MaximizeButton"
+                                            AutomationProperties.Name="Maximize"
                                             Command="{x:Static SystemCommands.MaximizeWindowCommand}"
                                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                             Style="{StaticResource Win_CaptionButtonStyle}"
-                                            ToolTip="Maximize"
                                             WindowChrome.IsHitTestVisibleInChrome="True">
                                         <Path Width="10"
                                               Height="10"
@@ -164,10 +182,10 @@
 
                                     <!--  Restore (shown only when maximized)  -->
                                     <Button x:Name="Win_RestoreButton"
+                                            AutomationProperties.Name="Restore"
                                             Command="{x:Static SystemCommands.RestoreWindowCommand}"
                                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                             Style="{StaticResource Win_CaptionButtonStyle}"
-                                            ToolTip="Restore"
                                             Visibility="Collapsed"
                                             WindowChrome.IsHitTestVisibleInChrome="True">
                                         <Path Width="10"
@@ -179,10 +197,10 @@
 
                                     <!--  Close  -->
                                     <Button x:Name="Win_CloseButton"
+                                            AutomationProperties.Name="Close"
                                             Command="{x:Static SystemCommands.CloseWindowCommand}"
                                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                             Style="{StaticResource Win_CloseCaptionButtonStyle}"
-                                            ToolTip="Close"
                                             WindowChrome.IsHitTestVisibleInChrome="True">
                                         <Path Width="10"
                                               Height="10"
@@ -204,10 +222,14 @@
                 </Border>
 
                 <ControlTemplate.Triggers>
-                    <!--  Maximized: swap chrome, hide maximize / show restore, add content margin so it doesn't overflow.  -->
+                    <!--  No icon set: collapse the slot so the title hugs the left edge.  -->
+                    <Trigger Property="Icon" Value="{x:Null}">
+                        <Setter TargetName="Win_Icon" Property="Visibility" Value="Collapsed" />
+                    </Trigger>
+
+                    <!--  Maximized: swap chrome, hide maximize / show restore. Content margin comes from ThemedWindow.ContentMargin.  -->
                     <Trigger Property="WindowState" Value="Maximized">
                         <Setter Property="WindowChrome.WindowChrome" Value="{StaticResource Win_MaximizedWindowChrome}" />
-                        <Setter TargetName="Win_ContentMargin" Property="Margin" Value="7" />
                         <Setter TargetName="Win_MaximizeButton" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="Win_RestoreButton" Property="Visibility" Value="Visible" />
                     </Trigger>
@@ -227,5 +249,14 @@
             </ControlTemplate>
         </Setter.Value>
     </Setter>
+    <Style.Triggers>
+        <!--  DWM 은 리사이즈 불가 창엔 테두리를 그리지 않는다 → 직접 1px.  -->
+        <Trigger Property="ResizeMode" Value="NoResize">
+            <Setter Property="BorderThickness" Value="1" />
+        </Trigger>
+        <Trigger Property="ResizeMode" Value="CanMinimize">
+            <Setter Property="BorderThickness" Value="1" />
+        </Trigger>
+    </Style.Triggers>
 </Style>
 </ResourceDictionary>

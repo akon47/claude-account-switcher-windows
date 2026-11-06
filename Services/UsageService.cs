@@ -8,24 +8,44 @@ using System.Text.Json.Nodes;
 
 namespace ClaudeAccountSwitcher.Services;
 
+/// <summary>사용량 한도 창 하나(5시간 세션 또는 7일 주간). RemainingPercent = 100 − 사용률(%).</summary>
+public sealed record UsageWindow(double RemainingPercent, DateTimeOffset? ResetsAt);
+
 /// <summary>
-/// 세션 사용량. RemainingPercent = 100 - 5시간 창 사용률(%). ResetsAt = 5시간 창 리셋 시각(원본).
-/// 주간(7일) 한도도 함께 담는다 — 주간이 소진되면 5시간 창이 100%라도 실제로는 사용할 수 없다.
+/// 범위가 좁은 한도(usage 응답의 <c>limits[]</c> 중 모델별 주간 한도 등). 예: "Fable 주간 4% 남음".
+/// Severity 는 서버가 주는 값(normal / warning / critical …)을 그대로 담는다.
 /// </summary>
-public record SessionUsage(
-    double RemainingPercent,
-    DateTimeOffset? ResetsAt,
-    double? WeeklyRemainingPercent = null,
-    DateTimeOffset? WeeklyResetsAt = null)
+public sealed record ScopedLimit(string Label, double RemainingPercent, DateTimeOffset? ResetsAt, string Severity)
 {
-    /// <summary>주간 한도 소진(만료) 여부. 소진 시 표시상 0%로 취급한다.</summary>
-    public bool WeeklyExhausted => WeeklyRemainingPercent is <= 0;
+    public bool IsWarning => !string.Equals(Severity, "normal", StringComparison.OrdinalIgnoreCase);
+}
 
-    /// <summary>화면 표시용 남은 비율: 주간이 소진됐으면 0%, 아니면 5시간 창 잔여.</summary>
-    public double DisplayPercent => WeeklyExhausted ? 0 : RemainingPercent;
+/// <summary>
+/// 계정 사용량. Session = 5시간 창, Weekly = 7일 창. 둘 다 null 일 수는 없다(그 경우 조회 결과 자체가 null).
+/// <para>
+/// <b>Session 이 null 인 계정</b>이 있다 — 인증된 Ultra 플랜은 5시간 세션 제한이 없어 서버가
+/// <c>five_hour: null</c> 로 내려준다(2026-10-30 이후). 그런 계정은 주간 한도만 표시하고 세션 자동 유지는 의미가 없다.
+/// </para>
+/// </summary>
+public sealed record SessionUsage(UsageWindow? Session, UsageWindow? Weekly, IReadOnlyList<ScopedLimit> Scoped)
+{
+    /// <summary>이 플랜에 5시간 세션 창이 있는지. false = 주간 한도만 적용(인증된 Ultra 등).</summary>
+    public bool HasSessionWindow => Session is not null;
 
-    /// <summary>화면 표시용 리셋 시각: 주간 소진 시 주간 리셋까지, 아니면 5시간 창 리셋까지.</summary>
-    public DateTimeOffset? DisplayResetsAt => WeeklyExhausted ? WeeklyResetsAt : ResetsAt;
+    /// <summary>주간 한도 소진 여부. 소진되면 5시간 창이 남아 있어도 실제로는 쓸 수 없다.</summary>
+    public bool WeeklyExhausted => Weekly is { RemainingPercent: <= 0 };
+
+    /// <summary>화면의 주 표시가 주간 값인지(세션 창이 없거나 주간이 소진됐을 때).</summary>
+    public bool DisplayIsWeekly => WeeklyExhausted || Session is null;
+
+    /// <summary>화면 표시용 남은 비율: 주간 소진이면 0, 세션 창이 있으면 세션, 없으면 주간.</summary>
+    public double DisplayPercent => WeeklyExhausted ? 0 : (Session ?? Weekly)?.RemainingPercent ?? 0;
+
+    /// <summary>화면 표시용 리셋 시각(주 표시가 가리키는 창의 리셋 시각).</summary>
+    public DateTimeOffset? DisplayResetsAt => DisplayIsWeekly ? Weekly?.ResetsAt : Session?.ResetsAt;
+
+    /// <summary>경고 단계(normal 아님)인 범위 한도가 하나라도 있는지 — 목록에 ⚠ 를 붙일지 결정한다.</summary>
+    public bool HasScopedWarning => Scoped.Any(s => s.IsWarning);
 }
 
 /// <summary>사용량 조회 결과의 상태.</summary>
@@ -42,7 +62,7 @@ public enum UsageState
 }
 
 /// <summary>사용량 조회 결과. Usage 는 State == Ok 일 때만 채워진다.</summary>
-public record UsageResult(SessionUsage? Usage, UsageState State)
+public sealed record UsageResult(SessionUsage? Usage, UsageState State)
 {
     public static readonly UsageResult Unauthorized = new(null, UsageState.Unauthorized);
     public static readonly UsageResult Unavailable = new(null, UsageState.Unavailable);
@@ -52,9 +72,9 @@ public record UsageResult(SessionUsage? Usage, UsageState State)
 }
 
 /// <summary>
-/// 각 프로필의 Claude 세션 사용량을 oauth/usage 엔드포인트에서 조회한다.
-/// 저장된 액세스 토큰이 만료됐으면 refresh_token으로 갱신한 뒤 자격증명 파일에 되돌려 저장한다.
-/// (토큰 회전·저장 방식은 claude 자신이 하는 것과 동일하다. 갱신은 성공 시에만 기록한다.)
+/// 각 프로필의 Claude 사용량을 oauth/usage 엔드포인트에서 조회한다.
+/// 저장된 액세스 토큰이 만료됐으면 refresh_token 으로 갱신한 뒤 자격증명 파일에 되돌려 저장한다
+/// (토큰 회전·저장 방식은 claude 자신이 하는 것과 동일하다. 갱신은 성공 시에만 기록한다).
 /// 갱신 자체가 거부되면(=재로그인 필요) Unauthorized 로 알려 목록이 "다시 로그인 필요"를 보여줄 수 있게 한다.
 /// </summary>
 public sealed class UsageService
@@ -69,17 +89,16 @@ public sealed class UsageService
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
 
-    // 계정별 결과 캐시. usage는 5시간 창이라 자주 부를 필요가 없고,
-    // 과도한 호출은 429(rate limit)를 유발하므로 TTL 동안 캐시한다.
+    // 계정별 결과 캐시. 사용량은 자주 부를 필요가 없고 과도한 호출은 429 를 유발하므로 TTL 동안 캐시한다.
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-    private readonly Dictionary<string, (UsageResult Result, DateTime At, long Stamp)> _cache = new();
-    private readonly object _cacheLock = new();
+    private readonly Dictionary<string, (UsageResult Result, DateTime At, long Stamp)> _cache = [];
+    private readonly Lock _cacheLock = new();
 
     /// <summary>
-    /// 캐시를 적용해 세션 사용량을 조회한다. cacheKey는 보통 프로필 Id.
+    /// 캐시를 적용해 사용량을 조회한다. cacheKey 는 보통 프로필 Id.
     /// credentialsPaths 는 이 계정의 자격증명 후보(우선순위 순) — 활성 프로필이면 ~/.claude 의 라이브
     /// 토큰과 프로필 보관본이 모두 후보가 된다. 하나라도 살아 있으면 그 계정은 쓸 수 있는 것이다.
-    /// force=true면 TTL을 무시하고 새로 조회한다(새로고침 버튼).
+    /// force=true 면 TTL 을 무시하고 새로 조회한다(새로고침 버튼).
     /// 자격증명 파일이 바뀌면(재로그인·토큰 회전) TTL 이 남아 있어도 캐시를 버린다 —
     /// 로그인 직후까지 "다시 로그인 필요"가 남아 보이지 않게 한다.
     /// 일시적 실패(429 등) 시엔 직전 정상값을 유지하고 재시도 시점을 늦춘다.
@@ -88,7 +107,7 @@ public sealed class UsageService
     {
         if (credentialsPaths.Count == 0) return UsageResult.Unauthorized; // 저장된 자격증명 자체가 없음
 
-        var stamp = Stamp(credentialsPaths);
+        long stamp = Stamp(credentialsPaths);
         lock (_cacheLock)
         {
             if (!force && _cache.TryGetValue(cacheKey, out var c)
@@ -99,14 +118,14 @@ public sealed class UsageService
         }
 
         var result = await FetchFirstUsableAsync(credentialsPaths);
-        var after = Stamp(credentialsPaths); // 조회 중 토큰이 갱신됐을 수 있다
+        long after = Stamp(credentialsPaths); // 조회 중 토큰이 갱신됐을 수 있다
 
         lock (_cacheLock)
         {
             if (result.State is UsageState.Unavailable
                 && _cache.TryGetValue(cacheKey, out var prev) && prev.Result.State is UsageState.Ok)
             {
-                // 일시적 실패: 마지막 정상값을 유지하되 At을 갱신해 잠시 재시도하지 않는다(백오프).
+                // 일시적 실패: 마지막 정상값을 유지하되 At 을 갱신해 잠시 재시도하지 않는다(백오프).
                 _cache[cacheKey] = (prev.Result, DateTime.UtcNow, after);
                 return prev.Result;
             }
@@ -120,7 +139,7 @@ public sealed class UsageService
     private static long Stamp(IReadOnlyList<string> paths)
     {
         long stamp = 0;
-        foreach (var p in paths)
+        foreach (string p in paths)
         {
             try { if (File.Exists(p)) stamp = (stamp * 31) + File.GetLastWriteTimeUtc(p).Ticks; }
             catch { /* 접근 실패는 0 으로 취급 */ }
@@ -134,10 +153,10 @@ public sealed class UsageService
     /// (오프라인·429 상황에서 후보마다 호출을 반복하지 않기 위해).
     /// **모든** 후보가 거부돼야 "다시 로그인 필요"로 확정한다 — 하나라도 살아 있으면 계정은 멀쩡하다.
     /// </summary>
-    private async Task<UsageResult> FetchFirstUsableAsync(IReadOnlyList<string> paths)
+    private static async Task<UsageResult> FetchFirstUsableAsync(IReadOnlyList<string> paths)
     {
-        UsageResult last = UsageResult.Unauthorized;
-        foreach (var path in paths)
+        var last = UsageResult.Unauthorized;
+        foreach (string path in paths)
         {
             last = await FetchWithRefreshAsync(path);
             if (last.State is UsageState.Ok or UsageState.Unavailable) return last;
@@ -145,7 +164,7 @@ public sealed class UsageService
         return last;
     }
 
-    private async Task<UsageResult> FetchWithRefreshAsync(string credentialsPath)
+    private static async Task<UsageResult> FetchWithRefreshAsync(string credentialsPath)
     {
         try
         {
@@ -164,7 +183,7 @@ public sealed class UsageService
                 if (tokens is { } r1)
                 {
                     token = r1.Access;
-                    WriteTokens(credentialsPath, r1.Access, r1.Refresh, r1.ExpiresAtMs);
+                    WriteTokens(credentialsPath, r1);
                 }
                 else if (rejected)
                 {
@@ -175,7 +194,7 @@ public sealed class UsageService
             }
 
             var (usage, unauthorized) = await FetchUsageAsync(token);
-            if (usage is not null) return new UsageResult(usage, UsageState.Ok);
+            if (usage is not null) return new(usage, UsageState.Ok);
             if (!unauthorized) return UsageResult.Unavailable; // 429·오프라인·무료 플랜 등
 
             // 토큰이 (예상과 달리) 거부됨 → 한 번 더 갱신 재시도
@@ -184,9 +203,9 @@ public sealed class UsageService
             var (retry, retryRejected) = await TryRefreshAsync(refresh);
             if (retry is not { } r2) return retryRejected ? UsageResult.Unauthorized : UsageResult.Unavailable;
 
-            WriteTokens(credentialsPath, r2.Access, r2.Refresh, r2.ExpiresAtMs);
+            WriteTokens(credentialsPath, r2);
             var (usage2, unauthorized2) = await FetchUsageAsync(r2.Access);
-            if (usage2 is not null) return new UsageResult(usage2, UsageState.Ok);
+            if (usage2 is not null) return new(usage2, UsageState.Ok);
             return unauthorized2 ? UsageResult.Unauthorized : UsageResult.Unavailable;
         }
         catch { return UsageResult.Unavailable; }
@@ -203,8 +222,7 @@ public sealed class UsageService
 
             using var resp = await Http.SendAsync(req);
             // 401 만 "이 토큰은 못 쓴다"로 본다. 403 은 WAF 차단·권한 없음 등일 수 있어 재로그인 신호가 아니다.
-            if (resp.StatusCode is HttpStatusCode.Unauthorized)
-                return (null, true);
+            if (resp.StatusCode is HttpStatusCode.Unauthorized) return (null, true);
             if (!resp.IsSuccessStatusCode) return (null, false);
 
             return (Parse(await resp.Content.ReadAsStringAsync()), false);
@@ -212,49 +230,70 @@ public sealed class UsageService
         catch { return (null, false); }
     }
 
+    /// <summary>
+    /// usage 응답을 해석한다. <c>five_hour</c> 가 null 이어도(세션 제한이 없는 플랜) 주간 창이 있으면 유효한 결과다.
+    /// 두 창이 모두 없으면 null(무료 플랜 등 — 사용량 정보 없음).
+    /// </summary>
     private static SessionUsage? Parse(string json)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
-            if (!root.TryGetProperty("five_hour", out var fh) || fh.ValueKind != JsonValueKind.Object)
-                return null;
+            if (root.ValueKind != JsonValueKind.Object) return null;
 
-            var (remaining, reset) = ReadWindow(fh);
+            var session = ReadWindow(root, "five_hour");
+            var weekly = ReadWindow(root, "seven_day");
+            if (session is null && weekly is null) return null;
 
-            // 주간(7일) 한도. 없으면 null(=미소진 취급).
-            double? weeklyRemaining = null;
-            DateTimeOffset? weeklyReset = null;
-            if (root.TryGetProperty("seven_day", out var wk) && wk.ValueKind == JsonValueKind.Object)
-                (weeklyRemaining, weeklyReset) = ReadWindow(wk);
-
-            return new SessionUsage(remaining, reset, weeklyRemaining, weeklyReset);
+            return new SessionUsage(session, weekly, ReadScopedLimits(root));
         }
         catch { return null; }
     }
 
-    /// <summary>usage 창 객체(five_hour/seven_day)에서 (남은 %, 리셋 시각)을 뽑는다.</summary>
-    private static (double Remaining, DateTimeOffset? ResetsAt) ReadWindow(JsonElement win)
+    /// <summary>창 객체(five_hour/seven_day)를 읽는다. 없거나 null 이면 null.</summary>
+    private static UsageWindow? ReadWindow(JsonElement root, string name)
     {
-        double util = win.TryGetProperty("utilization", out var u) && u.ValueKind == JsonValueKind.Number
-            ? u.GetDouble() : 0;
+        if (!root.TryGetProperty(name, out var win) || win.ValueKind != JsonValueKind.Object) return null;
 
-        DateTimeOffset? reset = null;
-        if (win.TryGetProperty("resets_at", out var r) && r.ValueKind == JsonValueKind.String
-            && DateTimeOffset.TryParse(r.GetString(), out var dt))
-        {
-            reset = dt;
-        }
-
-        return (Math.Clamp(100 - util, 0, 100), reset);
+        double util = win.TryGetProperty("utilization", out var u) && u.ValueKind == JsonValueKind.Number ? u.GetDouble() : 0;
+        return new UsageWindow(Math.Clamp(100 - util, 0, 100), ReadTime(win, "resets_at"));
     }
 
-    private record RefreshedTokens(string Access, string Refresh, long ExpiresAtMs);
+    /// <summary>
+    /// <c>limits[]</c> 중 범위(scope)가 있는 항목 — 모델별 주간 한도 등 — 을 읽는다.
+    /// 전체 창(five_hour/seven_day)과 중복되는 scope 없는 항목은 건너뛴다.
+    /// </summary>
+    private static IReadOnlyList<ScopedLimit> ReadScopedLimits(JsonElement root)
+    {
+        if (!root.TryGetProperty("limits", out var limits) || limits.ValueKind != JsonValueKind.Array) return [];
+
+        List<ScopedLimit> list = [];
+        foreach (var l in limits.EnumerateArray())
+        {
+            if (!l.TryGetProperty("scope", out var scope) || scope.ValueKind != JsonValueKind.Object) continue;
+
+            string? label = scope.TryGetProperty("model", out var model) && model.ValueKind == JsonValueKind.Object
+                && model.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
+            label ??= scope.TryGetProperty("surface", out var surface) ? surface.GetString() : null;
+            if (string.IsNullOrWhiteSpace(label)) continue;
+
+            double percent = l.TryGetProperty("percent", out var p) && p.ValueKind == JsonValueKind.Number ? p.GetDouble() : 0;
+            string severity = l.TryGetProperty("severity", out var s) ? s.GetString() ?? "normal" : "normal";
+            list.Add(new ScopedLimit(label, Math.Clamp(100 - percent, 0, 100), ReadTime(l, "resets_at"), severity));
+        }
+        return list;
+    }
+
+    private static DateTimeOffset? ReadTime(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var r) && r.ValueKind == JsonValueKind.String
+            && DateTimeOffset.TryParse(r.GetString(), out var dt) ? dt : null;
+
+    private sealed record RefreshedTokens(string Access, string Refresh, long ExpiresAtMs);
 
     /// <summary>
     /// 리프레시 토큰으로 액세스 토큰을 재발급한다.
-    /// 반환: (토큰, 거부됨). 거부됨(4xx) = 리프레시 토큰이 폐기/만료 → 재로그인 필요.
+    /// 반환: (토큰, 거부됨). 거부됨 = 리프레시 토큰이 폐기/만료 → 재로그인 필요.
     /// 네트워크 오류·5xx·429 는 거부가 아니라 일시적 실패로 본다.
     /// </summary>
     private static async Task<(RefreshedTokens? Tokens, bool Rejected)> TryRefreshAsync(string refreshToken)
@@ -288,13 +327,13 @@ public sealed class UsageService
             string? access = root.TryGetProperty("access_token", out var a) ? a.GetString() : null;
             if (string.IsNullOrEmpty(access)) return (null, false);
 
-            // refresh_token은 회전될 수 있다(없으면 기존 것 유지).
-            string refresh = root.TryGetProperty("refresh_token", out var rt) && rt.GetString() is { } s && s.Length > 0
+            // refresh_token 은 회전될 수 있다(없으면 기존 것 유지).
+            string refresh = root.TryGetProperty("refresh_token", out var rt) && rt.GetString() is { Length: > 0 } s
                 ? s : refreshToken;
 
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             long expiresAtMs = root.TryGetProperty("expires_in", out var ei) && ei.ValueKind == JsonValueKind.Number
-                ? nowMs + ei.GetInt64() * 1000
+                ? nowMs + (ei.GetInt64() * 1000)
                 : nowMs + 3600_000;
 
             return (new RefreshedTokens(access, refresh, expiresAtMs), false);
@@ -311,7 +350,7 @@ public sealed class UsageService
     }
 
     /// <summary>
-    /// 응답 본문이 "이 자격증명은 더 이상 유효하지 않다"는 OAuth 거부인지 판정한다.
+    /// 응답 본문이 "이 자격증명은 더 이상 유효하지 않다"는 OAuth 거부인지 판정한다
     /// (invalid_grant = 리프레시 토큰 만료/폐기). 그 외의 오류는 일시적/인프라 문제로 본다.
     /// </summary>
     private static bool IsOAuthRejection(string body)
@@ -343,24 +382,23 @@ public sealed class UsageService
 
             string? t = o.TryGetProperty("accessToken", out var a) ? a.GetString() : null;
             string? r = o.TryGetProperty("refreshToken", out var rf) ? rf.GetString() : null;
-            DateTimeOffset? exp = null;
-            if (o.TryGetProperty("expiresAt", out var e) && e.ValueKind == JsonValueKind.Number)
-                exp = DateTimeOffset.FromUnixTimeMilliseconds(e.GetInt64());
+            DateTimeOffset? exp = o.TryGetProperty("expiresAt", out var e) && e.ValueKind == JsonValueKind.Number
+                ? DateTimeOffset.FromUnixTimeMilliseconds(e.GetInt64()) : null;
             return (t, r, exp);
         }
         catch { return (null, null, null); }
     }
 
     /// <summary>구조를 유지한 채 claudeAiOauth 의 토큰 3개 필드만 갱신해 되돌려 쓴다.</summary>
-    private static void WriteTokens(string path, string access, string refresh, long expiresAtMs)
+    private static void WriteTokens(string path, RefreshedTokens tokens)
     {
         try
         {
             if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject root) return;
             if (root["claudeAiOauth"] is not JsonObject o) return;
-            o["accessToken"] = access;
-            o["refreshToken"] = refresh;
-            o["expiresAt"] = expiresAtMs;
+            o["accessToken"] = tokens.Access;
+            o["refreshToken"] = tokens.Refresh;
+            o["expiresAt"] = tokens.ExpiresAtMs;
             File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* best effort: 실패해도 화면 표시만 영향 */ }

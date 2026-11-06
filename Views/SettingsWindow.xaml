@@ -5,137 +5,206 @@
     xmlns:ctrl="clr-namespace:ClaudeAccountSwitcher.Controls"
     xmlns:loc="clr-namespace:ClaudeAccountSwitcher.Localization"
     Title="{loc:Loc SettingsTitle}"
-    Width="470"
-    SizeToContent="Height"
-    ResizeMode="NoResize"
+    Width="520"
+    Height="640"
+    MinWidth="440"
+    MinHeight="420"
+    ResizeMode="CanResize"
     ShowInTaskbar="False"
     WindowStartupLocation="CenterOwner"
     Style="{DynamicResource ThemedWindowStyle}"
     >
-    <StackPanel Margin="24 20">
-        <TextBlock
-            Text="{loc:Loc SetLangHeader}"
-            FontSize="14"
-            FontWeight="SemiBold"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource WhiteBrush}"
-            />
-        <TextBlock
-            Text="{loc:Loc SetLangDesc}"
-            Margin="0 2 0 8"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource SageMistBrush}"
-            />
-        <ComboBox
-            Width="240"
-            HorizontalAlignment="Left"
-            ItemsSource="{Binding Languages}"
-            DisplayMemberPath="Display"
-            SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
-            />
+    <ctrl:ThemedWindow.Resources>
+        <!-- 섹션 카드: 제목 + 설명 + 컨트롤을 한 덩어리로 묶어 설정 항목의 경계를 또렷하게. -->
+        <Style x:Key="SectionCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CharcoalAshBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16 14" />
+            <Setter Property="Margin" Value="0 0 0 12" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource WhiteBrush}" />
+        </Style>
+        <Style x:Key="SectionDesc" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0 2 0 10" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="26 4 0 0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource SageMistBrush}" />
+        </Style>
+    </ctrl:ThemedWindow.Resources>
 
-        <Border
-            Height="1"
-            Background="{DynamicResource CharcoalAshBrush}"
-            Margin="0 20"
-            />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <TextBlock
-            Text="{loc:Loc SetShellHeader}"
-            FontSize="14"
-            FontWeight="SemiBold"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource WhiteBrush}"
-            />
-        <TextBlock
-            Text="{loc:Loc SetShellDesc}"
-            Margin="0 2 0 8"
-            Foreground="{DynamicResource SageMistBrush}"
-            TextWrapping="Wrap"
-            />
-        <ComboBox
-            Width="240"
-            HorizontalAlignment="Left"
-            ItemsSource="{Binding Shells}"
-            SelectedItem="{Binding SelectedShell, Mode=TwoWay}"
-            />
-        <CheckBox
-            Content="{loc:Loc SetShellAdmin}"
-            Margin="0 12 0 0"
-            IsChecked="{Binding RunAsAdmin, Mode=TwoWay}"
-            />
-        <TextBlock
-            Text="{loc:Loc SetShellAdminDesc}"
-            Margin="26 4 0 0"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource SageMistBrush}"
-            />
-
-        <Border
-            Height="1"
-            Background="{DynamicResource CharcoalAshBrush}"
-            Margin="0 20"
-            />
-
-        <TextBlock
-            Text="{loc:Loc SetSkipHeader}"
-            FontSize="14"
-            FontWeight="SemiBold"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource WhiteBrush}"
-            />
-        <TextBlock
-            Margin="0 2 0 10"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource SageMistBrush}"
+        <ScrollViewer
+            Grid.Row="0"
+            VerticalScrollBarVisibility="Auto"
+            Padding="20 18 20 0"
             >
-            <Run Text="{loc:Loc SetSkipCurrent}" /><Run Text="{Binding SkipPermissionsState, Mode=OneWay}" />
-        </TextBlock>
-        <Button
-            Content="{loc:Loc SetSkipReset}"
-            HorizontalAlignment="Left"
-            Padding="12 6"
-            Command="{Binding ResetSkipPermissionsCommand}"
-            IsEnabled="{Binding CanResetSkipPermissions}"
-            />
+            <StackPanel>
+                <!-- 일반 -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc SetGeneralHeader}" />
+                        <CheckBox
+                            Content="{loc:Loc TrayAutostart}"
+                            Margin="0 10 0 0"
+                            IsChecked="{Binding RunAtStartup, Mode=TwoWay}"
+                            />
+                        <CheckBox
+                            Content="{loc:Loc TrayExplorer}"
+                            Margin="0 10 0 0"
+                            IsChecked="{Binding ExplorerMenuEnabled, Mode=TwoWay}"
+                            />
+                        <CheckBox
+                            Content="{loc:Loc SetStatusLine}"
+                            Margin="0 10 0 0"
+                            IsChecked="{Binding StatusLineEnabled, Mode=TwoWay}"
+                            />
+                        <Grid Margin="0 14 0 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                Grid.Column="0"
+                                Text="{loc:Loc SetLangHeader}"
+                                VerticalAlignment="Center"
+                                Margin="0 0 12 0"
+                                Foreground="{DynamicResource WhiteBrush}"
+                                />
+                            <ComboBox
+                                Grid.Column="1"
+                                Width="220"
+                                HorizontalAlignment="Left"
+                                ItemsSource="{Binding Languages}"
+                                DisplayMemberPath="Display"
+                                SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 실행 -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc SetShellHeader}" />
+                        <TextBlock Style="{StaticResource SectionDesc}" Text="{loc:Loc SetShellDesc}" />
+                        <ComboBox
+                            Width="220"
+                            HorizontalAlignment="Left"
+                            ItemsSource="{Binding Shells}"
+                            SelectedItem="{Binding SelectedShell, Mode=TwoWay}"
+                            />
+                        <CheckBox
+                            Content="{loc:Loc SetShellAdmin}"
+                            Margin="0 12 0 0"
+                            IsChecked="{Binding RunAsAdmin, Mode=TwoWay}"
+                            />
+                        <TextBlock Style="{StaticResource Hint}" Text="{loc:Loc SetShellAdminDesc}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 권한 건너뛰기 -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc SetSkipHeader}" />
+                        <TextBlock Style="{StaticResource SectionDesc}">
+                            <Run Text="{loc:Loc SetSkipCurrent}" /><Run FontWeight="SemiBold" Foreground="{DynamicResource WhiteBrush}" Text="{Binding SkipPermissionsState, Mode=OneWay}" />
+                        </TextBlock>
+                        <Button
+                            Content="{loc:Loc SetSkipReset}"
+                            HorizontalAlignment="Left"
+                            Command="{Binding ResetSkipPermissionsCommand}"
+                            IsEnabled="{Binding CanResetSkipPermissions}"
+                            />
+                    </StackPanel>
+                </Border>
+
+                <!-- 업데이트 -->
+                <Border Style="{StaticResource SectionCard}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc SetUpdateHeader}" />
+                        <CheckBox
+                            Content="{loc:Loc SetAutoUpdate}"
+                            Margin="0 10 0 12"
+                            IsChecked="{Binding AutoUpdateCheck, Mode=TwoWay}"
+                            />
+                        <Button
+                            Content="{loc:Loc SetCheckNow}"
+                            HorizontalAlignment="Left"
+                            Command="{Binding CheckUpdatesCommand}"
+                            />
+                    </StackPanel>
+                </Border>
+
+                <!-- 정보 -->
+                <Border Style="{StaticResource SectionCard}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Image
+                            Grid.Column="0"
+                            Width="40"
+                            Height="40"
+                            Margin="0 2 14 0"
+                            VerticalAlignment="Top"
+                            RenderOptions.BitmapScalingMode="HighQuality"
+                            Source="pack://application:,,,/Resources/app.ico"
+                            />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="Claude Account Switcher" />
+                            <TextBlock
+                                Margin="0 2 0 0"
+                                Foreground="{DynamicResource SageMistBrush}"
+                                Text="{Binding VersionText, Mode=OneWay}"
+                                />
+                            <TextBlock
+                                Margin="0 6 0 10"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource SageMistBrush}"
+                                Text="{loc:Loc SetAboutDesc}"
+                                />
+                            <WrapPanel>
+                                <Button
+                                    Content="{loc:Loc SetGitHub}"
+                                    Margin="0 0 8 6"
+                                    Command="{Binding OpenRepositoryCommand}"
+                                    />
+                                <Button
+                                    Content="{loc:Loc SetOpenData}"
+                                    Margin="0 0 8 6"
+                                    Command="{Binding OpenDataFolderCommand}"
+                                    />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
 
         <Border
-            Height="1"
-            Background="{DynamicResource CharcoalAshBrush}"
-            Margin="0 20"
-            />
-
-        <TextBlock
-            Text="{loc:Loc SetGeneralHeader}"
-            FontSize="14"
-            FontWeight="SemiBold"
-            TextWrapping="Wrap"
-            Foreground="{DynamicResource WhiteBrush}"
-            />
-        <CheckBox
-            Content="{loc:Loc TrayAutostart}"
-            Margin="0 12 0 0"
-            IsChecked="{Binding RunAtStartup, Mode=TwoWay}"
-            />
-        <CheckBox
-            Content="{loc:Loc TrayExplorer}"
-            Margin="0 10 0 0"
-            IsChecked="{Binding ExplorerMenuEnabled, Mode=TwoWay}"
-            />
-        <CheckBox
-            Content="{loc:Loc SetStatusLine}"
-            Margin="0 10 0 0"
-            IsChecked="{Binding StatusLineEnabled, Mode=TwoWay}"
-            />
-
-        <Grid Margin="0 24 0 0">
-            <TextBlock
-                VerticalAlignment="Center"
-                Margin="0 0 96 0"
-                TextWrapping="Wrap"
-                Foreground="{DynamicResource SageMistBrush}"
-                Text="{Binding Version, Mode=OneWay}"
-                />
+            Grid.Row="1"
+            BorderBrush="{DynamicResource CharcoalAshBrush}"
+            BorderThickness="0 1 0 0"
+            Padding="20 12"
+            >
             <Button
                 Content="{loc:Loc SetClose}"
                 HorizontalAlignment="Right"
@@ -144,6 +213,6 @@
                 IsDefault="True"
                 IsCancel="True"
                 />
-        </Grid>
-    </StackPanel>
+        </Border>
+    </Grid>
 </ctrl:ThemedWindow>

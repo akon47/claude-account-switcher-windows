@@ -23,7 +23,7 @@ public static class UpdateService
 
     private static HttpClient CreateClient()
     {
-        var c = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+        HttpClient c = new() { Timeout = TimeSpan.FromSeconds(20) };
         // GitHub API 는 User-Agent 가 없으면 403 을 준다.
         c.DefaultRequestHeaders.UserAgent.ParseAdd("Claude-Account-Switcher");
         c.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
@@ -86,7 +86,7 @@ public static class UpdateService
         await using var src = await resp.Content.ReadAsStreamAsync(ct);
         await using var dst = File.Create(path);
 
-        var buffer = new byte[81920];
+        byte[] buffer = new byte[81920];
         long read = 0;
         int n;
         while ((n = await src.ReadAsync(buffer, ct)) > 0)

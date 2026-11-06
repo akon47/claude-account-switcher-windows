@@ -1,5 +1,33 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:popt="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="pack://application:,,,/Theme/Brushes.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- 공용 효과/모션 토큰. 컨트롤 사전들이 이 파일을 머지해 StaticResource 로 참조한다. -->
     <DropShadowEffect x:Key="DefaultDropShadowEffect" popt:Freeze="True" BlurRadius="10" Direction="270" Opacity=".15" ShadowDepth="4" Color="Black" />
+
+    <!-- 모션: 짧고(120ms) 부드럽게(CircleEase Out). 토스트/오버레이 등 뷰 애니메이션이 공유한다. -->
+    <CircleEase x:Key="Motion_EaseOut" popt:Freeze="True" EasingMode="EaseOut" />
+    <Duration x:Key="Motion_Fast">0:0:0.12</Duration>
+    <Duration x:Key="Motion_Normal">0:0:0.2</Duration>
+
+    <!-- 전역 키보드 포커스 표시: 스톡의 검은 점선은 다크 배경에서 보이지 않는다 → AzureMist 점선 라운드 사각형.
+         (자체 포커스 링을 그리는 Button 스타일은 FocusVisualStyle 을 null 로 두고 있어 영향 없음.) -->
+    <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="-2"
+                               RadiusX="3"
+                               RadiusY="3"
+                               SnapsToDevicePixels="True"
+                               Stroke="{StaticResource AzureMistBrush}"
+                               StrokeDashArray="1 2"
+                               StrokeThickness="1" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

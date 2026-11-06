@@ -81,25 +81,25 @@ public static class SessionBundle
         IProgress<double>? progress = null,
         CancellationToken ct = default)
     {
-        var manifest = new Manifest
+        Manifest manifest = new()
         {
             Format = FormatId,
             Version = CurrentVersion,
             ExportedAt = DateTime.Now.ToString("o"),
             App = appVersion,
-            Sessions = new List<ManifestSession>(),
-            Workdirs = new List<ManifestWorkdir>(),
+            Sessions = [],
+            Workdirs = [],
         };
 
         // 1) 담을 파일 목록을 먼저 만든다((원본경로, zip 엔트리명, 크기)) → 진행률 총량 계산.
-        var files = new List<(string Source, string Entry, long Size)>();
-        var addedEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        List<(string Source, string Entry, long Size)> files = [];
+        HashSet<string> addedEntries = new(StringComparer.OrdinalIgnoreCase);
 
         void Plan(string source, string entry)
         {
             if (!File.Exists(source) || !addedEntries.Add(entry)) return;
             long size = 0;
-            try { size = new FileInfo(source).Length; } catch { }
+            try { size = new FileInfo(source).Length; } catch { /* 접근 불가 — 0 으로 */ }
             files.Add((source, entry, size));
         }
 
@@ -142,7 +142,7 @@ public static class SessionBundle
         // 2) 작업 폴더(cwd) 내용 — 제외 목록 적용, enc 로 dedupe.
         if (includeWorkdirs)
         {
-            var doneFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> doneFolders = new(StringComparer.OrdinalIgnoreCase);
             foreach (var s in sessions)
             {
                 if (string.IsNullOrEmpty(s.Cwd) || !Directory.Exists(s.Cwd)) continue;
@@ -166,8 +166,8 @@ public static class SessionBundle
         string tmp = destPath + ".tmp";
         try
         {
-            using (var fs = new FileStream(tmp, FileMode.Create, FileAccess.Write))
-            using (var zip = new ZipArchive(fs, ZipArchiveMode.Create))
+            using (FileStream fs = new(tmp, FileMode.Create, FileAccess.Write))
+            using (ZipArchive zip = new(fs, ZipArchiveMode.Create))
             {
                 foreach (var (source, entry, size) in files)
                 {
@@ -190,7 +190,7 @@ public static class SessionBundle
         }
         catch
         {
-            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* best effort */ }
             throw;
         }
     }
@@ -220,16 +220,16 @@ public static class SessionBundle
         ExtractSafely(zip, extractRoot, progress, ct);
 
         // 작업 폴더가 실제로 풀린 projectFolder 집합.
-        var workdirFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var w in manifest.Workdirs ?? new List<ManifestWorkdir>())
+        HashSet<string> workdirFolders = new(StringComparer.OrdinalIgnoreCase);
+        foreach (var w in manifest.Workdirs ?? [])
         {
             if (string.IsNullOrEmpty(w.ProjectFolder)) continue;
             string dir = Path.Combine(extractRoot, WorkdirsRoot, w.ProjectFolder);
             if (Directory.Exists(dir)) workdirFolders.Add(w.ProjectFolder);
         }
 
-        var result = new List<SessionEntry>();
-        foreach (var ms in manifest.Sessions ?? new List<ManifestSession>())
+        List<SessionEntry> result = [];
+        foreach (var ms in manifest.Sessions ?? [])
         {
             if (string.IsNullOrEmpty(ms.Id) || string.IsNullOrEmpty(ms.ProjectFolder)) continue;
 
@@ -247,7 +247,7 @@ public static class SessionBundle
                 Cwd = ms.Cwd ?? "",
                 FilePath = file,
                 ProfileId = "",                       // 번들 출처(다른 PC 계정) → 로컬 계정과 매칭 안 됨
-                ProfileName = string.IsNullOrEmpty(ms.SourceProfileName) ? "?" : ms.SourceProfileName!,
+                ProfileName = string.IsNullOrEmpty(ms.SourceProfileName) ? "?" : ms.SourceProfileName,
                 SourceEmail = ms.SourceProfileEmail,
                 LastModified = ParseDate(ms.LastModified),
                 Preview = ms.Preview,
@@ -274,7 +274,7 @@ public static class SessionBundle
             {
                 try { File.Copy(f, target); } catch { /* 개별 파일 실패는 무시 */ }
             }
-            try { done += new FileInfo(f).Length; } catch { }
+            try { done += new FileInfo(f).Length; } catch { /* 진행률만 영향 */ }
             progress?.Report(Math.Min(100, done * 100.0 / total));
         }
     }
@@ -282,15 +282,14 @@ public static class SessionBundle
     /// <summary>루트 아래 파일을 훑되, 제외 목록에 든 이름의 디렉터리는 통째로 건너뛴다(모든 깊이).</summary>
     private static IEnumerable<string> EnumerateIncludedFiles(string root)
     {
-        var stack = new Stack<string>();
-        stack.Push(root);
+        Stack<string> stack = new([root]);
         while (stack.Count > 0)
         {
             string dir = stack.Pop();
 
             string[] subdirs;
             try { subdirs = Directory.GetDirectories(dir); }
-            catch { subdirs = Array.Empty<string>(); }
+            catch { subdirs = []; }
             foreach (var sub in subdirs)
             {
                 string name = Path.GetFileName(sub);
@@ -300,14 +299,14 @@ public static class SessionBundle
 
             string[] filesInDir;
             try { filesInDir = Directory.GetFiles(dir); }
-            catch { filesInDir = Array.Empty<string>(); }
+            catch { filesInDir = []; }
             foreach (var f in filesInDir) yield return f;
         }
     }
 
     private static IEnumerable<string> DistinctExistingCwds(IEnumerable<SessionEntry> sessions)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
         foreach (var s in sessions)
         {
             if (string.IsNullOrEmpty(s.Cwd) || !Directory.Exists(s.Cwd)) continue;

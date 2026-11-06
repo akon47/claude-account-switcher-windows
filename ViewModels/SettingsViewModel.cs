@@ -1,4 +1,5 @@
-using System.Reflection;
+using System.Diagnostics;
+using System.IO;
 using ClaudeAccountSwitcher.Localization;
 using ClaudeAccountSwitcher.Models;
 using ClaudeAccountSwitcher.Services;
@@ -7,14 +8,17 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace ClaudeAccountSwitcher.ViewModels;
 
-/// <summary>설정 창 VM. 실행 셸 + 언어 선택 + 스킵 권한 기억값 재설정. 변경 즉시 저장한다.</summary>
-public partial class SettingsViewModel : ObservableObject
+/// <summary>설정 창 VM. 언어·실행 셸·권한·일반·업데이트·정보. 변경 즉시 저장한다.</summary>
+public sealed partial class SettingsViewModel : ObservableObject
 {
+    private const string RepoUrl = "https://github.com/akon47/claude-account-switcher-windows";
+
     private readonly ProfileStore _store;
+    private readonly UpdateCoordinator _updates;
 
     private static LocalizationManager L => LocalizationManager.Instance;
 
-    public ShellKind[] Shells { get; } = { ShellKind.PowerShell, ShellKind.Cmd };
+    public ShellKind[] Shells { get; } = [ShellKind.PowerShell, ShellKind.Cmd];
 
     [ObservableProperty] private ShellKind _selectedShell;
 
@@ -25,9 +29,10 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private LanguageOption _selectedLanguage;
 
-    public SettingsViewModel(ProfileStore store)
+    public SettingsViewModel(ProfileStore store, UpdateCoordinator updates)
     {
         _store = store;
+        _updates = updates;
         _selectedShell = _store.Data.Shell;
 
         Languages = LocalizationManager.Available.Select(a => new LanguageOption(a.Culture, a.Display)).ToArray();
@@ -41,12 +46,7 @@ public partial class SettingsViewModel : ObservableObject
     public bool RunAsAdmin
     {
         get => _store.Data.RunAsAdmin;
-        set
-        {
-            _store.Data.RunAsAdmin = value;
-            _store.Save();
-            OnPropertyChanged();
-        }
+        set { _store.Data.RunAsAdmin = value; _store.Save(); OnPropertyChanged(); }
     }
 
     /// <summary>Windows 로그인 시 자동 실행(HKCU Run). 트레이 메뉴 토글과 같은 레지스트리를 가리킨다.</summary>
@@ -89,6 +89,13 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>시작 시·주기적 자동 업데이트 확인.</summary>
+    public bool AutoUpdateCheck
+    {
+        get => _store.Data.AutoUpdateCheck;
+        set { _store.Data.AutoUpdateCheck = value; _store.Save(); OnPropertyChanged(); }
+    }
+
     partial void OnSelectedShellChanged(ShellKind value)
     {
         _store.Data.Shell = value;
@@ -103,6 +110,7 @@ public partial class SettingsViewModel : ObservableObject
         _store.Save();
         // 코드로 만든 표시 문자열은 수동 갱신
         OnPropertyChanged(nameof(SkipPermissionsState));
+        OnPropertyChanged(nameof(VersionText));
     }
 
     public string SkipPermissionsState => _store.Data.SkipPermissions switch
@@ -114,15 +122,8 @@ public partial class SettingsViewModel : ObservableObject
 
     public bool CanResetSkipPermissions => _store.Data.SkipPermissions is not null;
 
-    /// <summary>앱 버전 (예: v0.1.0).</summary>
-    public string Version
-    {
-        get
-        {
-            var v = Assembly.GetExecutingAssembly().GetName().Version;
-            return v is null ? "" : $"v{v.Major}.{v.Minor}.{v.Build}";
-        }
-    }
+    /// <summary>앱 버전 문구(예: "버전 0.12.0").</summary>
+    public string VersionText => L.Tr("SetVersionFmt", UpdateService.CurrentVersion.ToString(3));
 
     [RelayCommand]
     private void ResetSkipPermissions()
@@ -131,5 +132,27 @@ public partial class SettingsViewModel : ObservableObject
         _store.Save();
         OnPropertyChanged(nameof(SkipPermissionsState));
         OnPropertyChanged(nameof(CanResetSkipPermissions));
+    }
+
+    /// <summary>지금 업데이트 확인(결과를 항상 알려준다). 진행 중엔 버튼이 잠긴다.</summary>
+    [RelayCommand]
+    private Task CheckUpdates() => _updates.CheckAsync(manual: true);
+
+    [RelayCommand]
+    private static void OpenDataFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.AppDataDir);
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppPaths.AppDataDir}\"") { UseShellExecute = true });
+        }
+        catch { /* best effort */ }
+    }
+
+    [RelayCommand]
+    private static void OpenRepository()
+    {
+        try { Process.Start(new ProcessStartInfo(RepoUrl) { UseShellExecute = true }); }
+        catch { /* best effort */ }
     }
 }

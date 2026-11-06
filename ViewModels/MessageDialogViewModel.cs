@@ -8,7 +8,7 @@ namespace ClaudeAccountSwitcher.ViewModels;
 public enum MessageDialogKind { Info, Error, Question }
 
 /// <summary>정보/오류/확인 메시지 다이얼로그 ViewModel.</summary>
-public partial class MessageDialogViewModel : ObservableObject
+public sealed partial class MessageDialogViewModel : ObservableObject
 {
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _message = "";

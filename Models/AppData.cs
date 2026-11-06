@@ -1,11 +1,9 @@
 namespace ClaudeAccountSwitcher.Models;
 
-/// <summary>
-/// 앱 영속 데이터. %APPDATA%\ClaudeAccountSwitcher\profiles.json 에 저장된다.
-/// </summary>
-public class AppData
+/// <summary>앱 영속 데이터. %APPDATA%\ClaudeAccountSwitcher\profiles.json 에 저장된다.</summary>
+public sealed class AppData
 {
-    public List<Profile> Profiles { get; set; } = new();
+    public List<Profile> Profiles { get; set; } = [];
 
     /// <summary>현재 ~/.claude 에 활성화된 프로필 Id (없으면 null).</summary>
     public string? ActiveProfileId { get; set; }
@@ -43,4 +41,13 @@ public class AppData
 
     /// <summary>동시 실행 시 claude 하단에 계정 상태줄(👤 이메일·플랜·이름·세션%)을 설치할지. 기본 켜짐.</summary>
     public bool StatusLine { get; set; } = true;
+
+    /// <summary>시작 시·주기적으로 GitHub 릴리스에서 새 버전을 확인할지. 끄면 트레이/설정의 수동 확인만 동작.</summary>
+    public bool AutoUpdateCheck { get; set; } = true;
+
+    /// <summary>관리 창의 마지막 위치/크기. 다음에 열 때 같은 자리에 복원한다.</summary>
+    public WindowPlacement? MainWindowPlacement { get; set; }
+
+    /// <summary>"창을 닫아도 트레이에서 계속 실행됩니다" 안내를 이미 보였는지(최초 1회만).</summary>
+    public bool CloseToTrayHintShown { get; set; }
 }

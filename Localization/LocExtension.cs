@@ -8,7 +8,7 @@ namespace ClaudeAccountSwitcher.Localization;
 /// LocalizationManager 인덱서에 바인딩하므로 언어 변경 시 실시간으로 갱신된다.
 /// </summary>
 [MarkupExtensionReturnType(typeof(object))]
-public class LocExtension : MarkupExtension
+public sealed class LocExtension : MarkupExtension
 {
     public LocExtension() { }
 
@@ -19,11 +19,7 @@ public class LocExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider)
     {
-        var binding = new Binding($"[{Key}]")
-        {
-            Source = LocalizationManager.Instance,
-            Mode = BindingMode.OneWay,
-        };
+        Binding binding = new($"[{Key}]") { Source = LocalizationManager.Instance, Mode = BindingMode.OneWay };
         return binding.ProvideValue(serviceProvider);
     }
 }

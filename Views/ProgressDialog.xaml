@@ -29,24 +29,7 @@
             Minimum="0"
             Maximum="100"
             Value="{Binding Progress}"
-            Background="{DynamicResource CharcoalAshBrush}"
-            Foreground="{DynamicResource AzureBrush}"
-            BorderThickness="0"
-            >
-            <ProgressBar.Template>
-                <ControlTemplate TargetType="ProgressBar">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="4" SnapsToDevicePixels="True">
-                        <Grid ClipToBounds="True">
-                            <Border x:Name="PART_Track" />
-                            <Border x:Name="PART_Indicator"
-                                    HorizontalAlignment="Left"
-                                    Background="{TemplateBinding Foreground}"
-                                    CornerRadius="4" />
-                        </Grid>
-                    </Border>
-                </ControlTemplate>
-            </ProgressBar.Template>
-        </ProgressBar>
+            />
         <Grid>
             <TextBlock
                 Text="{Binding ProgressText}"

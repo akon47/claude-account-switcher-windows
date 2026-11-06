@@ -37,33 +37,60 @@
   첫 실행 시 윈도우 UI 언어로 자동 선택.
 - **자동 업데이트**: `Services/UpdateService.cs` 가 GitHub `releases/latest` 태그를 현재 어셈블리 버전과
   비교 → 새 버전이면 `*Setup.exe` 자산을 받아 인스톨러 실행(시작 시 1회 + 트레이 "업데이트 확인" 메뉴).
-- **버전**: csproj `<Version>`(현재 0.11.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
+- **버전**: csproj `<Version>`(현재 0.12.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
+- **플랜 이름(2026-10-30 변경)**: Max 5x → **Max**, Max 20x → **Ultra**. 자격증명의 `subscriptionType`/`rateLimitTier`
+  는 그대로(`max` / `default_claude_max_20x`)이고 `oauthAccount.planDisplayName`("Ultra")이 새로 들어온다.
+  `PlanFormatter` 는 표시 이름이 있으면 그대로, 없으면 등급으로 추정(20x→Ultra, 5x/없음→Max).
+- **인증된 Ultra 는 5시간 세션 창이 없다**: usage 응답이 `five_hour: null` + `seven_day` 만 온다. `UsageService` 는
+  이를 `SessionUsage.HasSessionWindow=false` 로 다루고(예전엔 통째로 버려 "—"만 보였음), 목록은 "주간 NN%"를 주 표시로,
+  세션 자동 유지는 비활성(체크박스 잠금 + 감시자 스킵), 상태줄 ps1 도 `seven_day` 로 폴백한다.
+  응답의 `limits[]`(모델별 `weekly_scoped`, severity)도 읽어 툴팁에 보여주고 경고면 ⚠ 를 붙인다.
 
 ## 아키텍처 (파일 맵)
 
 ```
-App.xaml(.cs)              합성 루트(DI). 트레이 상주 + 트레이 메뉴(빠른 전환/자동실행/탐색기/설정/종료),
-                          --launch <id> --dir <path> 인자 처리(탐색기 메뉴에서 호출). 창은 DI로 resolve.
-Controls/ThemedWindow.cs   커스텀 다크 타이틀바용 경량 Window 베이스(SystemCommands 바인딩만; DI/P-Invoke 결합 없음)
-Views/MainWindow.xaml(.cs) 관리 창(ThemedWindow). 프로필 목록(플랜 색뱃지/세션 색/활성 녹색 표시등) + 캡처/추가/전환/실행/이름변경/삭제/새로고침/설정
+App.xaml(.cs)              합성 루트(DI). 단일 인스턴스(SingleInstance) + 전역 예외 처리(테마 오류창, 앱은 계속) + 트레이 상주
+                          + 트레이 메뉴(빠른 전환 / 새 창 실행▸계정 / 최근 세션 이어하기▸(전 계정, 열 때 비동기) / 자동실행 /
+                          탐색기 / 설정 / 업데이트 / 종료; 툴팁에 활성 계정·잔량). --launch <id> --dir <path>(탐색기 메뉴),
+                          --show, --autostart, --screenshot <png> [--page main|settings|sessions](UI 검증용 렌더 후 종료).
+                          관리 창 X = 트레이로 숨김(최초 1회 안내 풍선). 창은 DI로 resolve.
+app.manifest               PerMonitorV2 DPI + longPathAware + asInvoker.
+Controls/ThemedWindow.cs   커스텀 다크 타이틀바 Window 베이스. SystemCommands 바인딩 + DWM 힌트(다크 프레임·둥근 모서리·테두리색)
+                          + Win11 스냅 레이아웃(WM_NCHITTEST→HTMAXBUTTON, 호버/클릭 직접 처리) + 최대화 프레임 여백(ContentMargin, DPI).
+                          P/Invoke 는 Controls/NativeMethods.cs 한곳에.
+Views/MainWindow.xaml(.cs) 관리 창(ThemedWindow). 프로필 목록(플랜 색뱃지/잔량 색/⚠ 모델별 한도/활성 녹색 표시등) + 캡처/추가/전환/
+                          실행/이름변경/삭제/새로고침/설정. 행 우클릭 메뉴(전환·새 창·최근 세션 이어하기▸·다시 로그인·세션 유지·
+                          이메일 복사·폴더 열기·삭제) + 행 끝 🕘 드롭다운(같은 목록). 빈 상태 안내, 조회 중 얇은 진행줄,
+                          토스트(전환/복사/삭제), 단축키(F5·F2·Enter·Delete·Ctrl+N·Ctrl+Shift+N·Ctrl+L·Ctrl+H·Ctrl+,).
+                          창 위치/크기 기억(WindowPlacementBehavior). 처음 열면 활성 계정이 기본 선택.
                           이름칸 더블클릭=편집(EditableTextBlock이 셀 전체 더블클릭 처리·핸들드), 행 더블클릭=전환(이름칸 제외)
 Views/InputDialog          이름 입력 다이얼로그(테마)
 Views/MessageDialog        정보/오류/확인 다이얼로그(테마)
 Views/SkipPermissionsDialog --dangerously-skip-permissions 부여 여부 + "다시 묻지 않음"
-Views/SettingsWindow       설정: 실행 셸(PowerShell/cmd)·관리자 권한으로 실행 + 스킵권한 기억값 재설정
+Views/SettingsWindow       설정(카드 섹션): 일반(자동실행/탐색기/상태줄/언어) · 실행 셸·관리자 권한 · 스킵권한 재설정 ·
+                          업데이트(자동 확인 토글 + 지금 확인) · 정보(버전/GitHub/데이터 폴더)
 Views/KeepAliveDialog      세션 유지 방식 다이얼로그: 항상(리셋 즉시) / 시간표(첫 리셋 시각 + 하루 창 개수, 미리보기).
                           목록 "세션 유지" 칸의 라벨 버튼("항상" / "11:00 ×4")을 누르면 열림. 확인 시 토글도 켜짐
 Views/SessionBrowserWindow 세션 브라우저: 소스 계정 선택→세션 목록(프로젝트/이름/마지막사용/미리보기), 대상 계정 골라 이어하기(resume).
                           다중선택 후 "내보내기"로 번들(.claudesession) 저장 / "파일에서 가져오기"로 다른 PC 번들 열어 이어하기
 ViewModels/*               MainViewModel / InputDialog / MessageDialog / SkipPermissionsDialog / KeepAliveDialog / Settings / ProfileItem
+                          / SessionMenuEntry(최근 세션 메뉴 한 줄: Session/Loading/Empty/Browse). ProfileItem 은 Owner(MainViewModel)에
+                          명령을 위임하고 RecentSessions 를 메뉴가 열릴 때 채운다(LoadRecentSessionsCommand).
 Services/IDialogService    테마 다이얼로그 추상화(ShowInput/Confirm/ShowInfo/ShowError/AskSkipPermissions/ShowSettings)
-Services/DialogService     IDialogService 구현(ProfileStore 주입). 활성 창을 owner로 잡음.
+Services/DialogService     IDialogService 구현(IServiceProvider 주입 — 창 VM 은 컨테이너에서 꺼내 순환 참조 없음). 활성 창을 owner로.
+Services/LaunchService.cs  "이 계정으로 띄운다" 사용자 흐름 한곳: 스킵권한 결정 → 폴더 선택/복원 → 세션 복사 → 실행.
+                          관리창 [새 창 실행]·행 메뉴 최근 세션·세션 브라우저·트레이·탐색기 --launch 가 공유.
+Services/UpdateCoordinator.cs  업데이트 흐름(확인→동의→진행률 다운로드→인스톨러→종료 요청). 시작 8초 후 1회 + 6시간마다(AutoUpdateCheck).
+Services/SingleInstance.cs 뮤텍스 + 이름 있는 이벤트. 두 번째 인스턴스는 첫 인스턴스에 "창 보여라" 신호만 보내고 종료.
+Services/UsageFormatter.cs 사용량 → 문자열(목록/트레이 "73%" 또는 "주간 85%", 리셋 카운트다운, 상세 툴팁). 목록·트레이가 공유.
+Services/ClipboardHelper.cs 클립보드 쓰기(잠김 재시도).
 Services/Launcher.cs        CLAUDE_CONFIG_DIR 격리로 PowerShell/cmd + claude 실행(셸·스킵권한·관리자권한 선택).
                           CLAUDE_CONFIG_DIR 은 ProcessStartInfo 가 아니라 셸 명령 안에서 설정한다 — 관리자 승격은
                           ShellExecute(Verb=runas) 라 EnvironmentVariables 를 못 쓰기 때문(두 경로를 한 방식으로 통일).
                           LaunchLogin = `claude auth login` 만 띄우는 로그인 전용(브라우저 인증 때문에 승격하지 않음)
 Services/ProfileStore.cs    캡처/전환/삭제/메타갱신 핵심 로직. CredentialSources(계정의 자격증명 후보:
-                          활성이면 ~/.claude + 프로필 보관본) / HomeBelongsTo(~/.claude 가 이 프로필 계정인지)
+                          활성이면 ~/.claude + 프로필 보관본) / HomeBelongsTo(~/.claude 가 이 프로필 계정인지).
+                          Save 는 tmp→Replace(+.bak), Load 는 깨지면 .bak 폴백. oauthAccount.json 은 내용이 바뀔 때만 쓴다.
 Services/UpdateService.cs   GitHub Releases 기반 자동 업데이트(최신 확인/다운로드/인스톨러 실행)
 Services/SessionStore.cs   프로필별 대화 세션(트랜스크립트) 열거 + 다른 계정으로 복사해 이어하기(resume) 지원.
                           세션 파일 `<configdir>\projects\<enc>\<id>.jsonl`(enc 는 cwd 로만 결정→계정 무관).
@@ -91,17 +118,23 @@ Services/SessionKeepAliveService.cs  세션 자동 유지 백그라운드 감시
 Services/KeepAliveScheduler.cs  시간표 슬롯 계산(로컬 시각). 하루 슬롯 = (첫 리셋 − 5h) 부터 5시간 간격 N개(N≤4, 25h 겹침 방지).
                           어제/오늘/내일 슬롯을 함께 봐 자정 넘김·전날 시작을 처리. CurrentSlot / NextSlotStart / 표시 포맷
 Models/KeepAliveSchedule.cs  시간표 설정(FirstResetAt: TimeSpan, WindowsPerDay 1~4). Normalized() 로 손편집 값 방어
-Services/StatusLineProvisioner.cs  동시 실행 시 프로필 settings.json 에 claude statusLine 설치(👤 이메일·플랜·이름·세션%). powershell -File <ps1>, ps1 은 prefix 바이트 + stdin five_hour 세션%
-Services/PlanFormatter.cs   구독→플랜 라벨(Pro/Max 5x) 공유 포맷(목록 뱃지 + statusLine)
+Services/StatusLineProvisioner.cs  동시 실행 시 프로필 settings.json 에 claude statusLine 설치(👤 이메일·플랜·이름·세션%). powershell -File <ps1>, ps1 은 prefix 바이트 + stdin five_hour 세션%(없으면 seven_day 주간%)
+Services/PlanFormatter.cs   구독→플랜 라벨(Pro / Max / Ultra; planDisplayName 우선) + PlanKind(뱃지 색) 공유 포맷(목록 뱃지 + statusLine)
 Services/AppPaths/ClaudeConfig/CredentialsReader/AutoStart/ExplorerMenu  경로/설정/자동실행/탐색기메뉴
+                          (ExplorerMenu.Sync 는 비파괴적: 바뀐 값만 쓰고 남는 항목만 지운다 — 아래 함정 참조)
 Localization/              LocalizationManager(런타임 스캔) + LocExtension + <culture>.json 14개(_culture/_name 메타)
-Models/Profile.cs          프로필 모델(계산 속성). SessionRemaining/SessionPercent(메모리 캐시) 포함.
+Models/Profile.cs          프로필 모델(계산 속성). PlanDisplayName(서버 표시 이름) / PlanLabel / LastUsage(SessionUsage 메모리 캐시).
                           KeepSessionAlive(토글) + KeepAliveSchedule(null=항상 모드, 값 있으면 시간표 모드)
-Models/AppData.cs          profiles.json 영속 데이터(Profiles, ActiveProfileId, LastWorkingDir, Shell, RunAsAdmin, SkipPermissions, Language, StatusLine)
+Models/AppData.cs          profiles.json 영속 데이터(Profiles, ActiveProfileId, LastWorkingDir, Shell, RunAsAdmin, SkipPermissions, Language,
+                          StatusLine, AutoUpdateCheck, MainWindowPlacement, CloseToTrayHintShown)
+Models/WindowPlacement.cs  창 위치/크기 기억값(DIP)
 Models/ShellKind.cs        PowerShell | Cmd
-ViewModels/ProfileItemVM   행 표시. PlanKind/PlanLabel(뱃지), StatusKind(표시등), SessionLevel(색 구간) 계산
-Theme/                     Colors/Brushes/Effects + Theme.xaml(엔트리) + Controls/*.xaml(컨트롤 스타일 8종). Violet=Max 뱃지
-Converters/                값 컨버터(markup-extension 패턴, 자체 구현). XAML에서 {conv:XxxConverter}로 사용
+ViewModels/ProfileItemVM   행 표시. PlanKind/PlanLabel(뱃지), StatusKind(표시등), SessionLevel(색 구간), HasSessionWindow(세션 창 유무) 계산
+Theme/                     Colors/Brushes(실제 쓰는 토큰만; Gold=Ultra, Violet=Max) + Effects(그림자·모션 토큰·전역 포커스 링)
+                          + Theme.xaml(엔트리) + Controls/*.xaml(컨트롤 스타일 9종: ProgressBar 포함).
+                          컨버터 라이브러리는 없다(필요하면 뷰에서 DataTrigger 또는 내장 BooleanToVisibilityConverter).
+Behaviors/                 첨부 동작: DoubleClick / FocusOnLoad / ListView(DragReorder·SelectedItems·RenameOnF2) / Menu(Opened·SubmenuOpened·
+                          IsDropDown) / Window(DialogResult·Activated·Closing·Placement)
 Installer/                 Setup.nsi(UTF-8 BOM!) + build-installer.ps1(-Version 주입 지원)
 Resources/app.ico          트레이/앱 아이콘(클로드 클레이 원+스왑 화살표). generate-icon.ps1 로 재생성
 .github/workflows/         build / bump-version / release(태그→인스톨러→릴리스) / winget(자동 제출)
@@ -131,7 +164,7 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 
 - 트레이+창 뼈대 / 캡처·전환·삭제 + 트레이 빠른전환 / 이메일 표시 + oauthAccount 동기화
 - 동시 실행(새 창) + 자동 실행 / 탐색기 우클릭 "Claude로 실행" 서브메뉴 / .sln + NSIS 인스톨러
-- **다크 테마 + MVVM(DI) 전면 적용** / 값 컨버터 라이브러리 자체 구현
+- **다크 테마 + MVVM(DI) 전면 적용**
 - **실행 옵션**: --dangerously-skip-permissions 묻는 다이얼로그(+다시 묻지 않음) / cmd·PowerShell 선택 / 설정 창
 - **UI 폴리시**: 새 아이콘 / 플랜 색뱃지 / 세션 한도 색(녹색·주황·버밀리온) / 활성 녹색 표시등 / 이름 더블클릭 충돌 해결
 - **다국어 14개** + 런타임 JSON 스캔(메타 기반) / **자동 업데이트**(GitHub Releases)
@@ -193,11 +226,17 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   취소(ERROR_CANCELLED 1223)는 오류로 취급하지 않고 조용히 넘어간다. 로그인 실행(새 계정 추가/다시 로그인)은
   브라우저 인증이 끼어들어 승격하지 않는다.
 
+- **0.12.0 상용 수준 정비**: 단일 인스턴스 / 전역 예외 처리 / 창 위치 기억 / PerMonitorV2 DPI / DWM 다크 프레임·둥근 모서리·
+  Win11 스냅 레이아웃 / 전역 포커스 링 / 빈 상태·진행줄·토스트 / 행 우클릭 메뉴 + 🕘 **최근 세션 바로 이어하기**(행·트레이) /
+  단축키 / 설정 창 카드 레이아웃(업데이트 자동 확인 토글·정보) / 6시간 주기 업데이트 확인 / profiles.json 원자적 저장(.bak) /
+  **Ultra 플랜·five_hour null 대응** / 탐색기 서브메뉴 비파괴 동기화 / 미사용 코드 제거(Converters 40여 개, 테마 토큰,
+  로컬라이즈 키) / 최신 C# 문법(primary ctor·컬렉션 식·GeneratedRegex·Lock·raw string) / `--screenshot` 검증 모드.
+
 ## 남은 일 / 다음 후보
 
 - 코드 서명(SmartScreen 제거 — 인증서 필요)
 - DPAPI로 저장 자격증명 암호화
-- 자동 업데이트 옵션(자동 확인 끄기/주기) 설정 노출, 다국어 추가
+- 업데이트 "이 버전 건너뛰기", 다국어 추가
 
 ## 알아둘 점 / 함정
 
@@ -205,6 +244,18 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   해석된다(앱 리소스의 형제 사전을 못 봄). 그래서 `Theme/Controls/*.xaml` 각 파일은 자기 의존 브러시를 위해
   `Brushes.xaml`+`Effects.xaml`을 직접 머지한다. **뷰(Views/*.xaml)에서는 테마 리소스를 `DynamicResource`로**
   참조한다(런타임 FindResource는 앱 리소스까지 재귀 탐색). 새 컨트롤 스타일/뷰 추가 시 이 규칙을 지킬 것.
+- **탐색기 서브메뉴가 가끔 비어 보이던 문제(0.12.0 수정)**: 예전 `ExplorerMenu.Sync` 가 서브키 트리를 통째로 지우고 다시
+  만들었는데, 격리 실행 중인 claude 가 `.claude.json` 을 쓸 때마다 파일 감시자가 Sync 를 호출해 그 빈 순간이 자주 생겼다
+  (빠른 우클릭에서 계정 목록이 안 나오던 증상). 이제 원하는 값을 먼저 전부 써 넣고(같으면 건너뜀) 남는 항목만 지운다 —
+  어느 순간에도 목록이 비지 않는다. 다시 파괴적으로 되돌리지 말 것.
+- **ThemedWindow 와 DWM/스냅 레이아웃**: WindowChrome 은 `GlassFrameThickness=1`(0 이면 DWM 그림자·테두리·둥근 모서리가
+  사라짐). 리사이즈 가능 창은 DWM 이 테두리를 그리므로 우리 BorderThickness=0, NoResize/CanMinimize 만 1px. 스냅 레이아웃은
+  `WM_NCHITTEST` 에 `HTMAXBUTTON` 을 돌려주는 대신 그 영역의 호버/클릭을 ThemedWindow 가 직접 처리한다(비클라이언트 메시지라
+  WPF 버튼이 못 받음). 최대화 여백은 `ContentMargin`(SM_CXFRAME+SM_CXPADDEDBORDER, DPI 반영)으로 템플릿에 바인딩.
+- **단일 인스턴스**: `Local\ClaudeAccountSwitcher.SingleInstance` 뮤텍스. 두 번째 실행은 기존 창을 앞으로 올리고 끝난다.
+  탐색기 `--launch` 와 `--screenshot` 은 이 검사 전에 처리된다(트레이 없이 바로 끝나는 모드).
+- **UI 검증은 `--screenshot`**: `Claude-Account-Switcher.exe --screenshot out.png --page main|settings|sessions` 이 창을
+  렌더링해 PNG 로 저장하고 종료한다(사람이 보지 않아도 에이전트가 확인 가능). 실행 중인 설치본과 무관하게 동작.
 - Win11은 새 트레이 아이콘을 `^`(숨겨진 아이콘)에 넣음 — 안 보이는 게 정상. ForceCreate() 사용 중.
 - 탐색기 메뉴는 Win11에선 "더 많은 옵션 표시"(Shift+우클릭) 안에 나타남(클래식 메뉴).
 - 탐색기 `--launch` 실행: 스킵권한이 "매번 묻기"(SkipPermissions=null)면 실행 전에 스킵권한 다이얼로그를
@@ -275,4 +326,7 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   StyleCop/Roslynator 빌드 강제는 `Directory.Build.props`에서 **옵트인**(현재 간결한 한 줄 스타일이라 켜면 ~300 포맷 경고).
 - **MVVM 노코드비하인드 지향**(사용자 선호): 뷰 상호작용은 커맨드(`[RelayCommand]`)+ `Behaviors/<타입>/` 첨부 동작으로,
   `*.xaml.cs` 이벤트 핸들러 지양. 단축키는 네이티브 `InputBindings`. 자세한 규약은 `CONTRIBUTING.md`.
-  (기존 코드비하인드: MainWindow 드래그/더블클릭, ProgressDialog, EditableTextBlock → 추후 비헤이비어로 이관 후보.)
+  행 메뉴는 ProfileItemViewModel.Owner(MainViewModel) 로 명령을 위임한다(ContextMenu 의 DataContext = 행).
+- **코드 스타일은 최신 C#**(사용자 요청): primary constructor(DI 서비스/VM), 컬렉션 식 `[]`, target-typed `new()`,
+  패턴 매칭(`is { } x`, 속성 패턴), `sealed` 기본, `[GeneratedRegex]`, `Lock`, raw string literal. 미사용 코드는 두지 않는다
+  (0.12.0 에서 Converters 라이브러리 전체·테마 토큰·로컬라이즈 키를 제거했다). 로거는 넣지 않는다(사용자 결정).
