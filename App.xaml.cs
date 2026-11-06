@@ -402,6 +402,11 @@ public partial class App : Application
         InitLanguage();
         _mainVm = _services.GetRequiredService<MainViewModel>();
 
+        // 바인딩 오류(화면엔 안 보이고 디버거 출력에만 남는다)를 <png>.binding.log 로 남겨 검증에 쓴다.
+        System.Diagnostics.PresentationTraceSources.Refresh();
+        System.Diagnostics.PresentationTraceSources.DataBindingSource.Listeners.Add(new System.Diagnostics.TextWriterTraceListener(output + ".binding.log"));
+        System.Diagnostics.PresentationTraceSources.DataBindingSource.Switch.Level = System.Diagnostics.SourceLevels.Warning;
+
         Window window = page switch
         {
             "settings" => new SettingsWindow { DataContext = _services.GetRequiredService<SettingsViewModel>() },
@@ -416,21 +421,67 @@ public partial class App : Application
             await Task.Delay(3000); // 사용량 조회·애니메이션이 안정될 때까지
             try
             {
-                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window);
-                RenderTargetBitmap bitmap = new((int)Math.Ceiling(window.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(window.ActualHeight * dpi.DpiScaleY),
-                    dpi.PixelsPerInchX, dpi.PixelsPerInchY, System.Windows.Media.PixelFormats.Pbgra32);
-                bitmap.Render(window);
-                PngBitmapEncoder encoder = new();
-                encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                using var fs = File.Create(output);
-                encoder.Save(fs);
+                if (page == "rowmenu") await RenderRowMenuAsync(window, output);
+                else RenderToPng(window, output);
             }
             finally
             {
+                System.Diagnostics.Trace.Flush();
                 Shutdown();
             }
         });
         return true;
+    }
+
+    /// <summary>첫 행의 우클릭 메뉴를 열어 렌더하고, "최근 세션" 서브메뉴를 열어 로딩 결과를 함께 저장한다(검증용).</summary>
+    private static async Task RenderRowMenuAsync(Window window, string output)
+    {
+        var list = FindDescendant<ListView>(window);
+        if (list is null || list.Items.Count == 0) return;
+        if (list.ItemContainerGenerator.ContainerFromIndex(0) is not ListViewItem { ContextMenu: { } menu } row) return;
+
+        menu.PlacementTarget = row;
+        menu.IsOpen = true;
+        await Task.Delay(600);
+        RenderToPng(menu, output);
+
+        if (menu.Items.OfType<MenuItem>().FirstOrDefault(m => m.ItemsSource is not null) is { } recent)
+        {
+            recent.IsSubmenuOpen = true;
+            await Task.Delay(2500); // 세션 목록 비동기 로딩
+            var headers = recent.Items.Cast<object>().Select(i => i switch
+            {
+                ViewModels.SessionMenuEntry e => $"[{e.Kind}] {e.Header}  ({e.Gesture})",
+                _ => i.ToString() ?? "",
+            });
+            await File.WriteAllLinesAsync(output + ".submenu.txt", headers);
+            if (recent.Template.FindName("Popup", recent) is System.Windows.Controls.Primitives.Popup { Child: FrameworkElement sub })
+                RenderToPng(sub, Path.ChangeExtension(output, ".submenu.png"));
+        }
+        menu.IsOpen = false;
+    }
+
+    private static void RenderToPng(FrameworkElement element, string output)
+    {
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(element);
+        RenderTargetBitmap bitmap = new((int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY),
+            dpi.PixelsPerInchX, dpi.PixelsPerInchY, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(element);
+        PngBitmapEncoder encoder = new();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var fs = File.Create(output);
+        encoder.Save(fs);
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is T hit) return hit;
+            if (FindDescendant<T>(child) is { } deeper) return deeper;
+        }
+        return null;
     }
 
     /// <summary>메뉴 표시용 라벨: 이름 + (이메일).</summary>
