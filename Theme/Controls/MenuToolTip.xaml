@@ -325,11 +325,15 @@
     </Style.Triggers>
 </Style>
 
-<!-- ============================ Separator (implicit) ============================ -->
+<!-- ============================ Separator ============================ -->
+<!-- 메뉴 안의 Separator 는 암시적 스타일이 아니라 MenuItem.SeparatorStyleKey 키 스타일을 쓴다(WPF 규칙).
+     그래서 키 스타일을 함께 정의하지 않으면 기본 Aero 구분선(밝고 두꺼운 3D 선)이 다크 메뉴에 그대로 그려진다. -->
 <Style TargetType="{x:Type Separator}">
     <Setter Property="SnapsToDevicePixels" Value="True" />
+    <Setter Property="OverridesDefaultStyle" Value="True" />
     <Setter Property="Margin" Value="8,4" />
     <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsTabStop" Value="False" />
     <Setter Property="Template">
         <Setter.Value>
             <ControlTemplate TargetType="{x:Type Separator}">
@@ -340,4 +344,7 @@
         </Setter.Value>
     </Setter>
 </Style>
+<Style x:Key="{x:Static MenuItem.SeparatorStyleKey}"
+       BasedOn="{StaticResource {x:Type Separator}}"
+       TargetType="{x:Type Separator}" />
 </ResourceDictionary>
