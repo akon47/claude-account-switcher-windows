@@ -31,6 +31,7 @@ public partial class App : Application
     private MainWindow? _window;
     private FileSystemWatcher? _watcher;
     private DispatcherTimer? _reloadDebounce;
+    private Action? _balloonAction;
 
     private static LocalizationManager L => LocalizationManager.Instance;
 
@@ -39,6 +40,9 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // 관리자 권한으로 다시 띄워진 경우(새 메뉴 옵션을 처음 켤 때 1회): 패키지 서명 인증서만 신뢰 등록하고 끝낸다.
+        if (e.Args.Contains(ShellPackage.TrustCertificateArgument)) { Shutdown(ShellPackage.TrustCertificateElevated()); return; }
 
         _services = BuildServiceProvider();
         _store = _services.GetRequiredService<ProfileStore>();
@@ -57,8 +61,8 @@ public partial class App : Application
 
         _store.Load();
         _store.PruneOrphanDirs();   // 목록에 없고 데이터도 없는 빈 프로필 폴더 정리
+        InitLanguage();             // 탐색기 메뉴 제목을 현재 언어로 쓰려면 레지스트리 복원보다 먼저 적용해야 한다
         ReconcileStartupSettings(); // 저장된 설정대로 자동실행/탐색기 레지스트리 복원(업데이트 후 초기화 방지)
-        InitLanguage();
 
         _mainVm = _services.GetRequiredService<MainViewModel>();
         _mainVm.Changed += OnDataChanged;
@@ -72,6 +76,7 @@ public partial class App : Application
         // --show 로 띄우면 토스트 대신 관리 창을 곧바로 연다(바로가기/스크립트에서 창을 열고 싶을 때).
         if (e.Args.Contains("--show")) ShowWindow();
         else if (!e.Args.Contains("--autostart")) Notify("Claude Account Switcher", L["TrayRunningBody"]);
+        _ = ShowModernMenuHintOnceAsync();
 
         // 세션 자동 유지 감시 시작(KeepSessionAlive 켜진 프로필의 5시간 창을 리셋 즉시 재시작).
         _services.GetRequiredService<SessionKeepAliveService>().Start();
@@ -126,14 +131,40 @@ public partial class App : Application
             data.RunAtStartup ??= AutoStart.IsEnabled();
             AutoStart.Set(data.RunAtStartup.Value);
 
-            // 탐색기 메뉴: 미설정이면 시드. ON 인데 지워졌으면 복원, OFF 인데 남아있으면 제거.
+            // 탐색기 메뉴: 미설정이면 시드. ON 이면 항상 다시 맞추고(지워졌으면 복원 + 설치 경로·새 메뉴용 제목 값 갱신,
+            // 바뀐 게 없으면 레지스트리에 쓰지 않는다), OFF 인데 남아있으면 제거.
             data.ExplorerMenu ??= ExplorerMenu.IsInstalled();
-            if (data.ExplorerMenu.Value && !ExplorerMenu.IsInstalled()) ExplorerMenu.Install(data.Profiles);
-            else if (!data.ExplorerMenu.Value && ExplorerMenu.IsInstalled()) ExplorerMenu.Uninstall();
+            if (data.ExplorerMenu.Value) ExplorerMenu.Install(data.Profiles);
+            else if (ExplorerMenu.IsInstalled()) ExplorerMenu.Uninstall();
+
+            ReconcileShellPackage();
 
             _store.Save();
         }
         catch { /* best effort — 복원 실패해도 앱은 동작 */ }
+    }
+
+    /// <summary>
+    /// Windows 11 새 메뉴 패키지를 설정과 맞춘다(백그라운드). 켜져 있는데 업데이트·재설치로 버전이나 설치 위치가 달라졌으면
+    /// 다시 등록하고, 꺼져 있거나 이 빌드에 패키지가 없는데(셸 확장 DLL 이 사라져 등록만 남은 상태) 남아 있으면 해제한다.
+    /// 시작할 때는 UAC 를 띄우지 않는다 — 인증서가 신뢰돼 있지 않으면 그대로 두고 클래식 메뉴로 동작한다.
+    /// 끝나면 클래식 동사를 등록 상태에 맞게 다시 쓴다(중복/누락 방지).
+    /// </summary>
+    private void ReconcileShellPackage()
+    {
+        bool wanted = _store.Data.ModernExplorerMenu && ShellPackage.IsSupported;
+        bool register = wanted && !ShellPackage.IsUpToDate;
+        bool unregister = !wanted && ShellPackage.IsRegistered;
+        if (!register && !unregister) return;
+
+        _ = Task.Run(() =>
+        {
+            if (unregister) ShellPackage.Unregister();
+            else if (ShellPackage.IsCertificateTrusted) ShellPackage.Register();
+        }).ContinueWith(_ => Dispatcher.BeginInvoke(() =>
+        {
+            if (ExplorerMenu.IsInstalled()) ExplorerMenu.Install(_store.Data.Profiles);
+        }), TaskScheduler.Default);
     }
 
     /// <summary>첫 실행이면 윈도우 언어로 기본값을 정하고, 저장된 언어를 적용한다.</summary>
@@ -174,7 +205,13 @@ public partial class App : Application
         _menu.Opened += (_, _) => RebuildMenu();
         _tray.ContextMenu = _menu;
         _tray.TrayLeftMouseUp += (_, _) => ShowWindow();
-        _tray.TrayBalloonTipClicked += (_, _) => ShowWindow(); // 토스트 클릭 → 관리 창 열기
+        _tray.TrayBalloonTipClicked += (_, _) =>
+        {
+            // 토스트 클릭 → 그 알림이 정해 둔 동작(없으면 관리 창 열기).
+            var action = _balloonAction ?? ShowWindow;
+            _balloonAction = null;
+            action();
+        };
 
         RebuildMenu();
         _tray.ForceCreate();
@@ -320,10 +357,27 @@ public partial class App : Application
         }
     }
 
-    private void Notify(string title, string body)
+    /// <param name="onClick">이 알림을 눌렀을 때 할 일. null 이면 관리 창을 연다.</param>
+    private void Notify(string title, string body, Action? onClick = null)
     {
+        _balloonAction = onClick;
         try { _tray?.ShowNotification(title, body, NotificationIcon.Info); }
         catch { /* 알림 실패는 무시 */ }
+    }
+
+    /// <summary>
+    /// 탐색기 메뉴를 쓰는데 Windows 11 새 메뉴 옵션은 꺼져 있는 사용자에게, 그 옵션이 있음을 한 번만 알린다 — 최신 Windows 11 은
+    /// 클래식 메뉴를 기본으로 숨겨서 "메뉴가 사라졌다"로 보이기 쉽다. 알림을 누르면 설정 창이 열린다.
+    /// </summary>
+    private async Task ShowModernMenuHintOnceAsync()
+    {
+        var data = _store.Data;
+        if (data.ModernMenuHintShown || data.ModernExplorerMenu || data.ExplorerMenu != true || !ShellPackage.IsSupported) return;
+        data.ModernMenuHintShown = true;
+        _store.Save();
+
+        await Task.Delay(TimeSpan.FromSeconds(5)); // 시작 알림("트레이에서 실행 중")과 겹치지 않게
+        Notify(L["TrayModernMenuHintTitle"], L["TrayModernMenuHintBody"], () => Dialogs.ShowSettings());
     }
 
     // ---------------------------------------------------------------- 관리 창
@@ -375,6 +429,9 @@ public partial class App : Application
 
         int di = Array.IndexOf(args, "--dir");
         string dir = di >= 0 && di + 1 < args.Length ? args[di + 1] : AppPaths.UserHome;
+        // 탐색기는 드라이브 루트를 "C:\" 로 넘기는데, \" 가 따옴표 이스케이프로 읽혀 인자가 C:" 로 들어온다(끝에 역슬래시가
+        // 붙는 경로는 루트뿐) → 따옴표를 떼고 역슬래시를 되돌린다. 경로에는 따옴표가 올 수 없으니 다른 경우와 겹치지 않는다.
+        if (dir.EndsWith('"')) dir = dir.TrimEnd('"') + "\\";
 
         _store.Load();
         if (_store.Data.Profiles.FirstOrDefault(x => x.Id == id) is { } p)
@@ -414,6 +471,9 @@ public partial class App : Application
             _ => _services.GetRequiredService<MainWindow>(),
         };
         window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        // --height <DIP>: 스크롤해야 보이는 아래쪽까지 한 장에 담고 싶을 때 창을 길게 띄운다.
+        int hi = Array.IndexOf(args, "--height");
+        if (hi >= 0 && hi + 1 < args.Length && double.TryParse(args[hi + 1], out double height)) window.Height = height;
         window.Show();
 
         _ = Dispatcher.InvokeAsync(async () =>

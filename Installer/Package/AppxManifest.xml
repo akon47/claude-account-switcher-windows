@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스파스 패키지(외부 위치 패키지) 매니페스트 — Windows 11 새 우클릭 메뉴에 "Claude로 실행"을 넣기 위한 것.
+  새 메뉴는 패키지 ID 가 있는 앱의 IExplorerCommand 만 받아 준다. 파일은 전부 NSIS 가 설치한 폴더(외부 위치)에 있고,
+  이 패키지는 그 위에 ID 와 확장 등록만 얹는다(build-package.ps1 이 버전을 채워 .msix 로 묶고 서명).
+
+  - Identity/Publisher 는 서명 인증서의 Subject 와 글자 그대로 같아야 한다.
+  - Clsid 는 Services\ExplorerMenuContract.cs 의 CommandClsid 와 같아야 한다(빌드 스크립트가 검사).
+  - Logo 만 패키지 안에서 읽고, 나머지 그림과 Executable/DLL 은 외부 위치(설치 폴더)에서 찾는다.
+-->
+<Package
+    xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+    xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+    xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+    xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+    xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+    IgnorableNamespaces="uap uap10 rescap desktop4 desktop5 com">
+
+  <Identity
+      Name="akon47.ClaudeAccountSwitcher"
+      Publisher="CN=akon47"
+      Version="0.0.0.0"
+      ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Claude Account Switcher</DisplayName>
+    <PublisherDisplayName>Kim, Hwan</PublisherDisplayName>
+    <Logo>shell\StoreLogo.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+  </Properties>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+
+  <Applications>
+    <Application
+        Id="App"
+        Executable="Claude-Account-Switcher.exe"
+        uap10:TrustLevel="mediumIL"
+        uap10:RuntimeBehavior="win32App">
+      <!-- 시작 메뉴 항목은 인스톨러 바로가기가 이미 있으므로 패키지 쪽은 숨긴다. -->
+      <uap:VisualElements
+          AppListEntry="none"
+          DisplayName="Claude Account Switcher"
+          Description="Claude Account Switcher"
+          BackgroundColor="transparent"
+          Square150x150Logo="shell\Logo150.png"
+          Square44x44Logo="shell\Logo44.png" />
+      <Extensions>
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="RunWithClaude" Clsid="F8F23DA5-FCF6-4F48-9F05-C4F06BF7F9E8" />
+            </desktop5:ItemType>
+            <desktop5:ItemType Type="Directory\Background">
+              <desktop5:Verb Id="RunWithClaude" Clsid="F8F23DA5-FCF6-4F48-9F05-C4F06BF7F9E8" />
+            </desktop5:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Claude Account Switcher shell extension">
+              <com:Class
+                  Id="F8F23DA5-FCF6-4F48-9F05-C4F06BF7F9E8"
+                  Path="shell\Claude-Account-Switcher.ShellExtension.dll"
+                  ThreadingModel="STA" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

@@ -37,7 +37,7 @@
   첫 실행 시 윈도우 UI 언어로 자동 선택.
 - **자동 업데이트**: `Services/UpdateService.cs` 가 GitHub `releases/latest` 태그를 현재 어셈블리 버전과
   비교 → 새 버전이면 `*Setup.exe` 자산을 받아 인스톨러 실행(시작 시 1회 + 트레이 "업데이트 확인" 메뉴).
-- **버전**: csproj `<Version>`(현재 0.12.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
+- **버전**: csproj `<Version>`(현재 0.13.0). CI는 `vX.Y.Z` 태그에서 버전을 주입(`build-installer.ps1 -Version`).
 - **플랜 이름(2026-10-30 변경)**: Max 5x → **Max**, Max 20x → **Ultra**. 자격증명의 `subscriptionType`/`rateLimitTier`
   는 그대로(`max` / `default_claude_max_20x`)이고 `oauthAccount.planDisplayName`("Ultra")이 새로 들어온다.
   `PlanFormatter` 는 표시 이름이 있으면 그대로, 없으면 등급으로 추정(20x→Ultra, 5x/없음→Max).
@@ -46,13 +46,23 @@
   세션 자동 유지는 비활성(체크박스 잠금 + 감시자 스킵), 상태줄 ps1 도 `seven_day` 로 폴백한다.
   응답의 `limits[]`(모델별 `weekly_scoped`, severity)도 읽어 툴팁에 보여주고 경고면 ⚠ 를 붙인다.
 
+- **Windows 11 새 우클릭 메뉴(스파스 패키지)**: 2026-10 선택 업데이트(KB5127936)부터 "더 많은 옵션 표시"가 **기본 꺼짐**이라
+  레지스트리 동사(클래식 메뉴)는 Shift+우클릭이나 Windows 설정 변경 없이는 안 보인다. 새 메뉴는 **패키지 ID 가 있는 앱의
+  IExplorerCommand** 만 받으므로, 설치 폴더를 외부 위치로 삼는 스파스 패키지(`shell\Claude-Account-Switcher.msix`)와
+  NativeAOT 셸 확장 DLL(`ShellExtension\` 프로젝트)을 함께 배포한다. 설정 "Windows 11 새 우클릭 메뉴에도 표시"(기본 꺼짐,
+  `AppData.ModernExplorerMenu`)를 켜면 `ShellPackage` 가 현재 사용자에게 패키지를 등록한다. 패키지는 **자체 서명**
+  (`CN=akon47`, 공개 인증서 `Installer\Package\signing.cer` 는 exe 에 임베드)이라 처음 한 번 UAC 로 인증서를
+  `LocalMachine\TrustedPeople` 에 넣는다. 메뉴 내용은 셸 확장이 **`ExplorerMenu` 가 쓰는 레지스트리 키를 그대로 읽어** 그린다
+  (`ExplorerMenuContract` 를 두 프로젝트가 공유) → 앱이 꺼져 있어도 뜨고 두 메뉴가 항상 같다.
+
 ## 아키텍처 (파일 맵)
 
 ```
 App.xaml(.cs)              합성 루트(DI). 단일 인스턴스(SingleInstance) + 전역 예외 처리(테마 오류창, 앱은 계속) + 트레이 상주
                           + 트레이 메뉴(빠른 전환 / 새 창 실행▸계정 / 최근 세션 이어하기▸(전 계정, 열 때 비동기) / 자동실행 /
                           탐색기 / 설정 / 업데이트 / 종료; 툴팁에 활성 계정·잔량). --launch <id> --dir <path>(탐색기 메뉴),
-                          --show, --autostart, --screenshot <png> [--page main|settings|sessions](UI 검증용 렌더 후 종료).
+                          --show, --autostart, --screenshot <png> [--page main|settings|sessions] [--height <DIP>](UI 검증용 렌더 후 종료),
+                          --trust-package-cert(관리자 권한으로 다시 띄워져 패키지 인증서만 신뢰 등록하고 종료).
                           관리 창 X = 트레이로 숨김(최초 1회 안내 풍선). 창은 DI로 resolve.
 app.manifest               PerMonitorV2 DPI + longPathAware + asInvoker.
 Controls/ThemedWindow.cs   커스텀 다크 타이틀바 Window 베이스. SystemCommands 바인딩 + DWM 힌트(다크 프레임·둥근 모서리·테두리색)
@@ -121,7 +131,17 @@ Models/KeepAliveSchedule.cs  시간표 설정(FirstResetAt: TimeSpan, WindowsPer
 Services/StatusLineProvisioner.cs  동시 실행 시 프로필 settings.json 에 claude statusLine 설치(👤 이메일·플랜·이름·세션%). powershell -File <ps1>, ps1 은 prefix 바이트 + stdin five_hour 세션%(없으면 seven_day 주간%)
 Services/PlanFormatter.cs   구독→플랜 라벨(Pro / Max / Ultra; planDisplayName 우선) + PlanKind(뱃지 색) 공유 포맷(목록 뱃지 + statusLine)
 Services/AppPaths/ClaudeConfig/CredentialsReader/AutoStart/ExplorerMenu  경로/설정/자동실행/탐색기메뉴
-                          (ExplorerMenu.Sync 는 비파괴적: 바뀐 값만 쓰고 남는 항목만 지운다 — 아래 함정 참조)
+                          (ExplorerMenu.Sync 는 비파괴적: 바뀐 값만 쓰고 남는 항목만 지운다 — 아래 함정 참조.
+                          IsInstalled 의 기준은 계정 목록 키 ClaudeAccountSwitcher.Sub — 제목·아이콘도 이 키에 둔다.
+                          새 메뉴 패키지가 등록돼 있으면 클래식 동사(Directory\shell\…)는 내린다)
+Services/ExplorerMenuContract.cs  탐색기 메뉴 레지스트리 계약(키·값 이름, CLSID, 패키지 이름). 앱과 ShellExtension 이 같은 파일을 컴파일
+Services/ShellPackage.cs   Windows 11 새 메뉴용 스파스 패키지: IsSupported(Win11 + shell\ 에 msix·DLL) / IsRegistered / IsUpToDate(버전+설치
+                          위치) / IsCertificateTrusted / Enable(필요하면 UAC→인증서 신뢰→등록) / Register / Unregister.
+                          등록·해제는 Windows PowerShell 의 Add-/Remove-AppxPackage(창 없음, -EncodedCommand)
+ShellExtension/            별도 프로젝트(NativeAOT, 약 1.5MB DLL). IExplorerCommand 구현: 최상위 "Claude로 실행" + 계정별 하위 명령.
+                          레지스트리(ExplorerMenuContract)에서 제목·계정·명령줄을 읽고, 고르면 %V 자리에 폴더를 넣어 CreateProcess.
+                          COM 은 소스 생성([GeneratedComInterface]/[GeneratedComClass]), 진입점은 DllGetClassObject/DllCanUnloadNow 내보내기.
+                          루트 csproj 는 DefaultItemExcludes 로 이 폴더를 뺀다
 Localization/              LocalizationManager(런타임 스캔) + LocExtension + <culture>.json 14개(_culture/_name 메타)
 Models/Profile.cs          프로필 모델(계산 속성). PlanDisplayName(서버 표시 이름) / PlanLabel / LastUsage(SessionUsage 메모리 캐시).
                           KeepSessionAlive(토글) + KeepAliveSchedule(null=항상 모드, 값 있으면 시간표 모드)
@@ -136,7 +156,11 @@ Theme/                     Colors/Brushes(실제 쓰는 토큰만; Gold=Ultra, V
 Behaviors/                 첨부 동작: DoubleClick / FocusOnLoad / ListView(DragReorder·SelectedItems·RenameOnF2) / Menu(Opened·SubmenuOpened·
                           IsDropDown) / Window(DialogResult·Activated·Closing·Placement)
 Installer/                 Setup.nsi(UTF-8 BOM!) + build-installer.ps1(-Version 주입 지원)
+                          + build-package.ps1(셸 확장 AOT publish → makeappx → signtool; 서명 키 없으면 건너뜀)
+                          + Package/(AppxManifest.xml, 로고 PNG, signing.cer) + new-signing-cert.ps1 / publish-signing-secrets.ps1
 Resources/app.ico          트레이/앱 아이콘(클로드 클레이 원+스왑 화살표). generate-icon.ps1 로 재생성
+Resources/app.png          같은 그림의 256px PNG — 화면에 크게 그릴 때(설정 > 정보) 쓴다. .ico 를 Image 소스로 쓰면 WPF 가
+                          16px 프레임을 골라 늘려서 흐려진다(창 Icon/트레이는 .ico 그대로)
 .github/workflows/         build / bump-version / release(태그→인스톨러→릴리스) / winget(자동 제출)
 winget/                    winget 매니페스트 3종 + README(식별자 akon47.ClaudeAccountSwitcher)
 ```
@@ -150,8 +174,13 @@ dotnet build Claude-Account-Switcher.csproj -c Debug      # 빌드
 dotnet run --project Claude-Account-Switcher.csproj       # 실행(트레이)
 powershell Installer\build-installer.ps1                  # 인스톨러 빌드 -> dist\Claude-Account-Switcher-Setup_v<버전>-x64.exe
 powershell Installer\build-installer.ps1 -Version 0.3.0   # 버전 주입(CI는 태그값 전달)
-powershell Resources\generate-icon.ps1                    # app.ico 재생성
+powershell Resources\generate-icon.ps1                    # app.ico + 패키지 로고(Installer\Package\shell\*.png) 재생성
+powershell Installer\publish-signing-secrets.ps1          # 패키지 서명 키를 GitHub 시크릿(MSIX_CERT_PFX/PASSWORD)으로 등록
 ```
+
+- 인스톨러 빌드는 스파스 패키지도 만든다 → **VS C++ 빌드 도구**(NativeAOT 링크)와 **Windows SDK**(makeappx/signtool)가 필요.
+  서명 인증서(`signing.cer` 와 같은 지문 + 개인 키)가 `CurrentUser\My` 에 없으면 패키지만 건너뛰고 인스톨러는 만들어진다
+  (그 빌드에서는 "새 우클릭 메뉴" 옵션이 숨는다).
 
 - **재빌드 전 실행 중인 `Claude-Account-Switcher.exe`를 종료**해야 함 (exe 잠금).
   `Get-Process Claude-Account-Switcher | Stop-Process -Force`
@@ -231,10 +260,19 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   단축키 / 설정 창 카드 레이아웃(업데이트 자동 확인 토글·정보) / 6시간 주기 업데이트 확인 / profiles.json 원자적 저장(.bak) /
   **Ultra 플랜·five_hour null 대응** / 탐색기 서브메뉴 비파괴 동기화 / 미사용 코드 제거(Converters 40여 개, 테마 토큰,
   로컬라이즈 키) / 최신 C# 문법(primary ctor·컬렉션 식·GeneratedRegex·Lock·raw string) / `--screenshot` 검증 모드.
+- **0.13.0 Windows 11 새 우클릭 메뉴**: 스파스 패키지 + NativeAOT 셸 확장으로 새 메뉴에 "Claude로 실행"을 직접 등록
+  (설정 옵션, 기본 꺼짐, 켜고 끌 때 체크박스 아래에 "적용 중… → 등록했습니다" 한 줄) / 탐색기 메뉴를 쓰는데 옵션이 꺼진
+  Windows 11 사용자에게 1회 트레이 안내(`AppData.ModernMenuHintShown`, 누르면 설정 창) / **드라이브 루트에서 탐색기 메뉴 실행이
+  안 되던 버그 수정**(`--dir "C:\"` 가 `C:"` 로 들어옴) / 설정 > 정보 아이콘 흐림 수정(app.png) / release 워크플로 수동 실행(시험 빌드).
 
 ## 남은 일 / 다음 후보
 
-- 코드 서명(SmartScreen 제거 — 인증서 필요)
+- **Windows 11 새 우클릭 메뉴에서 아직 안 해 본 것(0.13.0)**: ① 사람이 직접 하는 제거(조용하지 않은 제거)에서 certutil 로 인증서를
+  지우는 UAC 단계, ② UAC 창이 실제로 뜨는 PC 에서의 옵션 켜기(개발 PC 는 "확인 없이 승격" 정책이라 창이 안 떴다),
+  ③ KB5127936 이후 빌드의 새 메뉴 화면("앱 확장" 하위 메뉴로 묶이는 모습) — 개발 PC 는 26200.9457 이라 그 전 화면만 봤다.
+  나머지(옵션 켜기·끄기, 덮어 설치, 버전이 바뀌는 업데이트 후 재등록, DLL 잠김, 조용한 제거와 재설치)는 이 PC 에서 확인했다.
+- 코드 서명(SmartScreen 제거 — 인증서 필요). 공인 인증서가 생기면 스파스 패키지도 그걸로 서명해 UAC 단계를 없앨 수 있다
+  (build-package.ps1 의 서명 단계와 `ShellPackage` 의 인증서 신뢰 단계만 바뀐다).
 - DPAPI로 저장 자격증명 암호화
 - 업데이트 "이 버전 건너뛰기", 다국어 추가
 
@@ -257,7 +295,33 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
 - **UI 검증은 `--screenshot`**: `Claude-Account-Switcher.exe --screenshot out.png --page main|settings|sessions` 이 창을
   렌더링해 PNG 로 저장하고 종료한다(사람이 보지 않아도 에이전트가 확인 가능). 실행 중인 설치본과 무관하게 동작.
 - Win11은 새 트레이 아이콘을 `^`(숨겨진 아이콘)에 넣음 — 안 보이는 게 정상. ForceCreate() 사용 중.
-- 탐색기 메뉴는 Win11에선 "더 많은 옵션 표시"(Shift+우클릭) 안에 나타남(클래식 메뉴).
+- 탐색기 메뉴는 Win11에선 기본적으로 "더 많은 옵션 표시"(Shift+우클릭) 안에 나타난다(클래식 메뉴). 2026-10 업데이트부터는
+  그 항목도 기본 꺼짐(설정 > 개인 설정 > 상황에 맞는 메뉴). 새 메뉴에 직접 넣는 길은 스파스 패키지뿐이다(아래).
+- **스파스 패키지/셸 확장 함정(2026-11, 이 PC 에서 확인한 것)**:
+  - 서명은 필수이고 인증서는 **LocalMachine** 에 있어야 한다. `CurrentUser\TrustedPeople` 에만 넣으면 `Add-AppxPackage` 가
+    0x800B0109 로 거부한다(직접 시험함) → UAC 1회는 피할 수 없다. 개발자 모드 PC 에서는 서명 없이
+    `Add-AppxPackage -Register <AppxManifest.xml> -ExternalLocation <폴더>` 로 시험할 수 있다.
+  - **인증서를 다시 만들면 기존 사용자는 UAC 를 한 번 더 거쳐야 한다**(임베드된 지문이 바뀜). 개인 키는 만든 PC 의
+    `CurrentUser\My` 와 GitHub 시크릿에만 있다 — 잃어버리지 말 것. Publisher(`CN=akon47`)는 매니페스트와 글자 그대로 같아야 한다.
+  - `DllCanUnloadNow` 는 남은 객체가 없을 때 S_OK 를 돌려줘야 한다. 늘 S_FALSE 면 서로게이트(dllhost)가 안 죽고 DLL 을 잡고 있어
+    업데이트가 파일을 못 바꾼다. 지금은 메뉴를 닫고 약 5초 뒤 깨끗이 종료된다(확인함). 그래도 설치 직전에 잠겨 있을 수 있어
+    Setup.nsi 가 못 지우면 `.old` 로 이름을 바꿔 치운다.
+  - **탐색기는 패키지 항목을 클래식 메뉴(Shift+우클릭)에도 보여 준다**(2026-11-16 사용자가 눈으로 확인: 클래식 동사와
+    패키지 항목이 둘 다 떴다). 그래서 패키지가 등록되면 `ExplorerMenu.Install` 이 클래식 동사를 내린다 — 되돌리면 중복된다.
+    반대로 **탐색기 밖의 IContextMenu 호스트(서드파티 파일 관리자 등)에는 패키지 항목이 나오지 않는다**(하니스로 확인) →
+    그런 환경의 사용자는 새 메뉴 옵션을 꺼야 클래식 동사가 유지된다.
+  - 새 메뉴는 "클래식 메뉴 복원" 트윅(`HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32`)이
+    걸린 PC 에서는 아예 안 뜬다(개발 PC 가 이 상태). 새 메뉴 화면을 보려면 그 키를 지우고 탐색기를 재시작해야 한다.
+  - 셸 확장이 띄운 프로세스는 패키지 ID 를 물려받지 않는다(확인함) → 터미널/claude 는 평소와 같은 환경.
+  - NativeAOT 링크는 `vswhere.exe` 를 PATH 에서 찾는다. 없으면 "vswhere.exe은(는) 내부 또는 외부 명령…" 이 링커 경로에 섞여
+    exit 123 으로 죽는다 → build-package.ps1 이 VS Installer 폴더를 PATH 에 넣는다.
+  - 한글이 든 `.ps1` 은 **UTF-8 BOM** 으로 저장할 것(Windows PowerShell 5.1 이 BOM 없는 파일을 ANSI 로 읽어 깨진다).
+  - 버전은 exe 와 패키지가 같아야 한다(`IsUpToDate` 가 어셈블리 버전과 비교) — build-installer.ps1 이 exe 의 파일 버전을 넘긴다.
+  - UAC 정책이 "관리자는 확인 없이 승격"(`ConsentPromptBehaviorAdmin=0`)인 PC 에서는 옵션을 켜도 UAC 창이 안 뜬다(정상).
+- **시작 순서: `InitLanguage()` 가 `ReconcileStartupSettings()` 보다 먼저**여야 한다. 복원 단계가 탐색기 메뉴 제목을 현재 언어로
+  레지스트리에 쓰는데, 순서가 뒤집히면 영어("Run with Claude")로 써 버린다(0.13.0 작업 중 실제로 냈던 회귀).
+- **탐색기가 넘기는 드라이브 루트 경로**: `"%V"` 가 `"C:\"` 로 치환되면 `\"` 가 따옴표 이스케이프로 읽혀 인자가 `C:"` 가 된다.
+  `TryHandleCliLaunch` 가 끝의 따옴표를 떼고 역슬래시를 되돌린다. 셸 확장 쪽은 처음부터 끝 역슬래시를 두 배로 적어 넘긴다.
 - 탐색기 `--launch` 실행: 스킵권한이 "매번 묻기"(SkipPermissions=null)면 실행 전에 스킵권한 다이얼로그를
   띄운다(취소하면 실행 안 함). 기억값이 있으면 UI 없이 그 값으로 바로 실행.
 - **oauth 토큰 갱신(반드시 지킬 것)**: 갱신 엔드포인트는 `https://api.anthropic.com/v1/oauth/token` 이다.
@@ -283,7 +347,7 @@ powershell Resources\generate-icon.ps1                    # app.ico 재생성
   `projects` 가 전부 없는 폴더(plugins/ 만 남은 껍데기)만 지운다. 데이터가 있는 폴더는 절대 건드리지 않는다.
 - **`--show` 인자**: 트레이 토스트 대신 관리 창을 바로 연다(바로가기/UI 자동화용). `--autostart` 는 토스트 억제.
 - 설치 후엔 자동실행/탐색기메뉴 토글을 껐다 켜서 레지스트리가 설치된 exe 경로를 가리키게.
-- 커밋 작성자는 이 repo 한정 `Kim, Hwan <akon47@naver.com>` (로컬 git config).
+- 커밋 작성자는 이 repo 의 로컬 git config 에 설정된 값을 그대로 쓴다(바꾸거나 문서에 적지 말 것).
 - 외부 프로젝트명/브랜드는 코드·주석·식별자·경로 어디에도 넣지 말 것(사용자 요청).
 - 작업 방식: 모호하면 먼저 묻고, 큰 변경은 작은 마일스톤으로 나눠 진행(사용자 선호).
 - **릴리스 모델**: `main`에 **일반 커밋**을 선형으로 쌓는다(squash/force-push 안 함 — CONTRIBUTING.md 기준).

@@ -39,6 +39,15 @@ public sealed class AppData
     /// <summary>탐색기 우클릭 메뉴 등록 사용자 설정(진짜 값). null = 아직 미초기화. (자동실행과 동일한 복원 로직)</summary>
     public bool? ExplorerMenu { get; set; }
 
+    /// <summary>
+    /// 탐색기 메뉴를 Windows 11 새 우클릭 메뉴에도 넣을지(스파스 패키지 등록). 처음 켤 때 UAC 가 한 번 필요해 기본은 꺼짐.
+    /// 업데이트로 버전이 바뀌면 시작 시 이 값대로 패키지를 다시 등록한다.
+    /// </summary>
+    public bool ModernExplorerMenu { get; set; }
+
+    /// <summary>"Windows 11 새 우클릭 메뉴에 표시할 수 있다"는 안내를 이미 보여줬는지(최초 1회만). 옵션을 직접 켜고 꺼도 true 가 된다.</summary>
+    public bool ModernMenuHintShown { get; set; }
+
     /// <summary>동시 실행 시 claude 하단에 계정 상태줄(👤 이메일·플랜·이름·세션%)을 설치할지. 기본 켜짐.</summary>
     public bool StatusLine { get; set; } = true;
 

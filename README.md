@@ -74,7 +74,12 @@ Profile data lives in `%APPDATA%\ClaudeAccountSwitcher\` (not committed to the r
   UAC prompt each time), and decide whether to pass `--dangerously-skip-permissions` (with an optional
   *don't ask again* that remembers your choice — reset it any time in **Settings**). Applies to
   Explorer right-click launches too.
-- Optional Explorer right-click **"Run with Claude"** submenu (per account).
+- Optional Explorer right-click **"Run with Claude"** submenu (per account). On Windows 11, turn on
+  **Settings → "Also show in the Windows 11 context menu"** to get it directly in the new menu instead of
+  behind *Show more options* (recent Windows 11 builds hide *Show more options* by default, so without this
+  you need Shift+right-click or a Windows setting to see it). The new menu only accepts signed app packages,
+  so the first time you enable it Windows asks for administrator approval (UAC) once to register the app's
+  self-signed certificate. The uninstaller offers to remove that certificate again.
 - Start with Windows (autostart).
 - **Automatic updates** — checks GitHub Releases on startup (and on demand from the tray menu) and
   offers to download & install a newer version.

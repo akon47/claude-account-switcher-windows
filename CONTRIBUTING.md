@@ -45,8 +45,7 @@ each `Theme/Controls/*.xaml` merges its own dependency brushes (StaticResource c
 
 ## Commits & releases
 
-- Commit normally (descriptive message + `Co-Authored-By` trailer); don't squash/force-push. Author for
-  this repo is `Kim, Hwan <akon47@naver.com>` (local git config).
+- Commit normally (descriptive message + `Co-Authored-By` trailer); don't squash/force-push.
 - Release: bump `<Version>` and push a `vX.Y.Z` tag (or run the **bump-version** GitHub Action). The
   **release** workflow builds the self-contained installer and publishes the GitHub Release; the
   **winget** job then opens an update PR (needs the `WINGET_TOKEN` secret + `PUBLISH_WINGET=true` var).

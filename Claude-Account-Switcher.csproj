@@ -8,8 +8,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>0.12.0</Version>
+    <Version>0.13.0</Version>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <!-- ShellExtension\ 은 별도 프로젝트(NativeAOT 셸 확장)다. 루트 프로젝트의 기본 글롭에 딸려 들어오지 않게 뺀다. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);ShellExtension\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +22,10 @@
 
   <ItemGroup>
     <Resource Include="Resources\app.ico" />
+    <!-- 화면에 크게 그릴 때 쓰는 256px PNG(.ico 를 Image 로 쓰면 16px 프레임이 늘어나 흐려진다). generate-icon.ps1 이 함께 만든다. -->
+    <Resource Include="Resources\app.png" />
+    <!-- 스파스 패키지 서명 인증서(공개 부분). "새 메뉴에 표시"를 처음 켤 때 이 인증서를 신뢰 등록한다(Services\ShellPackage.cs). -->
+    <EmbeddedResource Include="Installer\Package\signing.cer" LogicalName="PackageSigning.cer" />
   </ItemGroup>
 
   <ItemGroup>

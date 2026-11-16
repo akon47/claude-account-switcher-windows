@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Windows 11 새 우클릭 메뉴용 셸 확장(IExplorerCommand). NativeAOT 로 publish 해 런타임 없는 네이티브 DLL 을 만든다:
+      dotnet publish ShellExtension\ShellExtension.csproj -c Release -r win-x64 -o <dir>
+    스파스 패키지(Installer\Package\AppxManifest.xml)가 이 DLL 을 COM 서로게이트로 등록한다.
+    탐색기 프로세스 밖(dllhost)에서 돌므로 여기서 죽어도 탐색기는 영향받지 않는다.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RootNamespace>ClaudeAccountSwitcher.ShellExtension</RootNamespace>
+    <AssemblyName>Claude-Account-Switcher.ShellExtension</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- 버전은 여기 두지 않는다: build-package.ps1 이 앱 버전을 -p:Version 으로 넘긴다. -->
+
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 앱과 공유하는 레지스트리 계약(키 이름·CLSID). -->
+    <Compile Include="..\Services\ExplorerMenuContract.cs" Link="ExplorerMenuContract.cs" />
+  </ItemGroup>
+
+</Project>

@@ -15,6 +15,10 @@
 !define PRODUCT_PUBLISHER "Kim, Hwan"
 !define PRODUCT_WEB_SITE "https://github.com/akon47/claude-account-switcher-windows"
 !define APP_EXE "Claude-Account-Switcher.exe"
+; Windows 11 새 우클릭 메뉴용 스파스 패키지(설치 폴더 shell\). 이름은 Services\ExplorerMenuContract.cs 의 PackageName,
+; DLL 은 Installer\Package\AppxManifest.xml 의 com:Class Path 와 같아야 한다.
+!define SHELL_DLL "Claude-Account-Switcher.ShellExtension.dll"
+!define PACKAGE_NAME "akon47.ClaudeAccountSwitcher"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 !include "MUI2.nsh"
@@ -104,6 +108,14 @@ Section "Install"
     Call CloseRunningApp
   skipUninst:
 
+  ; 새 우클릭 메뉴의 셸 확장 DLL 은 메뉴를 연 직후 몇 초간 COM 서로게이트(dllhost)가 잡고 있을 수 있다.
+  ; 잠긴 파일은 덮어쓸 수 없지만 이름은 바꿀 수 있으므로, 못 지우면 옆으로 치워 두고 새 파일을 쓴다
+  ; (치워 둔 파일은 다음 설치/제거 때 지워진다).
+  Delete "$INSTDIR\shell\*.old"
+  Delete "$INSTDIR\shell\${SHELL_DLL}"
+  IfFileExists "$INSTDIR\shell\${SHELL_DLL}" 0 +2
+    Rename "$INSTDIR\shell\${SHELL_DLL}" "$INSTDIR\shell\${SHELL_DLL}.old"
+
   SetOutPath "$INSTDIR"
   SetOverwrite on
   File /r "${PUBLISH_DIR}\*.*"
@@ -147,6 +159,24 @@ Section Uninstall
     DeleteRegKey HKCU "Software\Classes\Directory\shell\ClaudeAccountSwitcher"
     DeleteRegKey HKCU "Software\Classes\Directory\Background\shell\ClaudeAccountSwitcher"
     DeleteRegKey HKCU "Software\Classes\ClaudeAccountSwitcher.Sub"
+
+    ; Windows 11 새 우클릭 메뉴용 패키지 등록 해제(등록돼 있지 않으면 아무 일도 없다). 업데이트 때는 등록을 유지한다 —
+    ; 패키지는 같은 설치 폴더를 가리키고, 새 버전 앱이 시작하면서 버전을 맞춰 다시 등록한다.
+    nsExec::Exec '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Get-AppxPackage -Name ${PACKAGE_NAME} | Remove-AppxPackage"'
+    Pop $0
+
+    ; 패키지 서명 인증서를 신뢰 저장소(LocalMachine\TrustedPeople)에 넣어 둔 PC 라면 함께 지운다. 관리자 권한이 필요해
+    ; UAC 창이 한 번 뜬다(거절하면 인증서만 남는다). 조용한 제거(/S)에서는 창을 띄우지 않고 남겨 둔다.
+    !ifdef CERT_THUMBPRINT
+      IfSilent skipCertificate
+      SetRegView 64
+      ClearErrors
+      EnumRegValue $0 HKLM "SOFTWARE\Microsoft\SystemCertificates\TrustedPeople\Certificates\${CERT_THUMBPRINT}" 0
+      SetRegView lastused
+      IfErrors skipCertificate
+        ExecShell "runas" "$SYSDIR\certutil.exe" "-delstore TrustedPeople ${CERT_THUMBPRINT}" SW_HIDE
+      skipCertificate:
+    !endif
   skipUserSettings:
 
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk"

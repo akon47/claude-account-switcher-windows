@@ -15,6 +15,7 @@
     Style="{DynamicResource ThemedWindowStyle}"
     >
     <ctrl:ThemedWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <!-- 섹션 카드: 제목 + 설명 + 컨트롤을 한 덩어리로 묶어 설정 항목의 경계를 또렷하게. -->
         <Style x:Key="SectionCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
@@ -70,6 +71,38 @@
                             Margin="0 10 0 0"
                             IsChecked="{Binding ExplorerMenuEnabled, Mode=TwoWay}"
                             />
+                        <!-- Windows 11 새 메뉴(스파스 패키지). 지원되는 빌드·OS 에서만 보이고, 등록은 명령이 비동기로 처리한다. -->
+                        <StackPanel Visibility="{Binding ModernMenuSupported, Converter={StaticResource BoolToVisibility}}">
+                            <CheckBox
+                                Content="{loc:Loc SetModernMenu}"
+                                Margin="26 8 0 0"
+                                IsChecked="{Binding ModernMenuEnabled, Mode=OneWay}"
+                                IsEnabled="{Binding ExplorerMenuEnabled}"
+                                Command="{Binding ToggleModernMenuCommand}"
+                                />
+                            <TextBlock
+                                Style="{StaticResource Hint}"
+                                Margin="52 4 0 0"
+                                Text="{loc:Loc SetModernMenuDesc}"
+                                />
+                            <!-- 진행·결과 한 줄("적용 중…" → "등록했습니다"). 문구가 없으면 자리도 차지하지 않는다. -->
+                            <TextBlock
+                                Margin="52 6 0 0"
+                                TextWrapping="Wrap"
+                                Foreground="{DynamicResource AzureMistBrush}"
+                                Text="{Binding ModernMenuStatus}"
+                                >
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ModernMenuStatus}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
                         <CheckBox
                             Content="{loc:Loc SetStatusLine}"
                             Margin="0 10 0 0"
@@ -166,7 +199,7 @@
                             Margin="0 2 14 0"
                             VerticalAlignment="Top"
                             RenderOptions.BitmapScalingMode="HighQuality"
-                            Source="pack://application:,,,/Resources/app.ico"
+                            Source="pack://application:,,,/Resources/app.png"
                             />
                         <StackPanel Grid.Column="1">
                             <TextBlock Style="{StaticResource SectionTitle}" Text="Claude Account Switcher" />

@@ -6,8 +6,13 @@ using Microsoft.Win32;
 namespace ClaudeAccountSwitcher.Services;
 
 /// <summary>
-/// 탐색기 폴더 우클릭 메뉴 "Claude로 실행" + 계정별 서브메뉴(레지스트리 클래식 방식).
-/// HKCU\Software\Classes 아래에 등록하므로 관리자 권한이 필요 없다. (Windows 11 에서는 '더 많은 옵션 표시' 메뉴에 나타난다.)
+/// 탐색기 폴더 우클릭 메뉴 "Claude로 실행" + 계정별 서브메뉴의 레지스트리 데이터.
+/// HKCU\Software\Classes 아래에 등록하므로 관리자 권한이 필요 없다.
+/// <para>
+/// 두 메뉴가 같은 데이터를 쓴다(<see cref="ExplorerMenuContract"/>): 클래식 메뉴는 레지스트리 동사(TopKeys)가 계정 목록 키를
+/// 서브메뉴로 가리키고, Windows 11 새 메뉴는 <see cref="ShellPackage"/> 로 등록한 셸 확장이 같은 키를 읽어 그린다.
+/// 패키지가 등록돼 있으면 탐색기가 그 항목을 클래식 메뉴('더 많은 옵션 표시')에도 넣어 주므로 레지스트리 동사는 내린다(중복 방지).
+/// </para>
 /// <para>
 /// <b>서브메뉴 갱신은 비파괴적으로</b> 한다. 예전엔 Sync 가 서브키 트리를 통째로 지우고 다시 만들었는데,
 /// 그 사이(수 ms~수십 ms)에 탐색기가 메뉴를 열면 계정 목록이 빈 채로 나온다. 격리 실행 중인 claude 가
@@ -21,14 +26,14 @@ public static class ExplorerMenu
     // 주의: 아래 Verb/SubKeyName 으로 만드는 레지스트리 경로는 Installer\Setup.nsi 의 Section Uninstall
     //       (DeleteRegKey)에도 문자열로 복제돼 있다. 키 이름을 바꾸면 제거 시 정리가 깨지니 NSI 와 함께 수정할 것.
     private const string Verb = "ClaudeAccountSwitcher";
-    private const string SubKeyName = "ClaudeAccountSwitcher.Sub"; // ExtendedSubCommandsKey (Software\Classes 기준)
+    private const string SubKeyName = ExplorerMenuContract.SubKeyName; // ExtendedSubCommandsKey (Software\Classes 기준)
 
     // 최상위 메뉴 라벨은 현재 언어로 현지화한다(키 없으면 영어 폴백). 언어 변경 시 App 이 Install 을 다시 호출해 갱신.
     private static string DisplayName => LocalizationManager.Instance["ExplorerRunWith"];
 
     private static string ExePath => Environment.ProcessPath ?? "";
     private static string IconValue => $"\"{ExePath}\",0";
-    private static string Classes(string sub) => $@"Software\Classes\{sub}";
+    private static string Classes(string sub) => $@"{ExplorerMenuContract.ClassesRoot}\{sub}";
 
     private static readonly string[] TopKeys =
     [
@@ -40,7 +45,8 @@ public static class ExplorerMenu
     {
         try
         {
-            using var k = Registry.CurrentUser.OpenSubKey(Classes(TopKeys[0]));
+            // 계정 목록 키가 기준이다(클래식 동사는 새 메뉴 패키지가 등록돼 있으면 일부러 없다).
+            using var k = Registry.CurrentUser.OpenSubKey(Classes(SubKeyName));
             return k is not null;
         }
         catch { return false; }
@@ -50,12 +56,28 @@ public static class ExplorerMenu
     {
         try
         {
+            // 최상위 항목의 제목·아이콘은 계정 목록 키에도 둔다 — 새 메뉴의 셸 확장이 여기서 읽는다.
+            using (var data = Registry.CurrentUser.CreateSubKey(Classes(SubKeyName)))
+            {
+                if (data is not null)
+                {
+                    SetIfChanged(data, ExplorerMenuContract.LabelValue, DisplayName);
+                    SetIfChanged(data, ExplorerMenuContract.IconValue, IconValue);
+                }
+            }
+
+            bool classic = !ShellPackage.IsRegistered;
             foreach (string top in TopKeys)
             {
+                if (!classic)
+                {
+                    Registry.CurrentUser.DeleteSubKeyTree(Classes(top), throwOnMissingSubKey: false);
+                    continue;
+                }
                 using var k = Registry.CurrentUser.CreateSubKey(Classes(top));
                 if (k is null) continue;
-                SetIfChanged(k, "MUIVerb", DisplayName);
-                SetIfChanged(k, "Icon", IconValue);
+                SetIfChanged(k, ExplorerMenuContract.LabelValue, DisplayName);
+                SetIfChanged(k, ExplorerMenuContract.IconValue, IconValue);
                 SetIfChanged(k, "ExtendedSubCommandsKey", SubKeyName);
             }
             Sync(profiles);
@@ -73,7 +95,7 @@ public static class ExplorerMenu
 
         try
         {
-            using var shell = Registry.CurrentUser.CreateSubKey(Classes($@"{SubKeyName}\shell"));
+            using var shell = Registry.CurrentUser.CreateSubKey(Classes($@"{SubKeyName}\{ExplorerMenuContract.ShellKey}"));
             if (shell is null) return;
 
             Dictionary<string, (string Label, string Command)> desired = new(StringComparer.OrdinalIgnoreCase);
@@ -82,16 +104,16 @@ public static class ExplorerMenu
             {
                 if (!File.Exists(p.CredentialsPath)) continue; // 로그인된 계정만
                 string label = string.IsNullOrEmpty(p.Email) ? p.Name : $"{p.Name}  ({p.Email})";
-                desired[$"{order++:D3}_{p.Id}"] = (label, $"\"{ExePath}\" --launch {p.Id} --dir \"%V\"");
+                desired[$"{order++:D3}_{p.Id}"] = (label, $"\"{ExePath}\" --launch {p.Id} --dir \"{ExplorerMenuContract.FolderPlaceholder}\"");
             }
 
             foreach (var (name, (label, command)) in desired)
             {
                 using var item = shell.CreateSubKey(name);
                 if (item is null) continue;
-                SetIfChanged(item, "MUIVerb", label);
-                SetIfChanged(item, "Icon", IconValue);
-                using var cmd = item.CreateSubKey("command");
+                SetIfChanged(item, ExplorerMenuContract.LabelValue, label);
+                SetIfChanged(item, ExplorerMenuContract.IconValue, IconValue);
+                using var cmd = item.CreateSubKey(ExplorerMenuContract.CommandKey);
                 if (cmd is not null) SetIfChanged(cmd, "", command);
             }
 

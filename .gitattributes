@@ -13,3 +13,7 @@
 
 # NSIS 스크립트 (UTF-8 BOM 포함, 한글)
 *.nsi   text
+
+# 스파스 패키지 자산(로고·공개 인증서)
+*.png   binary
+*.cer   binary

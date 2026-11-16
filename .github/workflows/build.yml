@@ -19,3 +19,7 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build Claude-Account-Switcher.csproj -c Release --nologo
+
+      # Windows 11 새 우클릭 메뉴용 셸 확장(컴파일 검증만 — NativeAOT publish 와 패키징은 release 워크플로에서).
+      - name: Build shell extension (Release)
+        run: dotnet build ShellExtension/ShellExtension.csproj -c Release --nologo

@@ -15,6 +15,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private readonly ProfileStore _store;
     private readonly UpdateCoordinator _updates;
+    private readonly IDialogService _dialogs;
 
     private static LocalizationManager L => LocalizationManager.Instance;
 
@@ -29,10 +30,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private LanguageOption _selectedLanguage;
 
-    public SettingsViewModel(ProfileStore store, UpdateCoordinator updates)
+    public SettingsViewModel(ProfileStore store, UpdateCoordinator updates, IDialogService dialogs)
     {
         _store = store;
         _updates = updates;
+        _dialogs = dialogs;
         _selectedShell = _store.Data.Shell;
 
         Languages = LocalizationManager.Available.Select(a => new LanguageOption(a.Culture, a.Display)).ToArray();
@@ -74,6 +76,40 @@ public sealed partial class SettingsViewModel : ObservableObject
             _store.Save();
             OnPropertyChanged();
         }
+    }
+
+    /// <summary>Windows 11 새 메뉴 옵션을 보여 줄지(Windows 11 + 서명된 패키지가 든 빌드).</summary>
+    public bool ModernMenuSupported => ShellPackage.IsSupported;
+
+    /// <summary>탐색기 메뉴가 Windows 11 새 우클릭 메뉴에도 등록돼 있는지. 바꾸는 건 <see cref="ToggleModernMenuCommand"/>.</summary>
+    public bool ModernMenuEnabled => _store.Data.ModernExplorerMenu && ShellPackage.IsRegistered;
+
+    /// <summary>새 메뉴 등록의 진행·결과 문구("적용 중…" → "등록했습니다"). 비어 있으면 화면에 나오지 않는다.</summary>
+    [ObservableProperty] private string _modernMenuStatus = "";
+
+    /// <summary>
+    /// 새 메뉴 등록을 켜고 끈다. 패키지 등록은 수 초가 걸리고 처음엔 UAC 가 뜨므로 백그라운드에서 돌리며,
+    /// 그동안 체크박스는 명령이 잠근다. UAC 를 거절하면 조용히 원래 상태로 돌아간다.
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleModernMenu()
+    {
+        bool enable = !ModernMenuEnabled;
+        ModernMenuStatus = L["SetModernMenuBusy"];
+        var (outcome, detail) = await Task.Run(() => enable ? ShellPackage.Enable() : ShellPackage.Unregister());
+
+        ModernMenuStatus = outcome == ShellPackageOutcome.Done ? L[enable ? "SetModernMenuOn" : "SetModernMenuOff"] : "";
+        if (outcome == ShellPackageOutcome.Done)
+        {
+            _store.Data.ModernExplorerMenu = enable;
+            _store.Data.ModernMenuHintShown = true; // 직접 다뤄 본 사용자에게는 안내 알림을 띄우지 않는다
+        }
+        else if (outcome == ShellPackageOutcome.Failed) _dialogs.ShowError(L.Tr("ErrModernMenu", detail).TrimEnd());
+
+        // 클래식 동사를 패키지 등록 상태에 맞춘다(등록됐으면 내리고, 풀렸으면 되살린다).
+        if (ExplorerMenu.IsInstalled()) ExplorerMenu.Install(_store.Data.Profiles);
+        _store.Save();
+        OnPropertyChanged(nameof(ModernMenuEnabled));
     }
 
     /// <summary>동시 실행 claude 하단에 계정 상태줄 표시 여부. 끄면 모든 프로필에서 우리 statusLine 을 즉시 제거한다.</summary>

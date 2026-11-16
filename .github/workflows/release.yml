@@ -2,9 +2,13 @@ name: release
 
 # vX.Y.Z 태그를 푸시하면 자기완결 설치 파일을 빌드해 GitHub Release 로 올린다.
 # 버전은 태그에서 결정된다(build-installer.ps1 -Version).
+#
+# 수동 실행(Actions > release > Run workflow)은 시험용이다: 같은 단계로 인스톨러를 빌드하되 릴리스를 만들지 않고
+# 워크플로 아티팩트로만 올린다(버전은 csproj 값). 태그를 밀기 전에 러너에서 빌드·서명이 되는지 확인할 때 쓴다.
 on:
   push:
     tags: [ 'v*' ]
+  workflow_dispatch:
 
 permissions:
   contents: write   # 릴리스 생성 + 자산 업로드
@@ -61,11 +65,65 @@ jobs:
           }
           Write-Host "makensis = $found"
 
+      # Windows 11 새 우클릭 메뉴용 스파스 패키지(.msix)는 자체 서명 인증서로 서명한다. 개인 키는 시크릿에만 있다
+      # (Installer/publish-signing-secrets.ps1 로 등록). 시크릿이 없으면 build-package.ps1 이 패키지를 건너뛰고
+      # 인스톨러는 새 메뉴 옵션 없이 만들어진다 — 릴리스는 실패하지 않지만 경고를 남긴다.
+      - name: Import package signing certificate
+        shell: pwsh
+        env:
+          MSIX_CERT_PFX: ${{ secrets.MSIX_CERT_PFX }}
+          MSIX_CERT_PASSWORD: ${{ secrets.MSIX_CERT_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:MSIX_CERT_PFX) {
+            Write-Host "::warning::MSIX_CERT_PFX 시크릿이 없습니다 → Windows 11 새 메뉴 패키지 없이 빌드합니다."
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:MSIX_CERT_PFX))
+          try {
+            $password = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
+            Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password | Out-Null
+          }
+          finally { Remove-Item $pfx -Force }
+
       - name: Build self-contained installer
         shell: pwsh
-        run: ./Installer/build-installer.ps1 -Version "${{ github.ref_name }}"
+        env:
+          # 태그 이름은 스크립트 본문에 끼워 넣지 않고 환경 변수로 넘긴다(이름에 든 문자가 코드로 해석되지 않게).
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if ($env:REF_TYPE -eq 'tag') { ./Installer/build-installer.ps1 -Version $env:REF_NAME }
+          else { ./Installer/build-installer.ps1 }
+
+      # 서명이 끝났으면 개인 키를 러너에서 바로 지운다 — 뒤따르는 서드파티 액션이 키에 닿지 못하게.
+      - name: Remove package signing certificate
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ChildItem Cert:\CurrentUser\My | Where-Object Subject -eq 'CN=akon47' | Remove-Item -DeleteKey -ErrorAction SilentlyContinue
+
+      # 시크릿이 있는데도 패키지가 빠졌다면(서명·도구 문제) 새 메뉴가 조용히 사라진 릴리스가 나가므로 여기서 막는다.
+      - name: Verify sparse package
+        shell: pwsh
+        env:
+          HAS_CERT: ${{ secrets.MSIX_CERT_PFX != '' }}
+        run: |
+          if ($env:HAS_CERT -eq 'true' -and -not (Test-Path publish/win-x64/shell/Claude-Account-Switcher.msix)) {
+            throw '서명 인증서가 있는데 스파스 패키지가 만들어지지 않았습니다.'
+          }
+
+      - name: Upload installer (manual run only)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: dist/Claude-Account-Switcher-Setup_v*.exe
+          retention-days: 7
 
       - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
@@ -81,7 +139,7 @@ jobs:
   winget:
     needs: release
     runs-on: ubuntu-latest
-    if: ${{ vars.PUBLISH_WINGET == 'true' }}
+    if: ${{ vars.PUBLISH_WINGET == 'true' && github.ref_type == 'tag' }}
     # 최초 1회 winget-pkgs 등록 전에는 실패하는 게 정상이므로 릴리스 런을 빨갛게 만들지 않는다.
     continue-on-error: true
     steps:

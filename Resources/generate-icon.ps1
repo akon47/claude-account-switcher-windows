@@ -103,3 +103,20 @@ $bw.Flush()
 [System.IO.File]::WriteAllBytes($outPath, $fs.ToArray())
 $bw.Dispose(); $fs.Dispose()
 Write-Output "Wrote $outPath ($([Math]::Round((Get-Item $outPath).Length / 1KB, 1)) KB, $($sizes.Count) frames)"
+
+# Large PNG for in-app use (Settings > About). WPF's Image picks the smallest ICO frame and upscales it,
+# which looks blurry — a 256px PNG scaled down stays sharp at any DPI.
+$bmp = New-Frame 256
+$bmp.Save((Join-Path $PSScriptRoot 'app.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+$bmp.Dispose()
+Write-Output "Wrote $(Join-Path $PSScriptRoot 'app.png')"
+
+# Package logos for the sparse package (Installer\Package) — same drawing, PNG.
+$logoDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'Installer\Package\shell'
+New-Item -ItemType Directory -Force $logoDir | Out-Null
+foreach ($logo in @(@{ Name = 'Logo44.png'; Size = 44 }, @{ Name = 'Logo150.png'; Size = 150 }, @{ Name = 'StoreLogo.png'; Size = 50 })) {
+    $bmp = New-Frame $logo.Size
+    $bmp.Save((Join-Path $logoDir $logo.Name), [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+}
+Write-Output "Wrote package logos to $logoDir"
