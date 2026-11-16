@@ -22,13 +22,23 @@ $bytes = New-Object byte[] 30
 $plain  = [Convert]::ToBase64String($bytes) -replace '[+/=]', 'x'
 $secure = ConvertTo-SecureString $plain -AsPlainText -Force
 
+# 값은 BOM 없는 임시 파일에 써서 gh 의 표준 입력으로 넘긴다. 문자열을 파이프로 보내면 Windows PowerShell 이 맨 앞에
+# UTF-8 BOM 을 붙이는 환경이 있어(실제로 겪음) 시크릿이 깨진 채 올라간다 — Base64 해독 실패, 암호 불일치.
+function Set-Secret([string]$name, [string]$value) {
+  $tmp = Join-Path ([IO.Path]::GetTempPath()) ("secret-" + [Guid]::NewGuid().ToString('N') + '.txt')
+  try {
+    [IO.File]::WriteAllText($tmp, $value, (New-Object System.Text.ASCIIEncoding))
+    cmd /c "gh secret set $name < `"$tmp`""
+    if ($LASTEXITCODE -ne 0) { throw "gh secret set $name 실패" }
+  }
+  finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+}
+
 $pfx = Join-Path ([IO.Path]::GetTempPath()) ("signing-" + [Guid]::NewGuid().ToString('N') + '.pfx')
 try {
   Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $secure | Out-Null
-  [Convert]::ToBase64String([IO.File]::ReadAllBytes($pfx)) | gh secret set MSIX_CERT_PFX
-  if ($LASTEXITCODE -ne 0) { throw 'gh secret set MSIX_CERT_PFX 실패' }
-  $plain | gh secret set MSIX_CERT_PASSWORD
-  if ($LASTEXITCODE -ne 0) { throw 'gh secret set MSIX_CERT_PASSWORD 실패' }
+  Set-Secret 'MSIX_CERT_PFX' ([Convert]::ToBase64String([IO.File]::ReadAllBytes($pfx)))
+  Set-Secret 'MSIX_CERT_PASSWORD' $plain
   Write-Host 'GitHub 시크릿 등록 완료: MSIX_CERT_PFX, MSIX_CERT_PASSWORD' -ForegroundColor Green
 
   if ($BackupTo) {

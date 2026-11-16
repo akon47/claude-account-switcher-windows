@@ -79,10 +79,12 @@ jobs:
             Write-Host "::warning::MSIX_CERT_PFX 시크릿이 없습니다 → Windows 11 새 메뉴 패키지 없이 빌드합니다."
             exit 0
           }
+          # 시크릿 앞뒤에 BOM·줄바꿈이 묻어 올라간 경우에도 읽히게 다듬는다(등록 스크립트가 한 번 그렇게 올린 적이 있다).
+          $stray = [char[]]@([char]0xFEFF, ' ', "`r", "`n")
           $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
-          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:MSIX_CERT_PFX))
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:MSIX_CERT_PFX.Trim($stray)))
           try {
-            $password = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD -AsPlainText -Force
+            $password = ConvertTo-SecureString $env:MSIX_CERT_PASSWORD.Trim($stray) -AsPlainText -Force
             Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password | Out-Null
           }
           finally { Remove-Item $pfx -Force }
@@ -102,7 +104,10 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          Get-ChildItem Cert:\CurrentUser\My | Where-Object Subject -eq 'CN=akon47' | Remove-Item -DeleteKey -ErrorAction SilentlyContinue
+          # -DeleteKey 는 인증서 공급자의 동적 매개 변수라, 경로를 파이프로 넘기면 찾지 못한다 → 경로를 직접 준다.
+          foreach ($cert in Get-ChildItem Cert:\CurrentUser\My | Where-Object Subject -eq 'CN=akon47') {
+            Remove-Item -LiteralPath $cert.PSPath -DeleteKey
+          }
 
       # 시크릿이 있는데도 패키지가 빠졌다면(서명·도구 문제) 새 메뉴가 조용히 사라진 릴리스가 나가므로 여기서 막는다.
       - name: Verify sparse package
